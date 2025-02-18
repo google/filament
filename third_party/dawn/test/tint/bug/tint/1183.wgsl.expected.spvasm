@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %f "f" %f_loc0_Output
+               OpExecutionMode %f OriginUpperLeft
+               OpName %t "t"
+               OpName %s "s"
+               OpName %f_loc0_Output "f_loc0_Output"
+               OpName %f_inner "f_inner"
+               OpName %f "f"
+               OpDecorate %t DescriptorSet 0
+               OpDecorate %t Binding 0
+               OpDecorate %s DescriptorSet 1
+               OpDecorate %s Binding 0
+               OpDecorate %f_loc0_Output Location 0
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+          %t = OpVariable %_ptr_UniformConstant_3 UniformConstant
+          %7 = OpTypeSampler
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+          %s = OpVariable %_ptr_UniformConstant_7 UniformConstant
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%f_loc0_Output = OpVariable %_ptr_Output_v4float Output
+         %12 = OpTypeFunction %v4float
+         %17 = OpTypeSampledImage %3
+    %v2float = OpTypeVector %float 2
+         %19 = OpConstantNull %v2float
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+      %int_4 = OpConstant %int 4
+      %int_6 = OpConstant %int 6
+         %21 = OpConstantComposite %v2int %int_4 %int_6
+       %void = OpTypeVoid
+         %28 = OpTypeFunction %void
+    %f_inner = OpFunction %v4float None %12
+         %13 = OpLabel
+         %14 = OpLoad %3 %t None
+         %15 = OpLoad %7 %s None
+         %16 = OpSampledImage %17 %14 %15
+         %18 = OpImageSampleImplicitLod %v4float %16 %19 ConstOffset %21
+               OpReturnValue %18
+               OpFunctionEnd
+          %f = OpFunction %void None %28
+         %29 = OpLabel
+         %30 = OpFunctionCall %v4float %f_inner
+               OpStore %f_loc0_Output %30 None
+               OpReturn
+               OpFunctionEnd

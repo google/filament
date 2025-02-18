@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_f32 {
+  float fract;
+  float whole;
+};
+
+struct tint_module_vars_struct {
+  thread modf_result_f32* v;
+};
+
+kernel void v_1() {
+  thread modf_result_f32 v = modf_result_f32{.fract=0.0f, .whole=1.0f};
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&v)};
+}

@@ -1,0 +1,67 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S_packed_vec3 {
+  /* 0x0000 */ float f;
+  /* 0x0004 */ uint u;
+  /* 0x0008 */ tint_array<int8_t, 120> tint_pad;
+  /* 0x0080 */ float4 v;
+  /* 0x0090 */ tint_array<int8_t, 16> tint_pad_1;
+  /* 0x00a0 */ half x;
+  /* 0x00a2 */ tint_array<int8_t, 30> tint_pad_2;
+  /* 0x00c0 */ packed_half3 y;
+  /* 0x00c6 */ tint_array<int8_t, 58> tint_pad_3;
+};
+
+struct S {
+  float f;
+  uint u;
+  float4 v;
+  half x;
+  half3 y;
+};
+
+struct tint_module_vars_struct {
+  device S_packed_vec3* output;
+};
+
+struct frag_main_inputs {
+  float S_f [[user(locn0)]];
+  uint S_u [[user(locn1)]] [[flat]];
+  half S_x [[user(locn2)]];
+  half3 S_y [[user(locn3)]];
+};
+
+void tint_store_and_preserve_padding(device S_packed_vec3* const target, S value_param) {
+  (*target).f = value_param.f;
+  (*target).u = value_param.u;
+  (*target).v = value_param.v;
+  (*target).x = value_param.x;
+  (*target).y = packed_half3(value_param.y);
+}
+
+void frag_main_inner(S input, tint_module_vars_struct tint_module_vars) {
+  float const f = input.f;
+  uint const u = input.u;
+  float4 const v = input.v;
+  half const x = input.x;
+  half3 const y = input.y;
+  tint_store_and_preserve_padding(tint_module_vars.output, input);
+}
+
+fragment void frag_main(frag_main_inputs inputs [[stage_in]], float4 S_v [[position]], device S_packed_vec3* output [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.output=output};
+  frag_main_inner(S{.f=inputs.S_f, .u=inputs.S_u, .v=S_v, .x=inputs.S_x, .y=inputs.S_y}, tint_module_vars);
+}

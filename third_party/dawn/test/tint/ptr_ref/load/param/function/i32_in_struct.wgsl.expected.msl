@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct str {
+  int i;
+};
+
+int func(thread int* const pointer) {
+  return (*pointer);
+}
+
+kernel void v() {
+  str F = {};
+  int const r = func((&F.i));
+}

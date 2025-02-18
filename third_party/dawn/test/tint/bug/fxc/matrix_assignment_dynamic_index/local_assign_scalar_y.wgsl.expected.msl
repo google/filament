@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Uniforms {
+  /* 0x0000 */ uint i;
+  /* 0x0004 */ uint j;
+};
+
+struct tint_module_vars_struct {
+  const constant Uniforms* uniforms;
+  thread float2x4* m1;
+};
+
+kernel void v(const constant Uniforms* uniforms [[buffer(0)]]) {
+  thread float2x4 m1 = float2x4(0.0f);
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.uniforms=uniforms, .m1=(&m1)};
+  (*tint_module_vars.m1)[0u][min((*tint_module_vars.uniforms).j, 3u)] = 1.0f;
+}

@@ -1,0 +1,101 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+  texture2d_array<uint, access::sample> arg_0;
+};
+
+uint4 textureLoad_53e142(tint_module_vars_struct tint_module_vars) {
+  uint2 arg_1 = uint2(1u);
+  int arg_2 = 1;
+  int arg_3 = 1;
+  uint2 const v = arg_1;
+  int const v_1 = arg_3;
+  uint const v_2 = min(uint(arg_2), (tint_module_vars.arg_0.get_array_size() - 1u));
+  uint const v_3 = min(uint(v_1), (tint_module_vars.arg_0.get_num_mip_levels() - 1u));
+  uint4 res = tint_module_vars.arg_0.read(min(v, (uint2(tint_module_vars.arg_0.get_width(v_3), tint_module_vars.arg_0.get_height(v_3)) - uint2(1u))), v_2, v_3);
+  return res;
+}
+
+fragment void fragment_main(device uint4* prevent_dce [[buffer(0)]], texture2d_array<uint, access::sample> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=arg_0};
+  (*tint_module_vars.prevent_dce) = textureLoad_53e142(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint4* prevent_dce;
+  texture2d_array<uint, access::sample> arg_0;
+};
+
+uint4 textureLoad_53e142(tint_module_vars_struct tint_module_vars) {
+  uint2 arg_1 = uint2(1u);
+  int arg_2 = 1;
+  int arg_3 = 1;
+  uint2 const v = arg_1;
+  int const v_1 = arg_3;
+  uint const v_2 = min(uint(arg_2), (tint_module_vars.arg_0.get_array_size() - 1u));
+  uint const v_3 = min(uint(v_1), (tint_module_vars.arg_0.get_num_mip_levels() - 1u));
+  uint4 res = tint_module_vars.arg_0.read(min(v, (uint2(tint_module_vars.arg_0.get_width(v_3), tint_module_vars.arg_0.get_height(v_3)) - uint2(1u))), v_2, v_3);
+  return res;
+}
+
+kernel void compute_main(device uint4* prevent_dce [[buffer(0)]], texture2d_array<uint, access::sample> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=arg_0};
+  (*tint_module_vars.prevent_dce) = textureLoad_53e142(tint_module_vars);
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d_array<uint, access::sample> arg_0;
+};
+
+struct VertexOutput {
+  float4 pos;
+  uint4 prevent_dce;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+  uint4 VertexOutput_prevent_dce [[user(locn0)]] [[flat]];
+};
+
+uint4 textureLoad_53e142(tint_module_vars_struct tint_module_vars) {
+  uint2 arg_1 = uint2(1u);
+  int arg_2 = 1;
+  int arg_3 = 1;
+  uint2 const v = arg_1;
+  int const v_1 = arg_3;
+  uint const v_2 = min(uint(arg_2), (tint_module_vars.arg_0.get_array_size() - 1u));
+  uint const v_3 = min(uint(v_1), (tint_module_vars.arg_0.get_num_mip_levels() - 1u));
+  uint4 res = tint_module_vars.arg_0.read(min(v, (uint2(tint_module_vars.arg_0.get_width(v_3), tint_module_vars.arg_0.get_height(v_3)) - uint2(1u))), v_2, v_3);
+  return res;
+}
+
+VertexOutput vertex_main_inner(tint_module_vars_struct tint_module_vars) {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  out.prevent_dce = textureLoad_53e142(tint_module_vars);
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main(texture2d_array<uint, access::sample> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  VertexOutput const v_4 = vertex_main_inner(tint_module_vars);
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v_4.pos;
+  tint_wrapper_result.VertexOutput_prevent_dce = v_4.prevent_dce;
+  return tint_wrapper_result;
+}

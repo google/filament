@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant float4x4* u;
+  thread float4x4* p;
+};
+
+kernel void f(const constant float4x4* u [[buffer(0)]]) {
+  thread float4x4 p = float4x4(0.0f);
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u, .p=(&p)};
+  (*tint_module_vars.p) = (*tint_module_vars.u);
+  (*tint_module_vars.p)[1u] = (*tint_module_vars.u)[0u];
+  (*tint_module_vars.p)[1u] = (*tint_module_vars.u)[0u].ywxz;
+  (*tint_module_vars.p)[0u].y = (*tint_module_vars.u)[1u].x;
+}

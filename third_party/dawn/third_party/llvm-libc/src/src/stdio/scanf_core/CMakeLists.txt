@@ -1,0 +1,122 @@
+if(LIBC_CONF_SCANF_DISABLE_FLOAT)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
+  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+endif()
+if(scanf_config_copts)
+  list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
+endif()
+
+add_header_library(
+  scanf_config
+  HDRS
+    scanf_config.h
+  ${scanf_config_copts}
+)
+
+add_header_library(
+  core_structs
+  HDRS
+    core_structs.h
+  DEPENDS
+    .scanf_config
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.bitset
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  parser
+  HDRS
+    parser.h
+  DEPENDS
+    .core_structs
+    libc.src.__support.arg_list
+    libc.src.__support.ctype_utils
+    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.string_view
+)
+
+add_object_library(
+  scanf_main
+  SRCS
+    scanf_main.cpp
+  HDRS
+    scanf_main.h
+  DEPENDS
+    .parser
+    .reader
+    .converter
+    .core_structs
+    libc.src.__support.arg_list
+)
+
+add_object_library(
+  reader
+  SRCS
+    reader.cpp
+  HDRS
+    reader.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+)
+
+add_object_library(
+  converter
+  SRCS
+    converter.cpp
+    string_converter.cpp
+    int_converter.cpp
+    float_converter.cpp
+    ptr_converter.cpp
+  HDRS
+    converter.h
+    converter_utils.h
+    int_converter.h
+    string_converter.h
+    float_converter.h
+    current_pos_converter.h
+    ptr_converter.h
+  DEPENDS
+    .reader
+    .core_structs
+    libc.src.__support.common
+    libc.src.__support.ctype_utils
+    libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.limits
+    libc.src.__support.char_vector
+    libc.src.__support.str_to_float
+)
+
+if(LIBC_TARGET_OS_IS_GPU)
+  add_header_library(
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.include.stdio
+      libc.src.__support.arg_list
+      libc.src.stdio.getc
+      libc.src.stdio.ungetc
+      libc.src.stdio.ferror
+  )
+elseif(TARGET libc.src.__support.File.file OR (NOT LLVM_LIBC_FULL_BUILD))
+  add_header_library(
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.include.stdio
+      libc.src.__support.File.file
+      libc.src.__support.arg_list
+    ${use_system_file}
+  )
+endif()

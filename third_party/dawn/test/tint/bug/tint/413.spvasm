@@ -1,0 +1,50 @@
+
+                           OpCapability Shader
+                      %1 = OpExtInstImport "GLSL.std.450"
+                           OpMemoryModel Logical GLSL450
+                           OpEntryPoint GLCompute %main "main"
+                           OpExecutionMode %main LocalSize 1 1 1
+                           OpSource GLSL 450
+                           OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+                           OpSourceExtension "GL_GOOGLE_include_directive"
+                           OpName %main "main"
+                           OpName %srcValue "srcValue"
+                           OpName %Src "Src"
+                           OpName %Dst "Dst"
+                           OpDecorate %Src DescriptorSet 0
+                           OpDecorate %Src Binding 0
+                           OpDecorate %Src NonWritable
+                           OpDecorate %Dst DescriptorSet 0
+                           OpDecorate %Dst Binding 1
+                           OpDecorate %Dst NonReadable
+                   %void = OpTypeVoid
+                      %3 = OpTypeFunction %void
+                   %uint = OpTypeInt 32 0
+                 %v4uint = OpTypeVector %uint 4
+   %_ptr_Function_v4uint = OpTypePointer Function %v4uint
+                     %10 = OpTypeImage %uint 2D 0 0 0 2 R32ui
+%_ptr_UniformConstant_10 = OpTypePointer UniformConstant %10
+                    %Src = OpVariable %_ptr_UniformConstant_10 UniformConstant
+                    %int = OpTypeInt 32 1
+                  %v2int = OpTypeVector %int 2
+                  %int_0 = OpConstant %int 0
+                     %17 = OpConstantComposite %v2int %int_0 %int_0
+                 %uint_0 = OpConstant %uint 0
+     %_ptr_Function_uint = OpTypePointer Function %uint
+                  %int_1 = OpConstant %int 1
+                    %Dst = OpVariable %_ptr_UniformConstant_10 UniformConstant
+                   %main = OpFunction %void None %3
+                      %5 = OpLabel
+               %srcValue = OpVariable %_ptr_Function_v4uint Function
+                     %13 = OpLoad %10 %Src
+                     %18 = OpImageRead %v4uint %13 %17
+                           OpStore %srcValue %18
+                     %21 = OpAccessChain %_ptr_Function_uint %srcValue %uint_0
+                     %22 = OpLoad %uint %21
+                     %24 = OpIAdd %uint %22 %int_1
+                           OpStore %21 %24
+                     %26 = OpLoad %10 %Dst
+                     %27 = OpLoad %v4uint %srcValue
+                           OpImageWrite %26 %17 %27
+                           OpReturn
+                           OpFunctionEnd

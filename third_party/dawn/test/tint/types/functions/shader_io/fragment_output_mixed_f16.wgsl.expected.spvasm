@@ -1,0 +1,134 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 66
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability StorageInputOutput16
+         %58 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Output %main_frag_depth_Output %main_loc1_Output %main_loc2_Output %main_sample_mask_Output %main_loc3_Output %main_loc4_Output %main_loc5_Output
+               OpExecutionMode %main OriginUpperLeft
+               OpExecutionMode %main DepthReplacing
+               OpMemberName %tint_push_constant_struct 0 "tint_frag_depth_min"
+               OpMemberName %tint_push_constant_struct 1 "tint_frag_depth_max"
+               OpName %tint_push_constant_struct "tint_push_constant_struct"
+               OpName %tint_push_constants "tint_push_constants"
+               OpName %main_loc0_Output "main_loc0_Output"
+               OpName %main_frag_depth_Output "main_frag_depth_Output"
+               OpName %main_loc1_Output "main_loc1_Output"
+               OpName %main_loc2_Output "main_loc2_Output"
+               OpName %main_sample_mask_Output "main_sample_mask_Output"
+               OpName %main_loc3_Output "main_loc3_Output"
+               OpName %main_loc4_Output "main_loc4_Output"
+               OpName %main_loc5_Output "main_loc5_Output"
+               OpName %main_inner "main_inner"
+               OpMemberName %FragmentOutputs 0 "loc0"
+               OpMemberName %FragmentOutputs 1 "frag_depth"
+               OpMemberName %FragmentOutputs 2 "loc1"
+               OpMemberName %FragmentOutputs 3 "loc2"
+               OpMemberName %FragmentOutputs 4 "sample_mask"
+               OpMemberName %FragmentOutputs 5 "loc3"
+               OpMemberName %FragmentOutputs 6 "loc4"
+               OpMemberName %FragmentOutputs 7 "loc5"
+               OpName %FragmentOutputs "FragmentOutputs"
+               OpName %main "main"
+               OpMemberDecorate %tint_push_constant_struct 0 Offset 0
+               OpMemberDecorate %tint_push_constant_struct 1 Offset 4
+               OpDecorate %tint_push_constant_struct Block
+               OpDecorate %main_loc0_Output Location 0
+               OpDecorate %main_frag_depth_Output BuiltIn FragDepth
+               OpDecorate %main_loc1_Output Location 1
+               OpDecorate %main_loc2_Output Location 2
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+               OpDecorate %main_sample_mask_Output BuiltIn SampleMask
+               OpDecorate %main_loc3_Output Location 3
+               OpDecorate %main_loc4_Output Location 4
+               OpDecorate %main_loc5_Output Location 5
+               OpMemberDecorate %FragmentOutputs 0 Offset 0
+               OpMemberDecorate %FragmentOutputs 1 Offset 4
+               OpMemberDecorate %FragmentOutputs 2 Offset 8
+               OpMemberDecorate %FragmentOutputs 3 Offset 12
+               OpMemberDecorate %FragmentOutputs 4 Offset 16
+               OpMemberDecorate %FragmentOutputs 5 Offset 32
+               OpMemberDecorate %FragmentOutputs 6 Offset 48
+               OpMemberDecorate %FragmentOutputs 7 Offset 56
+      %float = OpTypeFloat 32
+%tint_push_constant_struct = OpTypeStruct %float %float
+%_ptr_PushConstant_tint_push_constant_struct = OpTypePointer PushConstant %tint_push_constant_struct
+%tint_push_constants = OpVariable %_ptr_PushConstant_tint_push_constant_struct PushConstant
+        %int = OpTypeInt 32 1
+%_ptr_Output_int = OpTypePointer Output %int
+%main_loc0_Output = OpVariable %_ptr_Output_int Output
+%_ptr_Output_float = OpTypePointer Output %float
+%main_frag_depth_Output = OpVariable %_ptr_Output_float Output
+       %uint = OpTypeInt 32 0
+%_ptr_Output_uint = OpTypePointer Output %uint
+%main_loc1_Output = OpVariable %_ptr_Output_uint Output
+%main_loc2_Output = OpVariable %_ptr_Output_float Output
+     %uint_1 = OpConstant %uint 1
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+%_ptr_Output__arr_uint_uint_1 = OpTypePointer Output %_arr_uint_uint_1
+%main_sample_mask_Output = OpVariable %_ptr_Output__arr_uint_uint_1 Output
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_loc3_Output = OpVariable %_ptr_Output_v4float Output
+       %half = OpTypeFloat 16
+%_ptr_Output_half = OpTypePointer Output %half
+%main_loc4_Output = OpVariable %_ptr_Output_half Output
+     %v3half = OpTypeVector %half 3
+%_ptr_Output_v3half = OpTypePointer Output %v3half
+%main_loc5_Output = OpVariable %_ptr_Output_v3half Output
+%FragmentOutputs = OpTypeStruct %int %float %uint %float %uint %v4float %half %v3half
+         %29 = OpTypeFunction %FragmentOutputs
+      %int_1 = OpConstant %int 1
+    %float_2 = OpConstant %float 2
+    %float_1 = OpConstant %float 1
+     %uint_2 = OpConstant %uint 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %36 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+%half_0x1_2p_1 = OpConstant %half 0x1.2p+1
+%half_0x1_8p_1 = OpConstant %half 0x1.8p+1
+%half_0x1_4p_2 = OpConstant %half 0x1.4p+2
+%half_0x1p_3 = OpConstant %half 0x1p+3
+         %40 = OpConstantComposite %v3half %half_0x1_8p_1 %half_0x1_4p_2 %half_0x1p_3
+         %31 = OpConstantComposite %FragmentOutputs %int_1 %float_2 %uint_1 %float_1 %uint_2 %36 %half_0x1_2p_1 %40
+       %void = OpTypeVoid
+         %46 = OpTypeFunction %void
+%_ptr_PushConstant_float = OpTypePointer PushConstant %float
+     %uint_0 = OpConstant %uint 0
+ %main_inner = OpFunction %FragmentOutputs None %29
+         %30 = OpLabel
+               OpReturnValue %31
+               OpFunctionEnd
+       %main = OpFunction %void None %46
+         %47 = OpLabel
+         %48 = OpFunctionCall %FragmentOutputs %main_inner
+         %49 = OpCompositeExtract %int %48 0
+               OpStore %main_loc0_Output %49 None
+         %50 = OpCompositeExtract %float %48 1
+         %51 = OpAccessChain %_ptr_PushConstant_float %tint_push_constants %uint_0
+         %54 = OpLoad %float %51 None
+         %55 = OpAccessChain %_ptr_PushConstant_float %tint_push_constants %uint_1
+         %56 = OpLoad %float %55 None
+         %57 = OpExtInst %float %58 NClamp %50 %54 %56
+               OpStore %main_frag_depth_Output %57 None
+         %59 = OpCompositeExtract %uint %48 2
+               OpStore %main_loc1_Output %59 None
+         %60 = OpCompositeExtract %float %48 3
+               OpStore %main_loc2_Output %60 None
+         %61 = OpCompositeExtract %uint %48 4
+         %62 = OpAccessChain %_ptr_Output_uint %main_sample_mask_Output %uint_0
+               OpStore %62 %61 None
+         %63 = OpCompositeExtract %v4float %48 5
+               OpStore %main_loc3_Output %63 None
+         %64 = OpCompositeExtract %half %48 6
+               OpStore %main_loc4_Output %64 None
+         %65 = OpCompositeExtract %v3half %48 7
+               OpStore %main_loc5_Output %65 None
+               OpReturn
+               OpFunctionEnd

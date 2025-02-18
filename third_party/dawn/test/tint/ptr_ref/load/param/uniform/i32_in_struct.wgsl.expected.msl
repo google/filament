@@ -1,0 +1,19 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct str {
+  /* 0x0000 */ int i;
+};
+
+struct tint_module_vars_struct {
+  const constant str* S;
+};
+
+int func(const constant int* const pointer) {
+  return (*pointer);
+}
+
+kernel void v(const constant str* S [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.S=S};
+  int const r = func((&(*tint_module_vars.S).i));
+}

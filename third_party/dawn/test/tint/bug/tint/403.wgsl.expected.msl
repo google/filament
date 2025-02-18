@@ -1,0 +1,49 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct vertexUniformBuffer1 {
+  /* 0x0000 */ float2x2 transform1;
+};
+
+struct vertexUniformBuffer2 {
+  /* 0x0000 */ float2x2 transform2;
+};
+
+struct tint_module_vars_struct {
+  const constant vertexUniformBuffer1* x_20;
+  const constant vertexUniformBuffer2* x_26;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct main_outputs {
+  float4 tint_symbol [[position]];
+};
+
+float4 main_inner(uint gl_VertexIndex, tint_module_vars_struct tint_module_vars) {
+  tint_array<float2, 3> indexable = {};
+  float2x2 const x_23 = (*tint_module_vars.x_20).transform1;
+  float2x2 const x_28 = (*tint_module_vars.x_26).transform2;
+  uint const x_46 = gl_VertexIndex;
+  indexable = tint_array<float2, 3>{float2(-1.0f, 1.0f), float2(1.0f), float2(-1.0f)};
+  float2 const x_51 = indexable[min(x_46, 2u)];
+  float2 const x_52 = (float2x2((x_23[0u] + x_28[0u]), (x_23[1u] + x_28[1u])) * x_51);
+  return float4(x_52.x, x_52.y, 0.0f, 1.0f);
+}
+
+vertex main_outputs v(uint gl_VertexIndex [[vertex_id]], const constant vertexUniformBuffer1* x_20 [[buffer(0)]], const constant vertexUniformBuffer2* x_26 [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.x_20=x_20, .x_26=x_26};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(gl_VertexIndex, tint_module_vars);
+  return tint_wrapper_result;
+}

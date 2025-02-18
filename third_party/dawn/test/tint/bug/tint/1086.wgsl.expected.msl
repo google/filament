@@ -1,0 +1,20 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread float* v;
+};
+
+void x(thread float* const p) {
+  (*p) = 0.0f;
+}
+
+void g(tint_module_vars_struct tint_module_vars) {
+  x(tint_module_vars.v);
+}
+
+fragment void f() {
+  thread float v = 0.0f;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.v=(&v)};
+  g(tint_module_vars);
+}

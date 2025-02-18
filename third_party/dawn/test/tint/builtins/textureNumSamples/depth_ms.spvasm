@@ -1,0 +1,76 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 37
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %tint_pointsize %tint_symbol_1
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %tint_pointsize "tint_pointsize"
+               OpName %arg_0 "arg_0"
+               OpName %tint_symbol_1 "tint_symbol_1"
+               OpName %textureNumSamples_a3c8a0 "textureNumSamples_a3c8a0"
+               OpName %res "res"
+               OpName %tint_symbol_2 "tint_symbol_2"
+               OpName %tint_symbol "tint_symbol"
+               OpName %vertex_main "vertex_main"
+               OpName %fragment_main "fragment_main"
+               OpName %compute_main "compute_main"
+               OpDecorate %tint_pointsize BuiltIn PointSize
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %tint_symbol_1 BuiltIn Position
+      %float = OpTypeFloat 32
+%_ptr_Output_float = OpTypePointer Output %float
+          %4 = OpConstantNull %float
+%tint_pointsize = OpVariable %_ptr_Output_float Output %4
+          %7 = OpTypeImage %float 2D 1 0 1 1 Unknown
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+      %arg_0 = OpVariable %_ptr_UniformConstant_7 UniformConstant
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+         %11 = OpConstantNull %v4float
+%tint_symbol_1 = OpVariable %_ptr_Output_v4float Output %11
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+         %21 = OpConstantNull %int
+         %22 = OpTypeFunction %void %v4float
+    %float_1 = OpConstant %float 1
+%textureNumSamples_a3c8a0 = OpFunction %void None %12
+         %15 = OpLabel
+        %res = OpVariable %_ptr_Function_int Function %21
+         %18 = OpLoad %7 %arg_0
+         %16 = OpImageQuerySamples %int %18
+               OpStore %res %16
+               OpReturn
+               OpFunctionEnd
+%tint_symbol_2 = OpFunction %void None %22
+%tint_symbol = OpFunctionParameter %v4float
+         %25 = OpLabel
+               OpStore %tint_symbol_1 %tint_symbol
+               OpReturn
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %12
+         %27 = OpLabel
+               OpStore %tint_pointsize %float_1
+         %29 = OpFunctionCall %void %textureNumSamples_a3c8a0
+         %30 = OpFunctionCall %void %tint_symbol_2 %11
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %12
+         %32 = OpLabel
+         %33 = OpFunctionCall %void %textureNumSamples_a3c8a0
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %12
+         %35 = OpLabel
+         %36 = OpFunctionCall %void %textureNumSamples_a3c8a0
+               OpReturn
+               OpFunctionEnd

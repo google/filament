@@ -1,0 +1,177 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 130
+; Schema: 0
+               OpCapability Shader
+         %73 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %v2f "v2f"
+               OpName %v3f "v3f"
+               OpName %v4f "v4f"
+               OpName %v2i "v2i"
+               OpName %v3i "v3i"
+               OpName %v4i "v4i"
+               OpName %v2u "v2u"
+               OpName %v3u "v3u"
+               OpName %v4u "v4u"
+               OpName %v2b "v2b"
+               OpName %v3b "v3b"
+               OpName %v4b "v4b"
+               OpName %i "i"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+          %9 = OpConstantNull %v2float
+    %v3float = OpTypeVector %float 3
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+         %13 = OpConstantNull %v3float
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+         %17 = OpConstantNull %v4float
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+%_ptr_Function_v2int = OpTypePointer Function %v2int
+         %22 = OpConstantNull %v2int
+      %v3int = OpTypeVector %int 3
+%_ptr_Function_v3int = OpTypePointer Function %v3int
+         %26 = OpConstantNull %v3int
+      %v4int = OpTypeVector %int 4
+%_ptr_Function_v4int = OpTypePointer Function %v4int
+         %30 = OpConstantNull %v4int
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+         %35 = OpConstantNull %v2uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+         %39 = OpConstantNull %v3uint
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %43 = OpConstantNull %v4uint
+       %bool = OpTypeBool
+     %v2bool = OpTypeVector %bool 2
+%_ptr_Function_v2bool = OpTypePointer Function %v2bool
+         %48 = OpConstantNull %v2bool
+     %v3bool = OpTypeVector %bool 3
+%_ptr_Function_v3bool = OpTypePointer Function %v3bool
+         %52 = OpConstantNull %v3bool
+     %v4bool = OpTypeVector %bool 4
+%_ptr_Function_v4bool = OpTypePointer Function %v4bool
+         %56 = OpConstantNull %v4bool
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+      %int_2 = OpConstant %int 2
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_float = OpTypePointer Function %float
+    %float_1 = OpConstant %float 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+      %int_1 = OpConstant %int 1
+%_ptr_Function_uint = OpTypePointer Function %uint
+%_ptr_Function_bool = OpTypePointer Function %bool
+       %true = OpConstantTrue %bool
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+        %v2f = OpVariable %_ptr_Function_v2float Function %9
+        %v3f = OpVariable %_ptr_Function_v3float Function %13
+        %v4f = OpVariable %_ptr_Function_v4float Function %17
+        %v2i = OpVariable %_ptr_Function_v2int Function %22
+        %v3i = OpVariable %_ptr_Function_v3int Function %26
+        %v4i = OpVariable %_ptr_Function_v4int Function %30
+        %v2u = OpVariable %_ptr_Function_v2uint Function %35
+        %v3u = OpVariable %_ptr_Function_v3uint Function %39
+        %v4u = OpVariable %_ptr_Function_v4uint Function %43
+        %v2b = OpVariable %_ptr_Function_v2bool Function %48
+        %v3b = OpVariable %_ptr_Function_v3bool Function %52
+        %v4b = OpVariable %_ptr_Function_v4bool Function %56
+          %i = OpVariable %_ptr_Function_int Function
+               OpBranch %57
+         %57 = OpLabel
+               OpStore %i %int_0
+               OpBranch %60
+         %60 = OpLabel
+               OpLoopMerge %61 %59 None
+               OpBranch %58
+         %58 = OpLabel
+         %65 = OpLoad %int %i None
+         %66 = OpSLessThan %bool %65 %int_2
+               OpSelectionMerge %68 None
+               OpBranchConditional %66 %68 %69
+         %69 = OpLabel
+               OpBranch %61
+         %68 = OpLabel
+         %70 = OpLoad %int %i None
+         %71 = OpBitcast %uint %70
+         %72 = OpExtInst %uint %73 UMin %71 %uint_1
+         %75 = OpAccessChain %_ptr_Function_float %v2f %72
+               OpStore %75 %float_1 None
+         %78 = OpLoad %int %i None
+         %79 = OpBitcast %uint %78
+         %80 = OpExtInst %uint %73 UMin %79 %uint_2
+         %82 = OpAccessChain %_ptr_Function_float %v3f %80
+               OpStore %82 %float_1 None
+         %83 = OpLoad %int %i None
+         %84 = OpBitcast %uint %83
+         %85 = OpExtInst %uint %73 UMin %84 %uint_3
+         %87 = OpAccessChain %_ptr_Function_float %v4f %85
+               OpStore %87 %float_1 None
+         %88 = OpLoad %int %i None
+         %89 = OpBitcast %uint %88
+         %90 = OpExtInst %uint %73 UMin %89 %uint_1
+         %91 = OpAccessChain %_ptr_Function_int %v2i %90
+               OpStore %91 %int_1 None
+         %93 = OpLoad %int %i None
+         %94 = OpBitcast %uint %93
+         %95 = OpExtInst %uint %73 UMin %94 %uint_2
+         %96 = OpAccessChain %_ptr_Function_int %v3i %95
+               OpStore %96 %int_1 None
+         %97 = OpLoad %int %i None
+         %98 = OpBitcast %uint %97
+         %99 = OpExtInst %uint %73 UMin %98 %uint_3
+        %100 = OpAccessChain %_ptr_Function_int %v4i %99
+               OpStore %100 %int_1 None
+        %101 = OpLoad %int %i None
+        %102 = OpBitcast %uint %101
+        %103 = OpExtInst %uint %73 UMin %102 %uint_1
+        %104 = OpAccessChain %_ptr_Function_uint %v2u %103
+               OpStore %104 %uint_1 None
+        %106 = OpLoad %int %i None
+        %107 = OpBitcast %uint %106
+        %108 = OpExtInst %uint %73 UMin %107 %uint_2
+        %109 = OpAccessChain %_ptr_Function_uint %v3u %108
+               OpStore %109 %uint_1 None
+        %110 = OpLoad %int %i None
+        %111 = OpBitcast %uint %110
+        %112 = OpExtInst %uint %73 UMin %111 %uint_3
+        %113 = OpAccessChain %_ptr_Function_uint %v4u %112
+               OpStore %113 %uint_1 None
+        %114 = OpLoad %int %i None
+        %115 = OpBitcast %uint %114
+        %116 = OpExtInst %uint %73 UMin %115 %uint_1
+        %117 = OpAccessChain %_ptr_Function_bool %v2b %116
+               OpStore %117 %true None
+        %120 = OpLoad %int %i None
+        %121 = OpBitcast %uint %120
+        %122 = OpExtInst %uint %73 UMin %121 %uint_2
+        %123 = OpAccessChain %_ptr_Function_bool %v3b %122
+               OpStore %123 %true None
+        %124 = OpLoad %int %i None
+        %125 = OpBitcast %uint %124
+        %126 = OpExtInst %uint %73 UMin %125 %uint_3
+        %127 = OpAccessChain %_ptr_Function_bool %v4b %126
+               OpStore %127 %true None
+               OpBranch %59
+         %59 = OpLabel
+        %128 = OpLoad %int %i None
+        %129 = OpIAdd %int %128 %int_1
+               OpStore %i %129 None
+               OpBranch %60
+         %61 = OpLabel
+               OpReturn
+               OpFunctionEnd

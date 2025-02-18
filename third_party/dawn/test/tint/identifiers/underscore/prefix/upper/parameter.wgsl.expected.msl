@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* s;
+};
+
+void f(int _A, tint_module_vars_struct tint_module_vars) {
+  int const B = _A;
+  (*tint_module_vars.s) = B;
+}
+
+kernel void v(device int* s [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.s=s};
+  f(1, tint_module_vars);
+}

@@ -1,0 +1,23 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* non_uniform_global;
+  device float* output;
+  thread bool* continue_execution;
+};
+
+fragment void v(device int* non_uniform_global [[buffer(0)]], device float* output [[buffer(1)]]) {
+  thread bool continue_execution = true;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.non_uniform_global=non_uniform_global, .output=output, .continue_execution=(&continue_execution)};
+  if (((*tint_module_vars.non_uniform_global) < 0)) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  float const v_1 = dfdx(1.0f);
+  if ((*tint_module_vars.continue_execution)) {
+    (*tint_module_vars.output) = v_1;
+  }
+  if (!((*tint_module_vars.continue_execution))) {
+    discard_fragment();
+  }
+}

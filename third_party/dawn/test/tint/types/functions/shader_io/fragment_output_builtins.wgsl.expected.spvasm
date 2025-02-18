@@ -1,0 +1,92 @@
+;
+; main1
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+         %25 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main1 "main1" %main1_frag_depth_Output
+               OpExecutionMode %main1 OriginUpperLeft
+               OpExecutionMode %main1 DepthReplacing
+               OpMemberName %tint_push_constant_struct 0 "tint_frag_depth_min"
+               OpMemberName %tint_push_constant_struct 1 "tint_frag_depth_max"
+               OpName %tint_push_constant_struct "tint_push_constant_struct"
+               OpName %tint_push_constants "tint_push_constants"
+               OpName %main1_frag_depth_Output "main1_frag_depth_Output"
+               OpName %main1_inner "main1_inner"
+               OpName %main1 "main1"
+               OpMemberDecorate %tint_push_constant_struct 0 Offset 0
+               OpMemberDecorate %tint_push_constant_struct 1 Offset 4
+               OpDecorate %tint_push_constant_struct Block
+               OpDecorate %main1_frag_depth_Output BuiltIn FragDepth
+      %float = OpTypeFloat 32
+%tint_push_constant_struct = OpTypeStruct %float %float
+%_ptr_PushConstant_tint_push_constant_struct = OpTypePointer PushConstant %tint_push_constant_struct
+%tint_push_constants = OpVariable %_ptr_PushConstant_tint_push_constant_struct PushConstant
+%_ptr_Output_float = OpTypePointer Output %float
+%main1_frag_depth_Output = OpVariable %_ptr_Output_float Output
+          %8 = OpTypeFunction %float
+    %float_1 = OpConstant %float 1
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void
+%_ptr_PushConstant_float = OpTypePointer PushConstant %float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%main1_inner = OpFunction %float None %8
+          %9 = OpLabel
+               OpReturnValue %float_1
+               OpFunctionEnd
+      %main1 = OpFunction %void None %13
+         %14 = OpLabel
+         %15 = OpFunctionCall %float %main1_inner
+         %16 = OpAccessChain %_ptr_PushConstant_float %tint_push_constants %uint_0
+         %20 = OpLoad %float %16 None
+         %21 = OpAccessChain %_ptr_PushConstant_float %tint_push_constants %uint_1
+         %23 = OpLoad %float %21 None
+         %24 = OpExtInst %float %25 NClamp %15 %20 %23
+               OpStore %main1_frag_depth_Output %24 None
+               OpReturn
+               OpFunctionEnd
+;
+; main2
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 17
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main2 "main2" %main2_sample_mask_Output
+               OpExecutionMode %main2 OriginUpperLeft
+               OpName %main2_sample_mask_Output "main2_sample_mask_Output"
+               OpName %main2_inner "main2_inner"
+               OpName %main2 "main2"
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+               OpDecorate %main2_sample_mask_Output BuiltIn SampleMask
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+%_ptr_Output__arr_uint_uint_1 = OpTypePointer Output %_arr_uint_uint_1
+%main2_sample_mask_Output = OpVariable %_ptr_Output__arr_uint_uint_1 Output
+          %7 = OpTypeFunction %uint
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+%_ptr_Output_uint = OpTypePointer Output %uint
+     %uint_0 = OpConstant %uint 0
+%main2_inner = OpFunction %uint None %7
+          %8 = OpLabel
+               OpReturnValue %uint_1
+               OpFunctionEnd
+      %main2 = OpFunction %void None %11
+         %12 = OpLabel
+         %13 = OpFunctionCall %uint %main2_inner
+         %14 = OpAccessChain %_ptr_Output_uint %main2_sample_mask_Output %uint_0
+               OpStore %14 %13 None
+               OpReturn
+               OpFunctionEnd

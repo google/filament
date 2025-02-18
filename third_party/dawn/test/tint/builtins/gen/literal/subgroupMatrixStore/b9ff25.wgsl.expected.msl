@@ -1,0 +1,51 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_module_vars_struct {
+  threadgroup tint_array<float, 64>* arg_0;
+};
+
+struct tint_symbol_1 {
+  tint_array<float, 64> tint_symbol;
+};
+
+void subgroupMatrixStore_b9ff25(tint_module_vars_struct tint_module_vars) {
+  simdgroup_store(simdgroup_float8x8(), (&(*tint_module_vars.arg_0)[1u]), ulong(1u), ulong2(0ul), true);
+}
+
+void compute_main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  {
+    uint v = 0u;
+    v = tint_local_index;
+    while(true) {
+      uint const v_1 = v;
+      if ((v_1 >= 64u)) {
+        break;
+      }
+      (*tint_module_vars.arg_0)[v_1] = 0.0f;
+      {
+        v = (v_1 + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  subgroupMatrixStore_b9ff25(tint_module_vars);
+}
+
+kernel void compute_main(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_2 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=(&(*v_2).tint_symbol)};
+  compute_main_inner(tint_local_index, tint_module_vars);
+}

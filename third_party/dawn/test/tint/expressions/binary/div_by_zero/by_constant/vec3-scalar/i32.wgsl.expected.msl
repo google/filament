@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int3 tint_div_v3i32(int3 lhs, int3 rhs) {
+  uint3 const v = uint3((lhs == int3((-2147483647 - 1))));
+  bool3 const v_1 = bool3((v & uint3((rhs == int3(-1)))));
+  uint3 const v_2 = uint3((rhs == int3(0)));
+  return (lhs / select(rhs, int3(1), bool3((v_2 | uint3(v_1)))));
+}
+
+kernel void f() {
+  int3 const a = int3(1, 2, 3);
+  int const b = 0;
+  int3 const r = tint_div_v3i32(a, int3(b));
+}

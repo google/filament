@@ -1,0 +1,126 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %x "x"
+               OpName %matrix_u "matrix_u"
+               OpName %b "b"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "matrix_a_uni"
+               OpName %_ ""
+               OpName %matrix_b "matrix_b"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %x RelaxedPrecision
+               OpDecorate %10 RelaxedPrecision
+               OpDecorate %11 RelaxedPrecision
+               OpDecorate %12 RelaxedPrecision
+               OpDecorate %13 RelaxedPrecision
+               OpDecorate %b RelaxedPrecision
+               OpMemberDecorate %buf0 0 ColMajor
+               OpMemberDecorate %buf0 0 Offset 0
+               OpMemberDecorate %buf0 0 MatrixStride 16
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %14 RelaxedPrecision
+               OpDecorate %15 RelaxedPrecision
+               OpDecorate %16 RelaxedPrecision
+               OpDecorate %17 RelaxedPrecision
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_4 = OpConstant %int 4
+      %int_1 = OpConstant %int 1
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+    %float_1 = OpConstant %float 1
+%_ptr_Function_float = OpTypePointer Function %float
+%mat4v4float = OpTypeMatrix %v4float 4
+       %buf0 = OpTypeStruct %mat4v4float
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+   %float_n1 = OpConstant %float -1
+     %uint_1 = OpConstant %uint 1
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %40 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+       %main = OpFunction %void None %19
+         %41 = OpLabel
+          %x = OpVariable %_ptr_Function_int Function
+   %matrix_u = OpVariable %_ptr_Function_v4float Function
+          %b = OpVariable %_ptr_Function_int Function
+   %matrix_b = OpVariable %_ptr_Function_v4float Function
+         %42 = OpVariable %_ptr_Function_v4float Function
+               OpStore %x %int_4
+               OpBranch %43
+         %43 = OpLabel
+               OpLoopMerge %44 %45 None
+               OpBranch %46
+         %46 = OpLabel
+         %10 = OpLoad %int %x
+         %47 = OpSGreaterThanEqual %bool %10 %int_1
+               OpBranchConditional %47 %48 %44
+         %48 = OpLabel
+         %11 = OpLoad %int %x
+         %49 = OpAccessChain %_ptr_Function_float %matrix_u %11
+               OpStore %49 %float_1
+               OpBranch %45
+         %45 = OpLabel
+         %12 = OpLoad %int %x
+         %13 = OpISub %int %12 %int_1
+               OpStore %x %13
+               OpBranch %43
+         %44 = OpLabel
+               OpStore %b %int_4
+               OpBranch %50
+         %50 = OpLabel
+               OpLoopMerge %51 %52 None
+               OpBranch %53
+         %53 = OpLabel
+         %54 = OpAccessChain %_ptr_Uniform_float %_ %int_0 %int_0 %uint_0
+         %55 = OpLoad %float %54
+         %56 = OpFOrdLessThan %bool %55 %float_n1
+               OpBranchConditional %56 %57 %51
+         %57 = OpLabel
+         %14 = OpLoad %int %b
+         %15 = OpLoad %int %b
+         %58 = OpSGreaterThan %bool %15 %int_1
+               OpSelectionMerge %59 None
+               OpBranchConditional %58 %60 %61
+         %60 = OpLabel
+         %62 = OpLoad %v4float %matrix_b
+         %63 = OpLoad %v4float %matrix_b
+         %64 = OpExtInst %v4float %1 FMin %62 %63
+               OpStore %42 %64
+               OpBranch %59
+         %61 = OpLabel
+         %65 = OpLoad %v4float %matrix_u
+               OpStore %42 %65
+               OpBranch %59
+         %59 = OpLabel
+         %66 = OpAccessChain %_ptr_Function_float %42 %uint_1
+         %67 = OpLoad %float %66
+         %68 = OpAccessChain %_ptr_Function_float %matrix_b %14
+               OpStore %68 %67
+               OpBranch %52
+         %52 = OpLabel
+         %16 = OpLoad %int %b
+         %17 = OpISub %int %16 %int_1
+               OpStore %b %17
+               OpBranch %50
+         %51 = OpLabel
+               OpStore %_GLF_color %40
+               OpReturn
+               OpFunctionEnd

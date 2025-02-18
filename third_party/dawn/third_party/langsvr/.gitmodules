@@ -1,0 +1,9 @@
+[submodule "third_party/googletest"]
+	path = third_party/googletest
+	url = https://github.com/google/googletest.git
+[submodule "third_party/lsprotocol"]
+	path = third_party/lsprotocol
+	url = https://github.com/microsoft/lsprotocol.git
+[submodule "third_party/jsoncpp"]
+	path = third_party/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git

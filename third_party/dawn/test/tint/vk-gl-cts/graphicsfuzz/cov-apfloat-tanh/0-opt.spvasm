@@ -1,0 +1,70 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %v "v"
+               OpName %dist1 "dist1"
+               OpName %dist2 "dist2"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %16 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+%_ptr_Function_float = OpTypePointer Function %float
+%float_0_761590004 = OpConstant %float 0.761590004
+%float_0_964030027 = OpConstant %float 0.964030027
+%float_0_995050013 = OpConstant %float 0.995050013
+%float_0_999329984 = OpConstant %float 0.999329984
+         %22 = OpConstantComposite %v4float %float_0_761590004 %float_0_964030027 %float_0_995050013 %float_0_999329984
+%float_0_100000001 = OpConstant %float 0.100000001
+       %bool = OpTypeBool
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %27 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %28 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+       %main = OpFunction %void None %8
+         %29 = OpLabel
+          %v = OpVariable %_ptr_Function_v4float Function
+      %dist1 = OpVariable %_ptr_Function_float Function
+      %dist2 = OpVariable %_ptr_Function_float Function
+               OpStore %v %16
+         %30 = OpLoad %v4float %v
+         %31 = OpExtInst %v4float %1 Tanh %30
+         %32 = OpLoad %v4float %v
+         %33 = OpExtInst %v4float %1 Sinh %32
+         %34 = OpLoad %v4float %v
+         %35 = OpExtInst %v4float %1 Cosh %34
+         %36 = OpFDiv %v4float %33 %35
+         %37 = OpExtInst %float %1 Distance %31 %36
+               OpStore %dist1 %37
+         %38 = OpLoad %v4float %v
+         %39 = OpExtInst %v4float %1 Tanh %38
+         %40 = OpExtInst %float %1 Distance %39 %22
+               OpStore %dist2 %40
+         %41 = OpLoad %float %dist1
+         %42 = OpFOrdLessThan %bool %41 %float_0_100000001
+         %43 = OpLoad %float %dist2
+         %44 = OpFOrdLessThan %bool %43 %float_0_100000001
+         %45 = OpLogicalAnd %bool %42 %44
+               OpSelectionMerge %46 None
+               OpBranchConditional %45 %47 %48
+         %47 = OpLabel
+               OpStore %_GLF_color %27
+               OpBranch %46
+         %48 = OpLabel
+               OpStore %_GLF_color %28
+               OpBranch %46
+         %46 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  /* 0x0000 */ int a;
+};
+
+struct tint_module_vars_struct {
+  device S* buf;
+};
+
+kernel void v(device S* buf [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.buf=buf};
+  device int* const p = (&(*tint_module_vars.buf).a);
+  (*p) = 12;
+}

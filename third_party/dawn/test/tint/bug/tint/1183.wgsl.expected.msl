@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::sample> t;
+  sampler s;
+};
+
+struct f_outputs {
+  float4 tint_symbol [[color(0)]];
+};
+
+float4 f_inner(tint_module_vars_struct tint_module_vars) {
+  return tint_module_vars.t.sample(tint_module_vars.s, float2(0.0f), int2(4, 6));
+}
+
+fragment f_outputs f(texture2d<float, access::sample> t [[texture(0)]], sampler s [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t=t, .s=s};
+  f_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = f_inner(tint_module_vars);
+  return tint_wrapper_result;
+}

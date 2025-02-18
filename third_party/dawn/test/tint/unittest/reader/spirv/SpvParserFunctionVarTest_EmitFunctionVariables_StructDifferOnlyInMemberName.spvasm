@@ -1,0 +1,28 @@
+; Test: SpvParserFunctionVarTest_EmitFunctionVariables_StructDifferOnlyInMemberName.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+OpName %S "S"
+OpName %S_0 "S"
+OpMemberName %S 0 "algo"
+OpMemberName %S_0 0 "rithm"
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%S = OpTypeStruct %uint
+%S_0 = OpTypeStruct %uint
+%_ptr_Function_S = OpTypePointer Function %S
+%_ptr_Function_S_0 = OpTypePointer Function %S_0
+%100 = OpFunction %void None %4
+%39 = OpLabel
+%40 = OpVariable %_ptr_Function_S Function
+%41 = OpVariable %_ptr_Function_S_0 Function
+OpReturn
+OpFunctionEnd
+

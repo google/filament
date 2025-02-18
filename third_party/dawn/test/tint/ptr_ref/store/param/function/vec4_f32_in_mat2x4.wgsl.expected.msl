@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void func(thread float4* const pointer) {
+  (*pointer) = float4(0.0f);
+}
+
+kernel void v() {
+  float2x4 F = float2x4(0.0f);
+  func((&F[1u]));
+}

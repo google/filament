@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_inner(float4 position, bool front_facing, uint sample_index, uint sample_mask) {
+  if (front_facing) {
+    float4 const foo = position;
+    uint const bar = (sample_index + sample_mask);
+  }
+}
+
+fragment void v(float4 position [[position]], bool front_facing [[front_facing]], uint sample_index [[sample_id]], uint sample_mask [[sample_mask]]) {
+  main_inner(position, front_facing, sample_index, sample_mask);
+}

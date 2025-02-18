@@ -1,0 +1,309 @@
+{
+  "_comment": [
+      "Copyright 2022 The Dawn & Tint Authors",
+      "",
+        "Redistribution and use in source and binary forms, with or without",
+        "modification, are permitted provided that the following conditions are met:",
+        "",
+        "  1. Redistributions of source code must retain the above copyright notice, this",
+        "     list of conditions and the following disclaimer.",
+        "",
+        "  2. Redistributions in binary form must reproduce the above copyright notice,",
+        "     this list of conditions and the following disclaimer in the documentation",
+        "     and/or other materials provided with the distribution.",
+        "",
+        "  3. Neither the name of the copyright holder nor the names of its",
+        "     contributors may be used to endorse or promote products derived from",
+        "     this software without specific prior written permission.",
+        "  ",
+        "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+        "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+        "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+        "DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+        "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+        "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+        "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+        "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+        "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+        "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
+  ],
+
+  "vendors": {
+
+    "_Example Vendor": {
+      "_comment": [
+        "Each vendor must have an `id` field, which is it's PCI Vendor ID, and may optionally ",
+        "have a `devices` field which defines device -> architecture mappings which will be ",
+        "when populating the GPUAdapterInfo. Keys that begin with an `_` (like this one) denote ",
+        "commnents, and will be ignored by the parser."
+      ],
+
+      "id": "0xDEAD",
+
+      "devices": [{
+        "_comment": [
+          "The `devices` is an array of 'Device Sets', each of which contains an `architecture` ",
+          "object which defines an architecture name as a key followed by an array of ",
+          "PCI device IDs that map to that architecture. The architecture name is what will be ",
+          "reported to the GPUAdapterInfo, made lower-case and with spaces converted to hyphens."
+        ],
+
+        "architecture": {
+          "Alpha": ["0x0A01", "0x0A02"],
+          "Beta": ["0x0B01", "0x0B02", "0x0B03"]
+        }
+      }, {
+        "_comment": [
+          "A Device Set can also define a binary `mask`, which will be be applied to any device ",
+          "ID prior to comparison, making it easier to capture ranges of device IDs. ",
+          "Architectures may be duplicated between Device Sets as long as the device ID values ",
+          "Don't overlap."
+        ],
+
+        "mask": "0xFF00",
+        "architecture": {
+          "Beta": ["0x1B00"],
+          "Gamma": ["0x0C00", "0x1C00"]
+        }
+      }, {
+        "_comment": [
+          "Finally, Device Sets may be flagged as `internal`. Architectures defined in an ",
+          "internal device set will never be reported in the GPUAdapterInfo, but will generate ",
+          "appropriate helper functions in Dawn (such as `IsExampleVendorDelta()`) in order to ",
+          "aid in applying workarounds. Device IDs of internal device sets may overlap with ",
+          "ones defined in non-internal device sets, but architectures must be unique between ",
+          "internal and non-internal device sets.",
+
+          "Internal architectures facilitate the (hopefully rare) cases where more targeted ",
+          "GPU identification is required by Dawn's implementation than is provided by the normal ",
+          "architecture groupings. When possible, however, using non-internal architectures ",
+          "should be preferred when applying workarounds."
+        ],
+
+        "internal": true,
+        "mask": "0xFFF0",
+        "architecture": {
+          "Beta Rev 3": ["0x1B30"]
+        }
+      }]
+    },
+
+    "AMD": {
+      "id": "0x1002",
+
+      "devices": [{
+        "mask": "0xFFF0",
+        "architecture": {
+          "GCN 1": ["0x1300", "0x1310", "0x6600", "0x6610", "0x6660", "0x6790", "0x6800", "0x6810", "0x6820", "0x6830"],
+          "GCN 2": ["0x6640", "0x6650", "0x67A0", "0x67B0", "0x9830", "0x9850"],
+          "GCN 3": ["0x6900", "0x6920", "0x6930", "0x7300", "0x9870", "0x98E0"],
+          "GCN 4": ["0x67C0", "0x67D0", "0x67E0", "0x67F0", "0x6980", "0x6990", "0x6FD0", "0x9920"],
+          "GCN 5": ["0x66A0", "0x6860", "0x6870", "0x6940", "0x69A0", "0x15D0", "0x1630"],
+          "RDNA 1": ["0x7310", "0x7340", "0x7360"],
+          "RDNA 2": ["0x73A0", "0x73B0", "0x73D0", "0x73E0", "0x73F0", "0x7400", "0x7420", "0x7430", "0x1430", "0x1500", "0x15E0", "0x1640", "0x1680"],
+          "RDNA 3": ["0x7440", "0x7470", "0x7480", "0x15B0"],
+          "CDNA 1": ["0x7380"]
+        }
+      }]
+    },
+
+    "Apple": {
+      "id": "0x106b",
+
+      "_comment": [
+        "Apple GPUs do not report a DeviceID via the Metal API, and as such the typical device",
+        "pattern matching does not work for them. The recommended approach is to find the highest",
+        "supported 'common' family supported and report it as the architecture.",
+        "Examples: 'common-1', 'common-3'",
+        "https://developer.apple.com/documentation/metal/gpu_devices_and_work_submission/detecting_gpu_features_and_metal_software_versions"
+      ]
+    },
+
+    "ARM": {
+      "id": "0x13B5",
+
+      "devices": [{
+        "mask": "0xF0000000",
+        "architecture": {
+          "_comment": [
+            "The Midgard GPUs have device IDs like 0x07______ and 0x08______, but it's easiest to",
+            "mask those values out and simply check for the highest octet being zero, since that",
+            "distinguishes it from the other architectures."
+          ],
+
+          "Midgard": ["0x00000000"],
+          "Bifrost": ["0x60000000", "0x70000000"],
+          "Valhall": ["0x90000000", "0xA0000000", "0xB0000000"],
+          "Gen 5": ["0xC0000000"]
+        }
+      }]
+    },
+
+    "Broadcom": {
+      "id": "0x14e4",
+
+      "devices": [{
+        "mask": "0x00000000",
+        "architecture": {
+          "_comment": [
+            "The Broadcom GPUs are rare (used by Raspberry Pi and similar low-power devices) and",
+            "have device IDs that are all over place, so they're all going to get lumped into a",
+            "single 'VideoCore' architecture unless someone comes up with a better way to break",
+            "them down."
+          ],
+
+          "VideoCore": ["0x00000000"]
+        }
+      }]
+    },
+
+    "Google": {
+      "id": "0x1AE0",
+
+      "devices": [{
+        "architecture": {
+          "Swiftshader": ["0xC0DE"]
+        }
+      }]
+    },
+
+    "Img Tec": {
+      "id": "0x1010",
+
+      "devices": [{
+        "mask": "0xFF000000",
+        "architecture": {
+          "Rogue": ["0x00000000", "0x22000000", "0x24000000"],
+          "Furian": ["0x1b000000"],
+          "Albiorix": ["0x35000000", "0x36000000"]
+        }
+      }]
+    },
+
+    "Intel": {
+      "id": "0x8086",
+
+      "devices": [{
+        "mask": "0xFF00",
+        "architecture": {
+          "Gen 7": ["0x0100", "0x0400", "0x0A00", "0x0D00", "0x0F00"],
+          "Gen 8": ["0x1600", "0x2200"],
+          "Gen 9": ["0x1900", "0x3100", "0x3E00", "0x5A00", "0x5900", "0x8700", "0x9B00"],
+          "Gen 11": ["0x8A00", "0x4E00", "0x9800"],
+          "Gen 12 LP": ["0x4600", "0x4C00", "0x4900", "0x9A00", "0xA700"],
+          "Gen 12 HP": ["0x4F00", "0x5600"],
+          "Xe LPG": ["0x7D00", "0xB600"],
+          "Xe 2 LPG": ["0x6400"],
+          "Xe 2 HPG": ["0xE200"],
+          "Xe 3 LPG": ["0xB000"]
+        }
+      }]
+    },
+
+    "Mesa": {
+      "id": "0x10005",
+      "devices": [{
+        "architecture": {
+          "Software": ["0x0000"]
+        }
+      }]
+    },
+
+    "Microsoft": {
+      "id": "0x1414",
+
+      "devices": [{
+        "architecture": {
+          "WARP": ["0x8c"]
+        }
+      }]
+    },
+
+    "Nvidia": {
+      "id": "0x10DE",
+
+      "devices": [{
+        "_comment": "Desktop/laptop devices",
+        "mask": "0xFFFFFF00",
+        "architecture": {
+          "Fermi": ["0x0D00"],
+          "Kepler": ["0x0F00", "0x1000", "0x1100", "0x1200"],
+          "Maxwell": ["0x1300", "0x1400", "0x1600", "0x1700"],
+          "Pascal": ["0x1500", "0x1B00", "0x1C00", "0x1D00"],
+          "Turing": ["0x1E00", "0x1F00", "0x2100"],
+          "Ampere": ["0x2200", "0x2400", "0x2500", "0x2000"],
+          "Lovelace": ["0x2600", "0x2700", "0x2800"]
+        }
+      }, {
+        "_comment": "Mobile devices (Tegra)",
+        "mask": "0xFF000000",
+        "architecture": {
+          "Kepler": ["0x1e000000"],
+          "Maxwell": ["0x92000000"],
+          "Pascal": ["0x93000000"],
+          "Ampere": ["0x97000000"],
+          "Volta": ["0xa5000000"]
+        }
+      }]
+    },
+
+    "Qualcomm_PCI": {
+      "name_override": "Qualcomm",
+      "id": "0x5143",
+
+      "devices": [{
+        "mask": "0xFF000000",
+        "architecture": {
+          "Adreno 4xx": ["0x04000000"],
+          "Adreno 5xx": ["0x05000000"],
+          "Adreno 6xx": ["0x06000000"],
+          "Adreno 7xx": ["0x07000000", "0x43000000"]
+        }
+      }]
+    },
+
+    "Qualcomm_ACPI": {
+      "name_override": "Qualcomm",
+      "id": "0x4D4F4351",
+
+      "devices": [{
+        "mask": "0xFF000000",
+        "architecture": {
+          "Adreno 8xx": ["0x36000000"]
+        }
+      }]
+
+    },
+
+    "Samsung": {
+      "id": "0x144d",
+
+      "devices": [{
+        "_comment": [
+          "Haven't seen enough of these to determine a good masking pattern, so just using full",
+          "device IDs of known devices in the meantime."
+        ],
+        "mask": "0xFFFFFFFF",
+        "architecture": {
+          "RDNA 2": ["0x000073A0", "0x01300100"],
+          "RDNA 3": ["0x02600200"]
+        }
+      }]
+    },
+
+    "Huawei": {
+      "id": "0x19e5",
+
+      "devices": [{
+        "_comment": [
+          "Add device ids in the future when they are available."
+        ],
+        "mask": "0xFFFFFFFF",
+        "architecture": {
+        }
+      }]
+    }
+
+  }
+
+}

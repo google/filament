@@ -1,0 +1,9 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libdrm_vc4
+Description: Userspace interface to vc4 kernel DRM services
+Version: @PACKAGE_VERSION@
+Requires.private: libdrm

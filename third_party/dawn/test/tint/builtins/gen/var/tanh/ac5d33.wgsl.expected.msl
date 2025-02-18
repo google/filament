@@ -1,0 +1,56 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void tanh_ac5d33() {
+  float4 res = float4(0.76159417629241943359f);
+}
+
+fragment void fragment_main() {
+  tanh_ac5d33();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+void tanh_ac5d33() {
+  float4 res = float4(0.76159417629241943359f);
+}
+
+kernel void compute_main() {
+  tanh_ac5d33();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+};
+
+void tanh_ac5d33() {
+  float4 res = float4(0.76159417629241943359f);
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  tanh_ac5d33();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = vertex_main_inner().pos;
+  return tint_wrapper_result;
+}

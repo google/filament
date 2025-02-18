@@ -1,0 +1,46 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 20
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %in_block 0 "inner"
+               OpName %in_block "in_block"
+               OpMemberName %out_block 0 "inner"
+               OpName %out_block "out_block"
+               OpName %main "main"
+               OpMemberDecorate %in_block 0 Offset 0
+               OpDecorate %in_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %out_block 0 Offset 0
+               OpDecorate %out_block Block
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 1
+               OpDecorate %6 Coherent
+        %int = OpTypeInt 32 1
+      %v4int = OpTypeVector %int 4
+   %in_block = OpTypeStruct %v4int
+%_ptr_StorageBuffer_in_block = OpTypePointer StorageBuffer %in_block
+          %1 = OpVariable %_ptr_StorageBuffer_in_block StorageBuffer
+  %out_block = OpTypeStruct %v4int
+%_ptr_StorageBuffer_out_block = OpTypePointer StorageBuffer %out_block
+          %6 = OpVariable %_ptr_StorageBuffer_out_block StorageBuffer
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4int = OpTypePointer StorageBuffer %v4int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_v4int_0 = OpTypePointer StorageBuffer %v4int
+       %main = OpFunction %void None %11
+         %12 = OpLabel
+         %13 = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0
+         %17 = OpLoad %v4int %13 None
+         %18 = OpAccessChain %_ptr_StorageBuffer_v4int_0 %6 %uint_0
+               OpStore %18 %17 None
+               OpReturn
+               OpFunctionEnd

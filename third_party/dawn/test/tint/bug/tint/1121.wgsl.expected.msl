@@ -1,0 +1,187 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct LightData_packed_vec3 {
+  /* 0x0000 */ float4 position;
+  /* 0x0010 */ packed_float3 color;
+  /* 0x001c */ float radius;
+};
+
+struct LightsBuffer_packed_vec3 {
+  /* 0x0000 */ tint_array<LightData_packed_vec3, 1> lights;
+};
+
+struct TileLightIdData {
+  /* 0x0000 */ atomic_uint count;
+  /* 0x0004 */ tint_array<uint, 64> lightId;
+};
+
+struct Tiles {
+  /* 0x0000 */ tint_array<TileLightIdData, 4> data;
+};
+
+struct Config {
+  /* 0x0000 */ uint numLights;
+  /* 0x0004 */ uint numTiles;
+  /* 0x0008 */ uint tileCountX;
+  /* 0x000c */ uint tileCountY;
+  /* 0x0010 */ uint numTileLightSlot;
+  /* 0x0014 */ uint tileSize;
+};
+
+struct Uniforms {
+  /* 0x0000 */ float4 min;
+  /* 0x0010 */ float4 max;
+  /* 0x0020 */ float4x4 viewMatrix;
+  /* 0x0060 */ float4x4 projectionMatrix;
+  /* 0x00a0 */ float4 fullScreenSize;
+};
+
+struct tint_module_vars_struct {
+  device LightsBuffer_packed_vec3* lightsBuffer;
+  device Tiles* tileLightId;
+  const constant Config* config;
+  const constant Uniforms* uniforms;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+void main_inner(uint3 GlobalInvocationID, tint_module_vars_struct tint_module_vars) {
+  uint index = GlobalInvocationID.x;
+  if ((index >= (*tint_module_vars.config).numLights)) {
+    return;
+  }
+  device float4* const v = (&(*tint_module_vars.lightsBuffer).lights[min(index, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u))].position);
+  float const v_1 = ((*tint_module_vars.lightsBuffer).lights[min(index, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u))].position.y - 0.10000000149011611938f);
+  float const v_2 = float(index);
+  (*v).y = (v_1 + (0.00100000004749745131f * (v_2 - (64.0f * floor((float(index) / 64.0f))))));
+  if (((*tint_module_vars.lightsBuffer).lights[min(index, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u))].position.y < (*tint_module_vars.uniforms).min.y)) {
+    (*tint_module_vars.lightsBuffer).lights[min(index, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u))].position.y = (*tint_module_vars.uniforms).max.y;
+  }
+  float4x4 M = (*tint_module_vars.uniforms).projectionMatrix;
+  float viewNear = (-(M[3u].z) / (-1.0f + M[2u].z));
+  float viewFar = (-(M[3u].z) / (1.0f + M[2u].z));
+  float4 lightPos = (*tint_module_vars.lightsBuffer).lights[min(index, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u))].position;
+  lightPos = ((*tint_module_vars.uniforms).viewMatrix * lightPos);
+  lightPos = (lightPos / lightPos.w);
+  float lightRadius = (*tint_module_vars.lightsBuffer).lights[min(index, ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u))].radius;
+  float4 const v_3 = lightPos;
+  float4 boxMin = (v_3 - float4(float3(lightRadius), 0.0f));
+  float4 const v_4 = lightPos;
+  float4 boxMax = (v_4 + float4(float3(lightRadius), 0.0f));
+  tint_array<float4, 6> frustumPlanes = {};
+  frustumPlanes[4u] = float4(0.0f, 0.0f, -1.0f, viewNear);
+  frustumPlanes[5u] = float4(0.0f, 0.0f, 1.0f, -(viewFar));
+  int const TILE_SIZE = 16;
+  int const TILE_COUNT_X = 2;
+  int const TILE_COUNT_Y = 2;
+  {
+    int y = 0;
+    while(true) {
+      if ((y < TILE_COUNT_Y)) {
+      } else {
+        break;
+      }
+      {
+        int x = 0;
+        while(true) {
+          if ((x < TILE_COUNT_X)) {
+          } else {
+            break;
+          }
+          int2 tilePixel0Idx = int2(as_type<int>((as_type<uint>(x) * as_type<uint>(TILE_SIZE))), as_type<int>((as_type<uint>(y) * as_type<uint>(TILE_SIZE))));
+          float2 const v_5 = (2.0f * float2(tilePixel0Idx));
+          float2 floorCoord = ((v_5 / (*tint_module_vars.uniforms).fullScreenSize.xy) - float2(1.0f));
+          int2 const v_6 = tilePixel0Idx;
+          float2 const v_7 = (2.0f * float2(as_type<int2>((as_type<uint2>(v_6) + as_type<uint2>(int2(TILE_SIZE))))));
+          float2 ceilCoord = ((v_7 / (*tint_module_vars.uniforms).fullScreenSize.xy) - float2(1.0f));
+          float2 viewFloorCoord = float2((((-(viewNear) * floorCoord.x) - (M[2u].x * viewNear)) / M[0u].x), (((-(viewNear) * floorCoord.y) - (M[2u].y * viewNear)) / M[1u].y));
+          float2 viewCeilCoord = float2((((-(viewNear) * ceilCoord.x) - (M[2u].x * viewNear)) / M[0u].x), (((-(viewNear) * ceilCoord.y) - (M[2u].y * viewNear)) / M[1u].y));
+          frustumPlanes[0u] = float4(1.0f, 0.0f, (-(viewFloorCoord.x) / viewNear), 0.0f);
+          frustumPlanes[1u] = float4(-1.0f, 0.0f, (viewCeilCoord.x / viewNear), 0.0f);
+          frustumPlanes[2u] = float4(0.0f, 1.0f, (-(viewFloorCoord.y) / viewNear), 0.0f);
+          frustumPlanes[3u] = float4(0.0f, -1.0f, (viewCeilCoord.y / viewNear), 0.0f);
+          float dp = 0.0f;
+          {
+            uint i = 0u;
+            while(true) {
+              if ((i < 6u)) {
+              } else {
+                break;
+              }
+              float4 p = 0.0f;
+              if ((frustumPlanes[min(i, 5u)].x > 0.0f)) {
+                p.x = boxMax.x;
+              } else {
+                p.x = boxMin.x;
+              }
+              if ((frustumPlanes[min(i, 5u)].y > 0.0f)) {
+                p.y = boxMax.y;
+              } else {
+                p.y = boxMin.y;
+              }
+              if ((frustumPlanes[min(i, 5u)].z > 0.0f)) {
+                p.z = boxMax.z;
+              } else {
+                p.z = boxMin.z;
+              }
+              p.w = 1.0f;
+              dp = (dp + min(0.0f, dot(p, frustumPlanes[min(i, 5u)])));
+              {
+                i = (i + 1u);
+              }
+              continue;
+            }
+          }
+          if ((dp >= 0.0f)) {
+            uint tileId = uint(as_type<int>((as_type<uint>(x) + as_type<uint>(as_type<int>((as_type<uint>(y) * as_type<uint>(TILE_COUNT_X)))))));
+            bool v_8 = false;
+            if ((tileId < 0u)) {
+              v_8 = true;
+            } else {
+              v_8 = (tileId >= (*tint_module_vars.config).numTiles);
+            }
+            if (v_8) {
+              {
+                x = as_type<int>((as_type<uint>(x) + as_type<uint>(1)));
+              }
+              continue;
+            }
+            uint offset = atomic_fetch_add_explicit((&(*tint_module_vars.tileLightId).data[min(tileId, 3u)].count), 1u, memory_order_relaxed);
+            if ((offset >= (*tint_module_vars.config).numTileLightSlot)) {
+              {
+                x = as_type<int>((as_type<uint>(x) + as_type<uint>(1)));
+              }
+              continue;
+            }
+            (*tint_module_vars.tileLightId).data[min(tileId, 3u)].lightId[min(offset, 63u)] = GlobalInvocationID.x;
+          }
+          {
+            x = as_type<int>((as_type<uint>(x) + as_type<uint>(1)));
+          }
+          continue;
+        }
+      }
+      {
+        y = as_type<int>((as_type<uint>(y) + as_type<uint>(1)));
+      }
+      continue;
+    }
+  }
+}
+
+kernel void v_9(uint3 GlobalInvocationID [[thread_position_in_grid]], device LightsBuffer_packed_vec3* lightsBuffer [[buffer(2)]], device Tiles* tileLightId [[buffer(3)]], const constant Config* config [[buffer(0)]], const constant Uniforms* uniforms [[buffer(1)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.lightsBuffer=lightsBuffer, .tileLightId=tileLightId, .config=config, .uniforms=uniforms, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  main_inner(GlobalInvocationID, tint_module_vars);
+}

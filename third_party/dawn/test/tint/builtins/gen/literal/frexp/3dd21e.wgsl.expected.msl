@@ -1,0 +1,71 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct frexp_result_vec4_f16 {
+  half4 fract;
+  int4 exp;
+};
+
+void frexp_3dd21e() {
+  frexp_result_vec4_f16 res = frexp_result_vec4_f16{.fract=half4(0.5h), .exp=int4(1)};
+}
+
+fragment void fragment_main() {
+  frexp_3dd21e();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct frexp_result_vec4_f16 {
+  half4 fract;
+  int4 exp;
+};
+
+void frexp_3dd21e() {
+  frexp_result_vec4_f16 res = frexp_result_vec4_f16{.fract=half4(0.5h), .exp=int4(1)};
+}
+
+kernel void compute_main() {
+  frexp_3dd21e();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct frexp_result_vec4_f16 {
+  half4 fract;
+  int4 exp;
+};
+
+struct VertexOutput {
+  float4 pos;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+};
+
+void frexp_3dd21e() {
+  frexp_result_vec4_f16 res = frexp_result_vec4_f16{.fract=half4(0.5h), .exp=int4(1)};
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  frexp_3dd21e();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = vertex_main_inner().pos;
+  return tint_wrapper_result;
+}

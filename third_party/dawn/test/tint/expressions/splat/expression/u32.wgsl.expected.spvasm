@@ -1,0 +1,41 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 21
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %f "f"
+               OpName %v2 "v2"
+               OpName %v3 "v3"
+               OpName %v4 "v4"
+               OpName %unused_entry_point "unused_entry_point"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+     %uint_3 = OpConstant %uint 3
+          %9 = OpConstantComposite %v2uint %uint_3 %uint_3
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+         %14 = OpConstantComposite %v3uint %uint_3 %uint_3 %uint_3
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %18 = OpConstantComposite %v4uint %uint_3 %uint_3 %uint_3 %uint_3
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+         %v2 = OpVariable %_ptr_Function_v2uint Function
+         %v3 = OpVariable %_ptr_Function_v3uint Function
+         %v4 = OpVariable %_ptr_Function_v4uint Function
+               OpStore %v2 %9
+               OpStore %v3 %14
+               OpStore %v4 %18
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %3
+         %20 = OpLabel
+               OpReturn
+               OpFunctionEnd

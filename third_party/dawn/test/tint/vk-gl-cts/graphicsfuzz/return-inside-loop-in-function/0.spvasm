@@ -1,0 +1,130 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %GLF_live4drawShape_ "GLF_live4drawShape("
+               OpName %i "i"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %i RelaxedPrecision
+               OpDecorate %_GLF_color Location 0
+               OpDecorate %6 RelaxedPrecision
+               OpDecorate %7 RelaxedPrecision
+               OpDecorate %8 RelaxedPrecision
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+         %13 = OpTypeFunction %v3float
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+       %bool = OpTypeBool
+    %float_1 = OpConstant %float 1
+         %19 = OpConstantComposite %v3float %float_1 %float_1 %float_1
+      %int_1 = OpConstant %int 1
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %24 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+      %false = OpConstantFalse %bool
+%_ptr_Function_bool = OpTypePointer Function %bool
+       %true = OpConstantTrue %bool
+         %29 = OpUndef %v3float
+         %30 = OpUndef %int
+         %31 = OpUndef %bool
+         %32 = OpUndef %v3float
+         %33 = OpUndef %int
+         %34 = OpUndef %bool
+       %main = OpFunction %void None %10
+         %35 = OpLabel
+         %36 = OpVariable %_ptr_Function_bool Function %false
+         %37 = OpVariable %_ptr_Function_v3float Function
+          %6 = OpVariable %_ptr_Function_int Function
+         %38 = OpVariable %_ptr_Function_v3float Function
+               OpStore %_GLF_color %24
+               OpStore %36 %false
+               OpBranch %39
+         %39 = OpLabel
+         %40 = OpPhi %bool %false %35 %31 %41
+               OpLoopMerge %42 %41 None
+               OpBranch %43
+         %43 = OpLabel
+               OpStore %6 %int_0
+               OpBranch %44
+         %44 = OpLabel
+         %45 = OpPhi %bool %40 %43 %31 %46
+          %7 = OpPhi %int %int_0 %43 %30 %46
+               OpLoopMerge %47 %46 None
+               OpBranch %48
+         %48 = OpLabel
+         %49 = OpSLessThan %bool %7 %int_0
+               OpBranchConditional %49 %50 %47
+         %50 = OpLabel
+               OpStore %36 %true
+               OpStore %37 %19
+               OpBranch %47
+         %46 = OpLabel
+               OpBranch %44
+         %47 = OpLabel
+         %51 = OpPhi %v3float %29 %48 %19 %50
+         %52 = OpPhi %bool %45 %48 %true %50
+               OpSelectionMerge %53 None
+               OpBranchConditional %52 %42 %53
+         %53 = OpLabel
+         %54 = OpUndef %v3float
+               OpStore %36 %true
+               OpBranch %42
+         %41 = OpLabel
+               OpBranch %39
+         %42 = OpLabel
+         %55 = OpPhi %v3float %51 %47 %54 %53
+               OpStore %38 %55
+               OpReturn
+               OpFunctionEnd
+%GLF_live4drawShape_ = OpFunction %v3float None %13
+         %56 = OpLabel
+         %57 = OpVariable %_ptr_Function_bool Function %false
+         %58 = OpVariable %_ptr_Function_v3float Function
+          %i = OpVariable %_ptr_Function_int Function
+               OpBranch %59
+         %59 = OpLabel
+         %60 = OpPhi %bool %false %56 %34 %61
+               OpLoopMerge %62 %61 None
+               OpBranch %63
+         %63 = OpLabel
+               OpStore %i %int_0
+               OpBranch %64
+         %64 = OpLabel
+         %65 = OpPhi %bool %60 %63 %34 %66
+          %8 = OpPhi %int %int_0 %63 %33 %66
+               OpLoopMerge %67 %66 None
+               OpBranch %68
+         %68 = OpLabel
+         %69 = OpSLessThan %bool %8 %int_0
+               OpBranchConditional %69 %70 %67
+         %70 = OpLabel
+               OpStore %57 %true
+               OpStore %58 %19
+               OpBranch %67
+         %66 = OpLabel
+               OpBranch %64
+         %67 = OpLabel
+         %71 = OpPhi %v3float %32 %68 %19 %70
+         %72 = OpPhi %bool %65 %68 %true %70
+               OpSelectionMerge %73 None
+               OpBranchConditional %72 %62 %73
+         %73 = OpLabel
+         %74 = OpUndef %v3float
+               OpStore %57 %true
+               OpBranch %62
+         %61 = OpLabel
+               OpBranch %59
+         %62 = OpLabel
+         %75 = OpPhi %v3float %71 %67 %74 %73
+               OpReturnValue %75
+               OpFunctionEnd

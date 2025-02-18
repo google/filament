@@ -1,0 +1,3 @@
+@fragment
+fn main() {
+}

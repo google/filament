@@ -1,0 +1,532 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 332
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %S 0 "scalar_f32"
+               OpMemberName %S 1 "scalar_i32"
+               OpMemberName %S 2 "scalar_u32"
+               OpMemberName %S 3 "scalar_f16"
+               OpMemberName %S 4 "vec2_f32"
+               OpMemberName %S 5 "vec2_i32"
+               OpMemberName %S 6 "vec2_u32"
+               OpMemberName %S 7 "vec2_f16"
+               OpMemberName %S 8 "vec3_f32"
+               OpMemberName %S 9 "vec3_i32"
+               OpMemberName %S 10 "vec3_u32"
+               OpMemberName %S 11 "vec3_f16"
+               OpMemberName %S 12 "vec4_f32"
+               OpMemberName %S 13 "vec4_i32"
+               OpMemberName %S 14 "vec4_u32"
+               OpMemberName %S 15 "vec4_f16"
+               OpMemberName %S 16 "mat2x2_f32"
+               OpMemberName %S 17 "mat2x3_f32"
+               OpMemberName %S 18 "mat2x4_f32"
+               OpMemberName %S 19 "mat3x2_f32"
+               OpMemberName %S 20 "mat3x3_f32"
+               OpMemberName %S 21 "mat3x4_f32"
+               OpMemberName %S 22 "mat4x2_f32"
+               OpMemberName %S 23 "mat4x3_f32"
+               OpMemberName %S 24 "mat4x4_f32"
+               OpMemberName %S 25 "mat2x2_f16"
+               OpMemberName %S 26 "mat2x3_f16"
+               OpMemberName %S 27 "mat2x4_f16"
+               OpMemberName %S 28 "mat3x2_f16"
+               OpMemberName %S 29 "mat3x3_f16"
+               OpMemberName %S 30 "mat3x4_f16"
+               OpMemberName %S 31 "mat4x2_f16"
+               OpMemberName %S 32 "mat4x3_f16"
+               OpMemberName %S 33 "mat4x4_f16"
+               OpMemberName %S 34 "arr2_vec3_f32"
+               OpMemberName %S 35 "arr2_mat4x2_f16"
+               OpMemberName %Inner 0 "scalar_i32"
+               OpMemberName %Inner 1 "scalar_f32"
+               OpMemberName %Inner 2 "scalar_f16"
+               OpName %Inner "Inner"
+               OpMemberName %S 36 "struct_inner"
+               OpMemberName %S 37 "array_struct_inner"
+               OpName %S "S"
+               OpMemberName %sb_block 0 "inner"
+               OpName %sb_block "sb_block"
+               OpMemberName %s_block 0 "inner"
+               OpName %s_block "s_block"
+               OpName %main "main"
+               OpName %scalar_f32 "scalar_f32"
+               OpName %scalar_i32 "scalar_i32"
+               OpName %scalar_u32 "scalar_u32"
+               OpName %scalar_f16 "scalar_f16"
+               OpName %vec2_f32 "vec2_f32"
+               OpName %vec2_i32 "vec2_i32"
+               OpName %vec2_u32 "vec2_u32"
+               OpName %vec2_f16 "vec2_f16"
+               OpName %vec3_f32 "vec3_f32"
+               OpName %vec3_i32 "vec3_i32"
+               OpName %vec3_u32 "vec3_u32"
+               OpName %vec3_f16 "vec3_f16"
+               OpName %vec4_f32 "vec4_f32"
+               OpName %vec4_i32 "vec4_i32"
+               OpName %vec4_u32 "vec4_u32"
+               OpName %vec4_f16 "vec4_f16"
+               OpName %mat2x2_f32 "mat2x2_f32"
+               OpName %mat2x3_f32 "mat2x3_f32"
+               OpName %mat2x4_f32 "mat2x4_f32"
+               OpName %mat3x2_f32 "mat3x2_f32"
+               OpName %mat3x3_f32 "mat3x3_f32"
+               OpName %mat3x4_f32 "mat3x4_f32"
+               OpName %mat4x2_f32 "mat4x2_f32"
+               OpName %mat4x3_f32 "mat4x3_f32"
+               OpName %mat4x4_f32 "mat4x4_f32"
+               OpName %mat2x2_f16 "mat2x2_f16"
+               OpName %mat2x3_f16 "mat2x3_f16"
+               OpName %mat2x4_f16 "mat2x4_f16"
+               OpName %mat3x2_f16 "mat3x2_f16"
+               OpName %mat3x3_f16 "mat3x3_f16"
+               OpName %mat3x4_f16 "mat3x4_f16"
+               OpName %mat4x2_f16 "mat4x2_f16"
+               OpName %mat4x3_f16 "mat4x3_f16"
+               OpName %mat4x4_f16 "mat4x4_f16"
+               OpName %arr2_vec3_f32 "arr2_vec3_f32"
+               OpName %arr2_mat4x2_f16 "arr2_mat4x2_f16"
+               OpName %struct_inner "struct_inner"
+               OpName %array_struct_inner "array_struct_inner"
+               OpName %tint_f32_to_i32 "tint_f32_to_i32"
+               OpName %value "value"
+               OpName %tint_f16_to_i32 "tint_f16_to_i32"
+               OpName %value_0 "value"
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %S 1 Offset 4
+               OpMemberDecorate %S 2 Offset 8
+               OpMemberDecorate %S 3 Offset 12
+               OpMemberDecorate %S 4 Offset 16
+               OpMemberDecorate %S 5 Offset 24
+               OpMemberDecorate %S 6 Offset 32
+               OpMemberDecorate %S 7 Offset 40
+               OpMemberDecorate %S 8 Offset 48
+               OpMemberDecorate %S 9 Offset 64
+               OpMemberDecorate %S 10 Offset 80
+               OpMemberDecorate %S 11 Offset 96
+               OpMemberDecorate %S 12 Offset 112
+               OpMemberDecorate %S 13 Offset 128
+               OpMemberDecorate %S 14 Offset 144
+               OpMemberDecorate %S 15 Offset 160
+               OpMemberDecorate %S 16 Offset 168
+               OpMemberDecorate %S 16 ColMajor
+               OpMemberDecorate %S 16 MatrixStride 8
+               OpMemberDecorate %S 17 Offset 192
+               OpMemberDecorate %S 17 ColMajor
+               OpMemberDecorate %S 17 MatrixStride 16
+               OpMemberDecorate %S 18 Offset 224
+               OpMemberDecorate %S 18 ColMajor
+               OpMemberDecorate %S 18 MatrixStride 16
+               OpMemberDecorate %S 19 Offset 256
+               OpMemberDecorate %S 19 ColMajor
+               OpMemberDecorate %S 19 MatrixStride 8
+               OpMemberDecorate %S 20 Offset 288
+               OpMemberDecorate %S 20 ColMajor
+               OpMemberDecorate %S 20 MatrixStride 16
+               OpMemberDecorate %S 21 Offset 336
+               OpMemberDecorate %S 21 ColMajor
+               OpMemberDecorate %S 21 MatrixStride 16
+               OpMemberDecorate %S 22 Offset 384
+               OpMemberDecorate %S 22 ColMajor
+               OpMemberDecorate %S 22 MatrixStride 8
+               OpMemberDecorate %S 23 Offset 416
+               OpMemberDecorate %S 23 ColMajor
+               OpMemberDecorate %S 23 MatrixStride 16
+               OpMemberDecorate %S 24 Offset 480
+               OpMemberDecorate %S 24 ColMajor
+               OpMemberDecorate %S 24 MatrixStride 16
+               OpMemberDecorate %S 25 Offset 544
+               OpMemberDecorate %S 25 ColMajor
+               OpMemberDecorate %S 25 MatrixStride 4
+               OpMemberDecorate %S 26 Offset 552
+               OpMemberDecorate %S 26 ColMajor
+               OpMemberDecorate %S 26 MatrixStride 8
+               OpMemberDecorate %S 27 Offset 568
+               OpMemberDecorate %S 27 ColMajor
+               OpMemberDecorate %S 27 MatrixStride 8
+               OpMemberDecorate %S 28 Offset 584
+               OpMemberDecorate %S 28 ColMajor
+               OpMemberDecorate %S 28 MatrixStride 4
+               OpMemberDecorate %S 29 Offset 600
+               OpMemberDecorate %S 29 ColMajor
+               OpMemberDecorate %S 29 MatrixStride 8
+               OpMemberDecorate %S 30 Offset 624
+               OpMemberDecorate %S 30 ColMajor
+               OpMemberDecorate %S 30 MatrixStride 8
+               OpMemberDecorate %S 31 Offset 648
+               OpMemberDecorate %S 31 ColMajor
+               OpMemberDecorate %S 31 MatrixStride 4
+               OpMemberDecorate %S 32 Offset 664
+               OpMemberDecorate %S 32 ColMajor
+               OpMemberDecorate %S 32 MatrixStride 8
+               OpMemberDecorate %S 33 Offset 696
+               OpMemberDecorate %S 33 ColMajor
+               OpMemberDecorate %S 33 MatrixStride 8
+               OpDecorate %_arr_v3float_uint_2 ArrayStride 16
+               OpMemberDecorate %S 34 Offset 736
+               OpDecorate %_arr_mat4v2half_uint_2 ArrayStride 16
+               OpMemberDecorate %S 35 Offset 768
+               OpMemberDecorate %S 35 ColMajor
+               OpMemberDecorate %S 35 MatrixStride 4
+               OpMemberDecorate %Inner 0 Offset 0
+               OpMemberDecorate %Inner 1 Offset 4
+               OpMemberDecorate %Inner 2 Offset 8
+               OpMemberDecorate %S 36 Offset 800
+               OpDecorate %_arr_Inner_uint_4 ArrayStride 12
+               OpMemberDecorate %S 37 Offset 812
+               OpMemberDecorate %sb_block 0 Offset 0
+               OpDecorate %sb_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %s_block 0 Offset 0
+               OpDecorate %s_block Block
+               OpDecorate %45 DescriptorSet 0
+               OpDecorate %45 Binding 1
+               OpDecorate %45 Coherent
+      %float = OpTypeFloat 32
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+       %half = OpTypeFloat 16
+    %v2float = OpTypeVector %float 2
+      %v2int = OpTypeVector %int 2
+     %v2uint = OpTypeVector %uint 2
+     %v2half = OpTypeVector %half 2
+    %v3float = OpTypeVector %float 3
+      %v3int = OpTypeVector %int 3
+     %v3uint = OpTypeVector %uint 3
+     %v3half = OpTypeVector %half 3
+    %v4float = OpTypeVector %float 4
+      %v4int = OpTypeVector %int 4
+     %v4uint = OpTypeVector %uint 4
+     %v4half = OpTypeVector %half 4
+%mat2v2float = OpTypeMatrix %v2float 2
+%mat2v3float = OpTypeMatrix %v3float 2
+%mat2v4float = OpTypeMatrix %v4float 2
+%mat3v2float = OpTypeMatrix %v2float 3
+%mat3v3float = OpTypeMatrix %v3float 3
+%mat3v4float = OpTypeMatrix %v4float 3
+%mat4v2float = OpTypeMatrix %v2float 4
+%mat4v3float = OpTypeMatrix %v3float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+ %mat2v2half = OpTypeMatrix %v2half 2
+ %mat2v3half = OpTypeMatrix %v3half 2
+ %mat2v4half = OpTypeMatrix %v4half 2
+ %mat3v2half = OpTypeMatrix %v2half 3
+ %mat3v3half = OpTypeMatrix %v3half 3
+ %mat3v4half = OpTypeMatrix %v4half 3
+ %mat4v2half = OpTypeMatrix %v2half 4
+ %mat4v3half = OpTypeMatrix %v3half 4
+ %mat4v4half = OpTypeMatrix %v4half 4
+     %uint_2 = OpConstant %uint 2
+%_arr_v3float_uint_2 = OpTypeArray %v3float %uint_2
+%_arr_mat4v2half_uint_2 = OpTypeArray %mat4v2half %uint_2
+      %Inner = OpTypeStruct %int %float %half
+     %uint_4 = OpConstant %uint 4
+%_arr_Inner_uint_4 = OpTypeArray %Inner %uint_4
+          %S = OpTypeStruct %float %int %uint %half %v2float %v2int %v2uint %v2half %v3float %v3int %v3uint %v3half %v4float %v4int %v4uint %v4half %mat2v2float %mat2v3float %mat2v4float %mat3v2float %mat3v3float %mat3v4float %mat4v2float %mat4v3float %mat4v4float %mat2v2half %mat2v3half %mat2v4half %mat3v2half %mat3v3half %mat3v4half %mat4v2half %mat4v3half %mat4v4half %_arr_v3float_uint_2 %_arr_mat4v2half_uint_2 %Inner %_arr_Inner_uint_4
+   %sb_block = OpTypeStruct %S
+%_ptr_StorageBuffer_sb_block = OpTypePointer StorageBuffer %sb_block
+          %1 = OpVariable %_ptr_StorageBuffer_sb_block StorageBuffer
+    %s_block = OpTypeStruct %int
+%_ptr_StorageBuffer_s_block = OpTypePointer StorageBuffer %s_block
+         %45 = OpVariable %_ptr_StorageBuffer_s_block StorageBuffer
+       %void = OpTypeVoid
+         %50 = OpTypeFunction %void
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+     %uint_3 = OpConstant %uint 3
+%_ptr_StorageBuffer_v2float = OpTypePointer StorageBuffer %v2float
+%_ptr_StorageBuffer_v2int = OpTypePointer StorageBuffer %v2int
+     %uint_5 = OpConstant %uint 5
+%_ptr_StorageBuffer_v2uint = OpTypePointer StorageBuffer %v2uint
+     %uint_6 = OpConstant %uint 6
+%_ptr_StorageBuffer_v2half = OpTypePointer StorageBuffer %v2half
+     %uint_7 = OpConstant %uint 7
+%_ptr_StorageBuffer_v3float = OpTypePointer StorageBuffer %v3float
+     %uint_8 = OpConstant %uint 8
+%_ptr_StorageBuffer_v3int = OpTypePointer StorageBuffer %v3int
+     %uint_9 = OpConstant %uint 9
+%_ptr_StorageBuffer_v3uint = OpTypePointer StorageBuffer %v3uint
+    %uint_10 = OpConstant %uint 10
+%_ptr_StorageBuffer_v3half = OpTypePointer StorageBuffer %v3half
+    %uint_11 = OpConstant %uint 11
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+    %uint_12 = OpConstant %uint 12
+%_ptr_StorageBuffer_v4int = OpTypePointer StorageBuffer %v4int
+    %uint_13 = OpConstant %uint 13
+%_ptr_StorageBuffer_v4uint = OpTypePointer StorageBuffer %v4uint
+    %uint_14 = OpConstant %uint 14
+%_ptr_StorageBuffer_v4half = OpTypePointer StorageBuffer %v4half
+    %uint_15 = OpConstant %uint 15
+%_ptr_StorageBuffer_mat2v2float = OpTypePointer StorageBuffer %mat2v2float
+    %uint_16 = OpConstant %uint 16
+%_ptr_StorageBuffer_mat2v3float = OpTypePointer StorageBuffer %mat2v3float
+    %uint_17 = OpConstant %uint 17
+%_ptr_StorageBuffer_mat2v4float = OpTypePointer StorageBuffer %mat2v4float
+    %uint_18 = OpConstant %uint 18
+%_ptr_StorageBuffer_mat3v2float = OpTypePointer StorageBuffer %mat3v2float
+    %uint_19 = OpConstant %uint 19
+%_ptr_StorageBuffer_mat3v3float = OpTypePointer StorageBuffer %mat3v3float
+    %uint_20 = OpConstant %uint 20
+%_ptr_StorageBuffer_mat3v4float = OpTypePointer StorageBuffer %mat3v4float
+    %uint_21 = OpConstant %uint 21
+%_ptr_StorageBuffer_mat4v2float = OpTypePointer StorageBuffer %mat4v2float
+    %uint_22 = OpConstant %uint 22
+%_ptr_StorageBuffer_mat4v3float = OpTypePointer StorageBuffer %mat4v3float
+    %uint_23 = OpConstant %uint 23
+%_ptr_StorageBuffer_mat4v4float = OpTypePointer StorageBuffer %mat4v4float
+    %uint_24 = OpConstant %uint 24
+%_ptr_StorageBuffer_mat2v2half = OpTypePointer StorageBuffer %mat2v2half
+    %uint_25 = OpConstant %uint 25
+%_ptr_StorageBuffer_mat2v3half = OpTypePointer StorageBuffer %mat2v3half
+    %uint_26 = OpConstant %uint 26
+%_ptr_StorageBuffer_mat2v4half = OpTypePointer StorageBuffer %mat2v4half
+    %uint_27 = OpConstant %uint 27
+%_ptr_StorageBuffer_mat3v2half = OpTypePointer StorageBuffer %mat3v2half
+    %uint_28 = OpConstant %uint 28
+%_ptr_StorageBuffer_mat3v3half = OpTypePointer StorageBuffer %mat3v3half
+    %uint_29 = OpConstant %uint 29
+%_ptr_StorageBuffer_mat3v4half = OpTypePointer StorageBuffer %mat3v4half
+    %uint_30 = OpConstant %uint 30
+%_ptr_StorageBuffer_mat4v2half = OpTypePointer StorageBuffer %mat4v2half
+    %uint_31 = OpConstant %uint 31
+%_ptr_StorageBuffer_mat4v3half = OpTypePointer StorageBuffer %mat4v3half
+    %uint_32 = OpConstant %uint 32
+%_ptr_StorageBuffer_mat4v4half = OpTypePointer StorageBuffer %mat4v4half
+    %uint_33 = OpConstant %uint 33
+%_ptr_StorageBuffer__arr_v3float_uint_2 = OpTypePointer StorageBuffer %_arr_v3float_uint_2
+    %uint_34 = OpConstant %uint 34
+%_ptr_StorageBuffer__arr_mat4v2half_uint_2 = OpTypePointer StorageBuffer %_arr_mat4v2half_uint_2
+    %uint_35 = OpConstant %uint 35
+%_ptr_StorageBuffer_Inner = OpTypePointer StorageBuffer %Inner
+    %uint_36 = OpConstant %uint 36
+%_ptr_StorageBuffer__arr_Inner_uint_4 = OpTypePointer StorageBuffer %_arr_Inner_uint_4
+    %uint_37 = OpConstant %uint 37
+%_ptr_StorageBuffer_int_0 = OpTypePointer StorageBuffer %int
+        %310 = OpTypeFunction %int %float
+%float_n2_14748365e_09 = OpConstant %float -2.14748365e+09
+       %bool = OpTypeBool
+%int_n2147483648 = OpConstant %int -2147483648
+%float_2_14748352e_09 = OpConstant %float 2.14748352e+09
+%int_2147483647 = OpConstant %int 2147483647
+        %323 = OpTypeFunction %int %half
+%half_n0x1_ffcp_15 = OpConstant %half -0x1.ffcp+15
+%half_0x1_ffcp_15 = OpConstant %half 0x1.ffcp+15
+       %main = OpFunction %void None %50
+         %51 = OpLabel
+         %52 = OpAccessChain %_ptr_StorageBuffer_float %1 %uint_0 %uint_0
+ %scalar_f32 = OpLoad %float %52 None
+         %56 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0 %uint_1
+ %scalar_i32 = OpLoad %int %56 None
+         %60 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_2
+ %scalar_u32 = OpLoad %uint %60 None
+         %63 = OpAccessChain %_ptr_StorageBuffer_half %1 %uint_0 %uint_3
+ %scalar_f16 = OpLoad %half %63 None
+         %67 = OpAccessChain %_ptr_StorageBuffer_v2float %1 %uint_0 %uint_4
+   %vec2_f32 = OpLoad %v2float %67 None
+         %70 = OpAccessChain %_ptr_StorageBuffer_v2int %1 %uint_0 %uint_5
+   %vec2_i32 = OpLoad %v2int %70 None
+         %74 = OpAccessChain %_ptr_StorageBuffer_v2uint %1 %uint_0 %uint_6
+   %vec2_u32 = OpLoad %v2uint %74 None
+         %78 = OpAccessChain %_ptr_StorageBuffer_v2half %1 %uint_0 %uint_7
+   %vec2_f16 = OpLoad %v2half %78 None
+         %82 = OpAccessChain %_ptr_StorageBuffer_v3float %1 %uint_0 %uint_8
+   %vec3_f32 = OpLoad %v3float %82 None
+         %86 = OpAccessChain %_ptr_StorageBuffer_v3int %1 %uint_0 %uint_9
+   %vec3_i32 = OpLoad %v3int %86 None
+         %90 = OpAccessChain %_ptr_StorageBuffer_v3uint %1 %uint_0 %uint_10
+   %vec3_u32 = OpLoad %v3uint %90 None
+         %94 = OpAccessChain %_ptr_StorageBuffer_v3half %1 %uint_0 %uint_11
+   %vec3_f16 = OpLoad %v3half %94 None
+         %98 = OpAccessChain %_ptr_StorageBuffer_v4float %1 %uint_0 %uint_12
+   %vec4_f32 = OpLoad %v4float %98 None
+        %102 = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0 %uint_13
+   %vec4_i32 = OpLoad %v4int %102 None
+        %106 = OpAccessChain %_ptr_StorageBuffer_v4uint %1 %uint_0 %uint_14
+   %vec4_u32 = OpLoad %v4uint %106 None
+        %110 = OpAccessChain %_ptr_StorageBuffer_v4half %1 %uint_0 %uint_15
+   %vec4_f16 = OpLoad %v4half %110 None
+        %114 = OpAccessChain %_ptr_StorageBuffer_mat2v2float %1 %uint_0 %uint_16
+ %mat2x2_f32 = OpLoad %mat2v2float %114 None
+        %118 = OpAccessChain %_ptr_StorageBuffer_mat2v3float %1 %uint_0 %uint_17
+ %mat2x3_f32 = OpLoad %mat2v3float %118 None
+        %122 = OpAccessChain %_ptr_StorageBuffer_mat2v4float %1 %uint_0 %uint_18
+ %mat2x4_f32 = OpLoad %mat2v4float %122 None
+        %126 = OpAccessChain %_ptr_StorageBuffer_mat3v2float %1 %uint_0 %uint_19
+ %mat3x2_f32 = OpLoad %mat3v2float %126 None
+        %130 = OpAccessChain %_ptr_StorageBuffer_mat3v3float %1 %uint_0 %uint_20
+ %mat3x3_f32 = OpLoad %mat3v3float %130 None
+        %134 = OpAccessChain %_ptr_StorageBuffer_mat3v4float %1 %uint_0 %uint_21
+ %mat3x4_f32 = OpLoad %mat3v4float %134 None
+        %138 = OpAccessChain %_ptr_StorageBuffer_mat4v2float %1 %uint_0 %uint_22
+ %mat4x2_f32 = OpLoad %mat4v2float %138 None
+        %142 = OpAccessChain %_ptr_StorageBuffer_mat4v3float %1 %uint_0 %uint_23
+ %mat4x3_f32 = OpLoad %mat4v3float %142 None
+        %146 = OpAccessChain %_ptr_StorageBuffer_mat4v4float %1 %uint_0 %uint_24
+ %mat4x4_f32 = OpLoad %mat4v4float %146 None
+        %150 = OpAccessChain %_ptr_StorageBuffer_mat2v2half %1 %uint_0 %uint_25
+ %mat2x2_f16 = OpLoad %mat2v2half %150 None
+        %154 = OpAccessChain %_ptr_StorageBuffer_mat2v3half %1 %uint_0 %uint_26
+ %mat2x3_f16 = OpLoad %mat2v3half %154 None
+        %158 = OpAccessChain %_ptr_StorageBuffer_mat2v4half %1 %uint_0 %uint_27
+ %mat2x4_f16 = OpLoad %mat2v4half %158 None
+        %162 = OpAccessChain %_ptr_StorageBuffer_mat3v2half %1 %uint_0 %uint_28
+ %mat3x2_f16 = OpLoad %mat3v2half %162 None
+        %166 = OpAccessChain %_ptr_StorageBuffer_mat3v3half %1 %uint_0 %uint_29
+ %mat3x3_f16 = OpLoad %mat3v3half %166 None
+        %170 = OpAccessChain %_ptr_StorageBuffer_mat3v4half %1 %uint_0 %uint_30
+ %mat3x4_f16 = OpLoad %mat3v4half %170 None
+        %174 = OpAccessChain %_ptr_StorageBuffer_mat4v2half %1 %uint_0 %uint_31
+ %mat4x2_f16 = OpLoad %mat4v2half %174 None
+        %178 = OpAccessChain %_ptr_StorageBuffer_mat4v3half %1 %uint_0 %uint_32
+ %mat4x3_f16 = OpLoad %mat4v3half %178 None
+        %182 = OpAccessChain %_ptr_StorageBuffer_mat4v4half %1 %uint_0 %uint_33
+ %mat4x4_f16 = OpLoad %mat4v4half %182 None
+        %186 = OpAccessChain %_ptr_StorageBuffer__arr_v3float_uint_2 %1 %uint_0 %uint_34
+%arr2_vec3_f32 = OpLoad %_arr_v3float_uint_2 %186 None
+        %190 = OpAccessChain %_ptr_StorageBuffer__arr_mat4v2half_uint_2 %1 %uint_0 %uint_35
+%arr2_mat4x2_f16 = OpLoad %_arr_mat4v2half_uint_2 %190 None
+        %194 = OpAccessChain %_ptr_StorageBuffer_Inner %1 %uint_0 %uint_36
+%struct_inner = OpLoad %Inner %194 None
+        %198 = OpAccessChain %_ptr_StorageBuffer__arr_Inner_uint_4 %1 %uint_0 %uint_37
+%array_struct_inner = OpLoad %_arr_Inner_uint_4 %198 None
+        %202 = OpFunctionCall %int %tint_f32_to_i32 %scalar_f32
+        %204 = OpIAdd %int %202 %scalar_i32
+        %205 = OpBitcast %int %scalar_u32
+        %206 = OpIAdd %int %204 %205
+        %207 = OpFunctionCall %int %tint_f16_to_i32 %scalar_f16
+        %209 = OpIAdd %int %206 %207
+        %210 = OpCompositeExtract %float %vec2_f32 0
+        %211 = OpFunctionCall %int %tint_f32_to_i32 %210
+        %212 = OpIAdd %int %209 %211
+        %213 = OpCompositeExtract %int %vec2_i32 0
+        %214 = OpIAdd %int %212 %213
+        %215 = OpCompositeExtract %uint %vec2_u32 0
+        %216 = OpBitcast %int %215
+        %217 = OpIAdd %int %214 %216
+        %218 = OpCompositeExtract %half %vec2_f16 0
+        %219 = OpFunctionCall %int %tint_f16_to_i32 %218
+        %220 = OpIAdd %int %217 %219
+        %221 = OpCompositeExtract %float %vec3_f32 1
+        %222 = OpFunctionCall %int %tint_f32_to_i32 %221
+        %223 = OpIAdd %int %220 %222
+        %224 = OpCompositeExtract %int %vec3_i32 1
+        %225 = OpIAdd %int %223 %224
+        %226 = OpCompositeExtract %uint %vec3_u32 1
+        %227 = OpBitcast %int %226
+        %228 = OpIAdd %int %225 %227
+        %229 = OpCompositeExtract %half %vec3_f16 1
+        %230 = OpFunctionCall %int %tint_f16_to_i32 %229
+        %231 = OpIAdd %int %228 %230
+        %232 = OpCompositeExtract %float %vec4_f32 2
+        %233 = OpFunctionCall %int %tint_f32_to_i32 %232
+        %234 = OpIAdd %int %231 %233
+        %235 = OpCompositeExtract %int %vec4_i32 2
+        %236 = OpIAdd %int %234 %235
+        %237 = OpCompositeExtract %uint %vec4_u32 2
+        %238 = OpBitcast %int %237
+        %239 = OpIAdd %int %236 %238
+        %240 = OpCompositeExtract %half %vec4_f16 2
+        %241 = OpFunctionCall %int %tint_f16_to_i32 %240
+        %242 = OpIAdd %int %239 %241
+        %243 = OpCompositeExtract %float %mat2x2_f32 0 0
+        %244 = OpFunctionCall %int %tint_f32_to_i32 %243
+        %245 = OpIAdd %int %242 %244
+        %246 = OpCompositeExtract %float %mat2x3_f32 0 0
+        %247 = OpFunctionCall %int %tint_f32_to_i32 %246
+        %248 = OpIAdd %int %245 %247
+        %249 = OpCompositeExtract %float %mat2x4_f32 0 0
+        %250 = OpFunctionCall %int %tint_f32_to_i32 %249
+        %251 = OpIAdd %int %248 %250
+        %252 = OpCompositeExtract %float %mat3x2_f32 0 0
+        %253 = OpFunctionCall %int %tint_f32_to_i32 %252
+        %254 = OpIAdd %int %251 %253
+        %255 = OpCompositeExtract %float %mat3x3_f32 0 0
+        %256 = OpFunctionCall %int %tint_f32_to_i32 %255
+        %257 = OpIAdd %int %254 %256
+        %258 = OpCompositeExtract %float %mat3x4_f32 0 0
+        %259 = OpFunctionCall %int %tint_f32_to_i32 %258
+        %260 = OpIAdd %int %257 %259
+        %261 = OpCompositeExtract %float %mat4x2_f32 0 0
+        %262 = OpFunctionCall %int %tint_f32_to_i32 %261
+        %263 = OpIAdd %int %260 %262
+        %264 = OpCompositeExtract %float %mat4x3_f32 0 0
+        %265 = OpFunctionCall %int %tint_f32_to_i32 %264
+        %266 = OpIAdd %int %263 %265
+        %267 = OpCompositeExtract %float %mat4x4_f32 0 0
+        %268 = OpFunctionCall %int %tint_f32_to_i32 %267
+        %269 = OpIAdd %int %266 %268
+        %270 = OpCompositeExtract %half %mat2x2_f16 0 0
+        %271 = OpFunctionCall %int %tint_f16_to_i32 %270
+        %272 = OpIAdd %int %269 %271
+        %273 = OpCompositeExtract %half %mat2x3_f16 0 0
+        %274 = OpFunctionCall %int %tint_f16_to_i32 %273
+        %275 = OpIAdd %int %272 %274
+        %276 = OpCompositeExtract %half %mat2x4_f16 0 0
+        %277 = OpFunctionCall %int %tint_f16_to_i32 %276
+        %278 = OpIAdd %int %275 %277
+        %279 = OpCompositeExtract %half %mat3x2_f16 0 0
+        %280 = OpFunctionCall %int %tint_f16_to_i32 %279
+        %281 = OpIAdd %int %278 %280
+        %282 = OpCompositeExtract %half %mat3x3_f16 0 0
+        %283 = OpFunctionCall %int %tint_f16_to_i32 %282
+        %284 = OpIAdd %int %281 %283
+        %285 = OpCompositeExtract %half %mat3x4_f16 0 0
+        %286 = OpFunctionCall %int %tint_f16_to_i32 %285
+        %287 = OpIAdd %int %284 %286
+        %288 = OpCompositeExtract %half %mat4x2_f16 0 0
+        %289 = OpFunctionCall %int %tint_f16_to_i32 %288
+        %290 = OpIAdd %int %287 %289
+        %291 = OpCompositeExtract %half %mat4x3_f16 0 0
+        %292 = OpFunctionCall %int %tint_f16_to_i32 %291
+        %293 = OpIAdd %int %290 %292
+        %294 = OpCompositeExtract %half %mat4x4_f16 0 0
+        %295 = OpFunctionCall %int %tint_f16_to_i32 %294
+        %296 = OpIAdd %int %293 %295
+        %297 = OpCompositeExtract %float %arr2_vec3_f32 0 0
+        %298 = OpFunctionCall %int %tint_f32_to_i32 %297
+        %299 = OpIAdd %int %296 %298
+        %300 = OpCompositeExtract %half %arr2_mat4x2_f16 0 0 0
+        %301 = OpFunctionCall %int %tint_f16_to_i32 %300
+        %302 = OpIAdd %int %299 %301
+        %303 = OpCompositeExtract %int %struct_inner 0
+        %304 = OpIAdd %int %302 %303
+        %305 = OpCompositeExtract %int %array_struct_inner 0 0
+        %306 = OpIAdd %int %304 %305
+        %307 = OpAccessChain %_ptr_StorageBuffer_int_0 %45 %uint_0
+               OpStore %307 %306 None
+               OpReturn
+               OpFunctionEnd
+%tint_f32_to_i32 = OpFunction %int None %310
+      %value = OpFunctionParameter %float
+        %311 = OpLabel
+        %312 = OpConvertFToS %int %value
+        %313 = OpFOrdGreaterThanEqual %bool %value %float_n2_14748365e_09
+        %316 = OpSelect %int %313 %312 %int_n2147483648
+        %318 = OpFOrdLessThanEqual %bool %value %float_2_14748352e_09
+        %320 = OpSelect %int %318 %316 %int_2147483647
+               OpReturnValue %320
+               OpFunctionEnd
+%tint_f16_to_i32 = OpFunction %int None %323
+    %value_0 = OpFunctionParameter %half
+        %324 = OpLabel
+        %325 = OpConvertFToS %int %value_0
+        %326 = OpFOrdGreaterThanEqual %bool %value_0 %half_n0x1_ffcp_15
+        %328 = OpSelect %int %326 %325 %int_n2147483648
+        %329 = OpFOrdLessThanEqual %bool %value_0 %half_0x1_ffcp_15
+        %331 = OpSelect %int %329 %328 %int_2147483647
+               OpReturnValue %331
+               OpFunctionEnd

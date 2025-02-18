@@ -1,0 +1,22 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void some_loop_body() {
+}
+
+void f() {
+  {
+    int i = 0;
+    while(true) {
+      if ((i < 5)) {
+      } else {
+        break;
+      }
+      some_loop_body();
+      {
+        i = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+      }
+      continue;
+    }
+  }
+}

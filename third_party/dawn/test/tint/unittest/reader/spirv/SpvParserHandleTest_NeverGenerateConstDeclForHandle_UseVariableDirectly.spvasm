@@ -1,0 +1,51 @@
+; Test: SpvParserHandleTest_NeverGenerateConstDeclForHandle_UseVariableDirectly.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpCapability Sampled1D
+OpCapability Image1D
+OpCapability StorageImageExtendedFormats
+OpCapability ImageQuery
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+OpName %var "var"
+OpDecorate %2 DescriptorSet 0
+OpDecorate %2 Binding 0
+OpDecorate %3 DescriptorSet 0
+OpDecorate %3 Binding 1
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%v2float = OpTypeVector %float 2
+%7 = OpConstantNull %v2float
+%8 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%9 = OpTypeSampledImage %8
+%10 = OpTypeSampler
+%_ptr_UniformConstant_8 = OpTypePointer UniformConstant %8
+%_ptr_UniformConstant_10 = OpTypePointer UniformConstant %10
+%2 = OpVariable %_ptr_UniformConstant_8 UniformConstant
+%3 = OpVariable %_ptr_UniformConstant_10 UniformConstant
+%void = OpTypeVoid
+%14 = OpTypeFunction %void
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%100 = OpFunction %void None %14
+%16 = OpLabel
+%var = OpVariable %_ptr_Function_v4float Function
+%17 = OpCopyObject %_ptr_UniformConstant_8 %2
+%18 = OpCopyObject %_ptr_UniformConstant_10 %3
+%19 = OpLoad %8 %17
+%20 = OpLoad %10 %18
+%21 = OpSampledImage %9 %19 %20
+%22 = OpImageSampleImplicitLod %v4float %21 %7
+%23 = OpLoad %8 %17
+%24 = OpLoad %10 %18
+%25 = OpSampledImage %9 %23 %24
+%26 = OpImageSampleImplicitLod %v4float %25 %7
+%27 = OpFAdd %v4float %22 %26
+OpStore %var %27
+OpReturn
+OpFunctionEnd
+

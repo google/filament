@@ -1,0 +1,38 @@
+#  Import `dawn_gen_root` and `dawn_partition_alloc_dir`
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+# This file provides Dawn, the MiraclePtr "raw_ptr" definition.
+# Depending on the configuration, this is either:
+# - Delegated to the `partition_alloc` library.
+# - Provided by Dawn itself as "no-op" implementation.
+
+# This define the same targets as in partition_alloc. See Chrome's file:
+# - base/allocator/partition_allocator/BUILD.gn
+# - base/allocator/partition_allocator/src/partition_alloc/BUILD.gn
+
+if (defined(dawn_partition_alloc_dir)) {
+  group("raw_ptr") {
+    public_deps = [ "${dawn_partition_alloc_dir}:raw_ptr" ]
+  }
+
+  # PartitionAlloc do not fully support MSVC cl.exe compiler. The condition
+  # is_clang || !is_win is the one used by partition_alloc.
+  is_clang_or_gcc = is_clang || !is_win
+  assert(is_clang_or_gcc, "PartitionAlloc is not fully supported on MSVC")
+
+  group("partition_alloc") {
+    public_deps = [ "${dawn_partition_alloc_dir}:partition_alloc" ]
+  }
+} else {
+  source_set("raw_ptr") {
+    public_configs = [ ":public_includes" ]
+    public = [
+      "partition_alloc/pointers/raw_ptr.h",
+      "partition_alloc/pointers/raw_ptr_exclusion.h",
+      "partition_alloc/pointers/raw_ref.h",
+    ]
+  }
+  config("public_includes") {
+    include_dirs = [ "." ]
+  }
+}

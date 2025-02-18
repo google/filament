@@ -1,0 +1,86 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 41
+; Schema: 0
+                                     OpCapability Shader
+                                %1 = OpExtInstImport "GLSL.std.450"
+                                     OpMemoryModel Logical GLSL450
+                                     OpEntryPoint Fragment %main "main"
+                                     OpExecutionMode %main OriginUpperLeft
+                                     OpSource GLSL 460
+                                     OpSourceExtension "GL_ARB_enhanced_layouts"
+                                     OpSourceExtension "GL_ARB_gpu_shader_int64"
+                                     OpSourceExtension "GL_ARB_separate_shader_objects"
+                                     OpSourceExtension "GL_ARB_shader_clock"
+                                     OpSourceExtension "GL_ARB_shading_language_420pack"
+                                     OpSourceExtension "GL_EXT_scalar_block_layout"
+                                     OpSourceExtension "GL_EXT_shader_io_blocks"
+                                     OpSourceExtension "GL_EXT_shader_realtime_clock"
+                                     OpName %main "main"
+                                     OpName %orientation "orientation"
+                                     OpName %sspp962805860buildInformationS "sspp962805860buildInformationS"
+                                     OpMemberName %sspp962805860buildInformationS 0 "footprint"
+                                     OpMemberName %sspp962805860buildInformationS 1 "offset"
+                                     OpMemberName %sspp962805860buildInformationS 2 "essence"
+                                     OpMemberName %sspp962805860buildInformationS 3 "orientation"
+                                     OpName %_B4_BuildInformation "_B4_BuildInformation"
+                                     OpMemberName %_B4_BuildInformation 0 "passthru"
+                                     OpName %sspp962805860buildInformation "sspp962805860buildInformation"
+                                     OpDecorate %_arr_int_uint_6_0 ArrayStride 4
+                                     OpMemberDecorate %sspp962805860buildInformationS 0 Offset 0
+                                     OpMemberDecorate %sspp962805860buildInformationS 1 Offset 16
+                                     OpMemberDecorate %sspp962805860buildInformationS 2 Offset 32
+                                     OpMemberDecorate %sspp962805860buildInformationS 3 Offset 36
+                                     OpMemberDecorate %_B4_BuildInformation 0 NonWritable
+                                     OpMemberDecorate %_B4_BuildInformation 0 Offset 0
+                                     OpDecorate %_B4_BuildInformation BufferBlock
+                                     OpDecorate %sspp962805860buildInformation DescriptorSet 0
+                                     OpDecorate %sspp962805860buildInformation Binding 2
+                             %void = OpTypeVoid
+                                %3 = OpTypeFunction %void
+                              %int = OpTypeInt 32 1
+                             %uint = OpTypeInt 32 0
+                           %uint_6 = OpConstant %uint 6
+                  %_arr_int_uint_6 = OpTypeArray %int %uint_6
+    %_ptr_Function__arr_int_uint_6 = OpTypePointer Function %_arr_int_uint_6
+                            %float = OpTypeFloat 32
+                          %v4float = OpTypeVector %float 4
+                %_arr_int_uint_6_0 = OpTypeArray %int %uint_6
+   %sspp962805860buildInformationS = OpTypeStruct %v4float %v4float %int %_arr_int_uint_6_0
+             %_B4_BuildInformation = OpTypeStruct %sspp962805860buildInformationS
+%_ptr_Uniform__B4_BuildInformation = OpTypePointer Uniform %_B4_BuildInformation
+    %sspp962805860buildInformation = OpVariable %_ptr_Uniform__B4_BuildInformation Uniform
+                            %int_0 = OpConstant %int 0
+                            %int_3 = OpConstant %int 3
+   %_ptr_Uniform__arr_int_uint_6_0 = OpTypePointer Uniform %_arr_int_uint_6_0
+                %_ptr_Function_int = OpTypePointer Function %int
+                            %int_1 = OpConstant %int 1
+                            %int_2 = OpConstant %int 2
+                            %int_4 = OpConstant %int 4
+                            %int_5 = OpConstant %int 5
+                             %main = OpFunction %void None %3
+                                %5 = OpLabel
+                      %orientation = OpVariable %_ptr_Function__arr_int_uint_6 Function
+                               %22 = OpAccessChain %_ptr_Uniform__arr_int_uint_6_0 %sspp962805860buildInformation %int_0 %int_3
+                               %23 = OpLoad %_arr_int_uint_6_0 %22
+                               %24 = OpCompositeExtract %int %23 0
+                               %26 = OpAccessChain %_ptr_Function_int %orientation %int_0
+                                     OpStore %26 %24
+                               %27 = OpCompositeExtract %int %23 1
+                               %29 = OpAccessChain %_ptr_Function_int %orientation %int_1
+                                     OpStore %29 %27
+                               %30 = OpCompositeExtract %int %23 2
+                               %32 = OpAccessChain %_ptr_Function_int %orientation %int_2
+                                     OpStore %32 %30
+                               %33 = OpCompositeExtract %int %23 3
+                               %34 = OpAccessChain %_ptr_Function_int %orientation %int_3
+                                     OpStore %34 %33
+                               %35 = OpCompositeExtract %int %23 4
+                               %37 = OpAccessChain %_ptr_Function_int %orientation %int_4
+                                     OpStore %37 %35
+                               %38 = OpCompositeExtract %int %23 5
+                               %40 = OpAccessChain %_ptr_Function_int %orientation %int_5
+                                     OpStore %40 %38
+                                     OpReturn
+                                     OpFunctionEnd

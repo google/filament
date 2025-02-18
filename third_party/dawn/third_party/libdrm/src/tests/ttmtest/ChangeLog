@@ -1,0 +1,23 @@
+2006-01-24  Thomas Hellström  <thomas-at-tungstengraphics.com>
+
+	* configure.ac:
+	* src/ttmtest.c:
+
+	Fixed include path.
+
+2006-01-24  Thomas Hellström  <thomas-at-tungstengraphics.com>
+
+	* AUTHORS:
+	* Makefile.am:
+	* configure.ac:
+	* reconf:
+	* src/Makefile.am:
+	* src/ttmtest.c: (fastrdtsc), (time_diff), (releaseContext),
+	(testAGP), (main):
+	* src/xf86dri.c: (uniDRIDestroyContext), (uniDRICreateDrawable),
+	(uniDRIDestroyDrawable), (uniDRIGetDrawableInfo):
+	* src/xf86dri.h:
+	* src/xf86dristr.h:
+
+	Initial import of the ttmtest utility.
+	

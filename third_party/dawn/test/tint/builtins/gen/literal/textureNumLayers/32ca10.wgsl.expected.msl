@@ -1,0 +1,40 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+  texture2d_array<uint, access::read_write> arg_0;
+};
+
+uint textureNumLayers_32ca10(tint_module_vars_struct tint_module_vars) {
+  uint res = tint_module_vars.arg_0.get_array_size();
+  return res;
+}
+
+fragment void fragment_main(device uint* prevent_dce [[buffer(0)]], texture2d_array<uint, access::read_write> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=arg_0};
+  (*tint_module_vars.prevent_dce) = textureNumLayers_32ca10(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+  texture2d_array<uint, access::read_write> arg_0;
+};
+
+uint textureNumLayers_32ca10(tint_module_vars_struct tint_module_vars) {
+  uint res = tint_module_vars.arg_0.get_array_size();
+  return res;
+}
+
+kernel void compute_main(device uint* prevent_dce [[buffer(0)]], texture2d_array<uint, access::read_write> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=arg_0};
+  (*tint_module_vars.prevent_dce) = textureNumLayers_32ca10(tint_module_vars);
+}

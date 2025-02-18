@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S1 {
+  int i;
+};
+
+struct S2 {
+  S1 s1;
+};
+
+struct S3 {
+  S2 s2;
+};
+
+struct tint_module_vars_struct {
+  thread S3* P;
+  device int* out;
+};
+
+kernel void v(device int* out [[buffer(0)]]) {
+  thread S3 P = S3{.s2=S2{.s1=S1{.i=42}}};
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.P=(&P), .out=out};
+  (*tint_module_vars.out) = (*tint_module_vars.P).s2.s1.i;
+}

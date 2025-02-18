@@ -1,0 +1,74 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %c1 "c1"
+               OpName %uv "uv"
+               OpName %i "i"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %i RelaxedPrecision
+               OpDecorate %_GLF_color Location 0
+               OpDecorate %7 RelaxedPrecision
+               OpDecorate %8 RelaxedPrecision
+               OpDecorate %9 RelaxedPrecision
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+       %bool = OpTypeBool
+%_ptr_Function_bool = OpTypePointer Function %bool
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_float = OpTypePointer Function %float
+ %float_0_25 = OpConstant %float 0.25
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %29 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %30 = OpUndef %int
+         %31 = OpUndef %bool
+       %main = OpFunction %void None %11
+         %32 = OpLabel
+         %c1 = OpVariable %_ptr_Function_bool Function
+         %uv = OpVariable %_ptr_Function_v2float Function
+          %i = OpVariable %_ptr_Function_int Function
+         %33 = OpAccessChain %_ptr_Function_float %uv %uint_1
+         %34 = OpLoad %float %33
+         %35 = OpFOrdLessThan %bool %34 %float_0_25
+               OpStore %c1 %35
+               OpStore %i %int_0
+               OpBranch %36
+         %36 = OpLabel
+         %37 = OpPhi %bool %35 %32 %31 %38
+          %9 = OpPhi %int %int_0 %32 %30 %38
+               OpLoopMerge %39 %38 None
+               OpBranch %40
+         %40 = OpLabel
+         %41 = OpSLessThan %bool %9 %int_1
+               OpBranchConditional %41 %42 %39
+         %42 = OpLabel
+               OpStore %_GLF_color %29
+               OpReturn
+         %38 = OpLabel
+          %7 = OpLoad %int %i
+          %8 = OpIAdd %int %7 %int_1
+               OpStore %i %8
+               OpBranch %36
+         %39 = OpLabel
+               OpSelectionMerge %43 None
+               OpBranchConditional %37 %44 %43
+         %44 = OpLabel
+               OpReturn
+         %43 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread int* a;
+};
+
+fragment void f() {
+  thread int a = 1;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=(&a)};
+  int const b = (*tint_module_vars.a);
+}

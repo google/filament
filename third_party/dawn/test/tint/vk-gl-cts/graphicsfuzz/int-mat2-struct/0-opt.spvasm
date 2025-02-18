@@ -1,0 +1,96 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %S "S"
+               OpMemberName %S 0 "f1"
+               OpMemberName %S 1 "f2"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpName %_GLF_color "_GLF_color"
+               OpMemberDecorate %S 0 RelaxedPrecision
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %_GLF_color Location 0
+               OpDecorate %6 RelaxedPrecision
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+          %S = OpTypeStruct %int %mat2v2float
+%_ptr_Function_S = OpTypePointer Function %S
+      %int_1 = OpConstant %int 1
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+%_ptr_Function_mat2v2float = OpTypePointer Function %mat2v2float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+         %25 = OpConstantComposite %v2float %float_1 %float_2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %28 = OpConstantComposite %v2float %float_3 %float_4
+         %29 = OpConstantComposite %mat2v2float %25 %28
+  %float_0_5 = OpConstant %float 0.5
+ %float_n0_5 = OpConstant %float -0.5
+         %32 = OpConstantComposite %v2float %float_0_5 %float_n0_5
+         %33 = OpConstantComposite %v2float %float_n0_5 %float_0_5
+         %34 = OpConstantComposite %mat2v2float %32 %33
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+      %int_0 = OpConstant %int 0
+%_ptr_Function_int = OpTypePointer Function %int
+%_ptr_Function_float = OpTypePointer Function %float
+     %uint_1 = OpConstant %uint 1
+       %main = OpFunction %void None %8
+         %40 = OpLabel
+         %41 = OpVariable %_ptr_Function_mat2v2float Function
+          %6 = OpVariable %_ptr_Function_int Function
+         %42 = OpVariable %_ptr_Function_mat2v2float Function
+         %43 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %44 = OpLoad %float %43
+         %45 = OpFOrdLessThan %bool %44 %float_0
+               OpSelectionMerge %46 None
+               OpBranchConditional %45 %47 %48
+         %47 = OpLabel
+               OpStore %42 %29
+               OpBranch %46
+         %48 = OpLabel
+               OpStore %42 %34
+               OpBranch %46
+         %46 = OpLabel
+         %49 = OpPhi %mat2v2float %29 %47 %34 %48
+         %50 = OpTranspose %mat2v2float %49
+         %51 = OpCompositeConstruct %S %int_1 %50
+         %52 = OpCompositeExtract %int %51 0
+               OpStore %6 %52
+         %53 = OpCompositeExtract %mat2v2float %51 1
+               OpStore %41 %53
+         %54 = OpConvertSToF %float %52
+         %55 = OpAccessChain %_ptr_Function_float %41 %int_0 %uint_0
+         %56 = OpLoad %mat2v2float %41
+         %57 = OpCompositeExtract %float %56 0 0
+         %58 = OpAccessChain %_ptr_Function_float %41 %int_1 %uint_0
+         %59 = OpLoad %mat2v2float %41
+         %60 = OpCompositeExtract %float %59 1 0
+         %61 = OpFAdd %float %57 %60
+         %62 = OpAccessChain %_ptr_Function_float %41 %int_0 %uint_1
+         %63 = OpLoad %mat2v2float %41
+         %64 = OpCompositeExtract %float %63 0 1
+         %65 = OpAccessChain %_ptr_Function_float %41 %int_1 %uint_1
+         %66 = OpLoad %mat2v2float %41
+         %67 = OpCompositeExtract %float %66 1 1
+         %68 = OpFAdd %float %64 %67
+         %69 = OpConvertSToF %float %52
+         %70 = OpCompositeConstruct %v4float %54 %61 %68 %69
+               OpStore %_GLF_color %70
+               OpReturn
+               OpFunctionEnd

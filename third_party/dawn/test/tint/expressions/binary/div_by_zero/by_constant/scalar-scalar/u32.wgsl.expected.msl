@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+uint tint_div_u32(uint lhs, uint rhs) {
+  return (lhs / select(rhs, 1u, (rhs == 0u)));
+}
+
+kernel void f() {
+  uint const a = 1u;
+  uint const b = 0u;
+  uint const r = tint_div_u32(a, b);
+}

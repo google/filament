@@ -1,0 +1,15 @@
+          OpCapability Shader
+          OpMemoryModel Logical Simple
+          OpEntryPoint GLCompute %100 "main"
+          OpExecutionMode %100 LocalSize 1 1 1
+  %uint = OpTypeInt 32 0
+  %void = OpTypeVoid
+%voidfn = OpTypeFunction %void
+   %ptr = OpTypePointer Function %uint
+   %100 = OpFunction %void None %voidfn
+ %entry = OpLabel
+    %10 = OpVariable %ptr Function
+     %1 = OpCopyObject %ptr %10
+     %2 = OpCopyObject %ptr %1
+          OpReturn
+          OpFunctionEnd

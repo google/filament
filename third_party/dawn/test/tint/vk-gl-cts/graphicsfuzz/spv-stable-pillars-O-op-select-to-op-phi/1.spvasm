@@ -1,0 +1,304 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 320
+               OpName %main "main"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "resolution"
+               OpName %_ ""
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpMemberDecorate %buf0 0 Offset 0
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+       %uint = OpTypeInt 32 0
+%_ptr_Function_int = OpTypePointer Function %int
+    %int_256 = OpConstant %int 256
+       %bool = OpTypeBool
+     %uint_0 = OpConstant %uint 0
+   %uint_256 = OpConstant %uint 256
+%_arr_int_uint_256 = OpTypeArray %int %uint_256
+    %int_115 = OpConstant %int 115
+    %int_133 = OpConstant %int 133
+    %int_150 = OpConstant %int 150
+    %int_164 = OpConstant %int 164
+    %int_176 = OpConstant %int 176
+    %int_184 = OpConstant %int 184
+    %int_190 = OpConstant %int 190
+    %int_192 = OpConstant %int 192
+    %int_191 = OpConstant %int 191
+    %int_187 = OpConstant %int 187
+    %int_181 = OpConstant %int 181
+    %int_172 = OpConstant %int 172
+    %int_163 = OpConstant %int 163
+    %int_153 = OpConstant %int 153
+    %int_143 = OpConstant %int 143
+    %int_134 = OpConstant %int 134
+    %int_126 = OpConstant %int 126
+    %int_120 = OpConstant %int 120
+    %int_116 = OpConstant %int 116
+    %int_114 = OpConstant %int 114
+    %int_117 = OpConstant %int 117
+    %int_121 = OpConstant %int 121
+    %int_127 = OpConstant %int 127
+    %int_141 = OpConstant %int 141
+    %int_148 = OpConstant %int 148
+    %int_154 = OpConstant %int 154
+    %int_159 = OpConstant %int 159
+    %int_162 = OpConstant %int 162
+    %int_161 = OpConstant %int 161
+    %int_157 = OpConstant %int 157
+    %int_151 = OpConstant %int 151
+    %int_124 = OpConstant %int 124
+    %int_113 = OpConstant %int 113
+    %int_103 = OpConstant %int 103
+     %int_94 = OpConstant %int 94
+     %int_87 = OpConstant %int 87
+     %int_82 = OpConstant %int 82
+     %int_79 = OpConstant %int 79
+     %int_80 = OpConstant %int 80
+     %int_84 = OpConstant %int 84
+     %int_91 = OpConstant %int 91
+    %int_101 = OpConstant %int 101
+    %int_130 = OpConstant %int 130
+    %int_146 = OpConstant %int 146
+    %int_182 = OpConstant %int 182
+    %int_199 = OpConstant %int 199
+    %int_215 = OpConstant %int 215
+    %int_229 = OpConstant %int 229
+    %int_240 = OpConstant %int 240
+    %int_249 = OpConstant %int 249
+    %int_254 = OpConstant %int 254
+    %int_250 = OpConstant %int 250
+    %int_243 = OpConstant %int 243
+    %int_233 = OpConstant %int 233
+    %int_223 = OpConstant %int 223
+    %int_212 = OpConstant %int 212
+    %int_200 = OpConstant %int 200
+    %int_180 = OpConstant %int 180
+    %int_166 = OpConstant %int 166
+    %int_169 = OpConstant %int 169
+    %int_174 = OpConstant %int 174
+    %int_179 = OpConstant %int 179
+    %int_185 = OpConstant %int 185
+    %int_193 = OpConstant %int 193
+    %int_195 = OpConstant %int 195
+    %int_188 = OpConstant %int 188
+    %int_171 = OpConstant %int 171
+    %int_149 = OpConstant %int 149
+    %int_137 = OpConstant %int 137
+    %int_125 = OpConstant %int 125
+    %int_105 = OpConstant %int 105
+     %int_97 = OpConstant %int 97
+     %int_93 = OpConstant %int 93
+     %int_98 = OpConstant %int 98
+    %int_106 = OpConstant %int 106
+    %int_145 = OpConstant %int 145
+    %int_177 = OpConstant %int 177
+    %int_208 = OpConstant %int 208
+    %int_221 = OpConstant %int 221
+    %int_231 = OpConstant %int 231
+    %int_239 = OpConstant %int 239
+    %int_244 = OpConstant %int 244
+    %int_242 = OpConstant %int 242
+    %int_236 = OpConstant %int 236
+    %int_228 = OpConstant %int 228
+    %int_218 = OpConstant %int 218
+    %int_207 = OpConstant %int 207
+    %int_194 = OpConstant %int 194
+    %int_158 = OpConstant %int 158
+    %int_135 = OpConstant %int 135
+    %int_132 = OpConstant %int 132
+    %int_131 = OpConstant %int 131
+    %int_138 = OpConstant %int 138
+    %int_147 = OpConstant %int 147
+    %int_155 = OpConstant %int 155
+    %int_152 = OpConstant %int 152
+    %int_139 = OpConstant %int 139
+    %int_129 = OpConstant %int 129
+    %int_118 = OpConstant %int 118
+     %int_68 = OpConstant %int 68
+     %int_58 = OpConstant %int 58
+     %int_49 = OpConstant %int 49
+     %int_43 = OpConstant %int 43
+     %int_40 = OpConstant %int 40
+     %int_41 = OpConstant %int 41
+     %int_44 = OpConstant %int 44
+     %int_51 = OpConstant %int 51
+     %int_61 = OpConstant %int 61
+     %int_73 = OpConstant %int 73
+    %int_119 = OpConstant %int 119
+    %int_173 = OpConstant %int 173
+    %int_186 = OpConstant %int 186
+    %int_128 = OpConstant %int 128
+    %int_104 = OpConstant %int 104
+     %int_86 = OpConstant %int 86
+     %int_81 = OpConstant %int 81
+     %int_77 = OpConstant %int 77
+     %int_76 = OpConstant %int 76
+     %int_89 = OpConstant %int 89
+    %int_102 = OpConstant %int 102
+     %int_92 = OpConstant %int 92
+     %int_83 = OpConstant %int 83
+     %int_62 = OpConstant %int 62
+     %int_50 = OpConstant %int 50
+     %int_38 = OpConstant %int 38
+     %int_26 = OpConstant %int 26
+     %int_16 = OpConstant %int 16
+      %int_8 = OpConstant %int 8
+      %int_2 = OpConstant %int 2
+      %int_0 = OpConstant %int 0
+      %int_4 = OpConstant %int 4
+     %int_11 = OpConstant %int 11
+     %int_21 = OpConstant %int 21
+     %int_33 = OpConstant %int 33
+     %int_48 = OpConstant %int 48
+     %int_64 = OpConstant %int 64
+    %int_144 = OpConstant %int 144
+    %int_123 = OpConstant %int 123
+    %int_112 = OpConstant %int 112
+    %int_100 = OpConstant %int 100
+     %int_90 = OpConstant %int 90
+     %int_65 = OpConstant %int 65
+     %int_67 = OpConstant %int 67
+     %int_70 = OpConstant %int 70
+     %int_75 = OpConstant %int 75
+     %int_95 = OpConstant %int 95
+     %int_88 = OpConstant %int 88
+     %int_69 = OpConstant %int 69
+     %int_47 = OpConstant %int 47
+     %int_36 = OpConstant %int 36
+     %int_18 = OpConstant %int 18
+     %int_13 = OpConstant %int 13
+     %int_15 = OpConstant %int 15
+     %int_22 = OpConstant %int 22
+     %int_32 = OpConstant %int 32
+     %int_45 = OpConstant %int 45
+     %int_60 = OpConstant %int 60
+        %177 = OpConstantComposite %_arr_int_uint_256 %int_115 %int_133 %int_150 %int_164 %int_176 %int_184 %int_190 %int_192 %int_191 %int_187 %int_181 %int_172 %int_163 %int_153 %int_143 %int_134 %int_126 %int_120 %int_116 %int_114 %int_114 %int_117 %int_121 %int_127 %int_134 %int_141 %int_148 %int_154 %int_159 %int_162 %int_163 %int_161 %int_157 %int_151 %int_143 %int_134 %int_124 %int_113 %int_103 %int_94 %int_87 %int_82 %int_79 %int_80 %int_84 %int_91 %int_101 %int_114 %int_130 %int_146 %int_164 %int_182 %int_199 %int_215 %int_229 %int_240 %int_249 %int_254 %int_256 %int_254 %int_250 %int_243 %int_233 %int_223 %int_212 %int_200 %int_190 %int_180 %int_172 %int_166 %int_163 %int_161 %int_162 %int_164 %int_169 %int_174 %int_179 %int_185 %int_190 %int_193 %int_195 %int_195 %int_192 %int_188 %int_180 %int_171 %int_161 %int_149 %int_137 %int_125 %int_114 %int_105 %int_97 %int_93 %int_91 %int_93 %int_98 %int_106 %int_117 %int_130 %int_145 %int_161 %int_177 %int_193 %int_208 %int_221 %int_231 %int_239 %int_243 %int_244 %int_242 %int_236 %int_228 %int_218 %int_207 %int_194 %int_181 %int_169 %int_158 %int_148 %int_141 %int_135 %int_132 %int_131 %int_132 %int_135 %int_138 %int_143 %int_147 %int_151 %int_154 %int_155 %int_155 %int_152 %int_146 %int_139 %int_129 %int_118 %int_106 %int_93 %int_80 %int_68 %int_58 %int_49 %int_43 %int_40 %int_41 %int_44 %int_51 %int_61 %int_73 %int_87 %int_103 %int_119 %int_134 %int_149 %int_162 %int_173 %int_181 %int_186 %int_188 %int_186 %int_181 %int_174 %int_164 %int_153 %int_141 %int_128 %int_116 %int_104 %int_94 %int_86 %int_81 %int_77 %int_76 %int_77 %int_80 %int_84 %int_89 %int_94 %int_98 %int_102 %int_104 %int_104 %int_102 %int_98 %int_92 %int_83 %int_73 %int_62 %int_50 %int_38 %int_26 %int_16 %int_8 %int_2 %int_0 %int_0 %int_4 %int_11 %int_21 %int_33 %int_48 %int_64 %int_81 %int_98 %int_114 %int_129 %int_141 %int_151 %int_158 %int_161 %int_161 %int_158 %int_152 %int_144 %int_134 %int_123 %int_112 %int_100 %int_90 %int_81 %int_73 %int_68 %int_65 %int_65 %int_67 %int_70 %int_75 %int_81 %int_87 %int_92 %int_97 %int_101 %int_103 %int_102 %int_100 %int_95 %int_88 %int_79 %int_69 %int_58 %int_47 %int_36 %int_26 %int_18 %int_13 %int_11 %int_11 %int_15 %int_22 %int_32 %int_45 %int_60 %int_77 %int_94
+%_ptr_Function__arr_int_uint_256 = OpTypePointer Function %_arr_int_uint_256
+   %float_15 = OpConstant %float 15
+    %float_1 = OpConstant %float 1
+      %int_1 = OpConstant %int 1
+    %float_0 = OpConstant %float 0
+        %183 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_1
+    %v2float = OpTypeVector %float 2
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %buf0 = OpTypeStruct %v2float
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+%_ptr_Uniform_v2float = OpTypePointer Uniform %v2float
+  %float_256 = OpConstant %float 256
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+      %false = OpConstantFalse %bool
+       %true = OpConstantTrue %bool
+        %192 = OpUndef %v4float
+%float_0_0666666701 = OpConstant %float 0.0666666701
+    %int_0_0 = OpConstant %int 0
+       %main = OpFunction %void None %8
+        %195 = OpLabel
+        %196 = OpVariable %_ptr_Function__arr_int_uint_256 Function
+        %197 = OpVariable %_ptr_Function__arr_int_uint_256 Function
+        %198 = OpVariable %_ptr_Function__arr_int_uint_256 Function
+        %199 = OpLoad %v4float %gl_FragCoord
+        %200 = OpVectorShuffle %v2float %199 %199 0 1
+        %201 = OpAccessChain %_ptr_Uniform_v2float %_ %int_0
+        %202 = OpLoad %v2float %201
+        %203 = OpFDiv %v2float %200 %202
+        %204 = OpCompositeExtract %float %203 0
+        %205 = OpFMul %float %204 %float_256
+        %206 = OpConvertFToS %int %205
+        %207 = OpCompositeExtract %float %203 1
+        %208 = OpFMul %float %207 %float_256
+        %209 = OpConvertFToS %int %208
+        %210 = OpCompositeConstruct %v2int %206 %209
+               OpSelectionMerge %211 None
+               OpSwitch %uint_0 %212
+        %212 = OpLabel
+               OpBranch %213
+        %213 = OpLabel
+        %214 = OpPhi %v2int %210 %212 %215 %216
+        %217 = OpCompositeExtract %int %214 1
+        %218 = OpINotEqual %bool %217 %int_256
+               OpLoopMerge %219 %216 None
+               OpBranchConditional %218 %220 %219
+        %220 = OpLabel
+        %221 = OpCompositeExtract %int %214 0
+               OpStore %196 %177
+        %222 = OpAccessChain %_ptr_Function_int %196 %217
+        %223 = OpLoad %int %222
+        %224 = OpIAdd %int %223 %int_15
+        %225 = OpSLessThan %bool %221 %224
+               OpBranch %226
+        %226 = OpLabel
+               OpSelectionMerge %227 None
+               OpBranchConditional %225 %228 %227
+        %228 = OpLabel
+               OpStore %197 %177
+               OpBranch %227
+        %227 = OpLabel
+        %229 = OpAccessChain %_ptr_Function_int %197 %217
+               OpSelectionMerge %230 None
+               OpBranchConditional %225 %231 %232
+        %231 = OpLabel
+        %233 = OpLoad %int %229
+               OpBranch %230
+        %232 = OpLabel
+        %234 = OpCopyObject %int %int_0_0
+               OpBranch %230
+        %230 = OpLabel
+        %235 = OpPhi %int %233 %231 %234 %232
+        %236 = OpISub %int %235 %int_15
+        %237 = OpSGreaterThan %bool %221 %236
+               OpSelectionMerge %238 None
+               OpBranchConditional %225 %239 %240
+        %239 = OpLabel
+               OpBranch %238
+        %240 = OpLabel
+               OpBranch %238
+        %238 = OpLabel
+        %241 = OpPhi %bool %237 %239 %225 %240
+               OpSelectionMerge %242 None
+               OpBranchConditional %241 %243 %242
+        %243 = OpLabel
+               OpStore %198 %177
+        %244 = OpAccessChain %_ptr_Function_int %198 %217
+        %245 = OpLoad %int %244
+        %246 = OpISub %int %221 %245
+        %247 = OpConvertSToF %float %246
+        %248 = OpExtInst %float %1 FAbs %247
+        %249 = OpFSub %float %float_15 %248
+        %250 = OpFMul %float %249 %float_0_0666666701
+        %251 = OpCompositeConstruct %v4float %250 %250 %250 %float_1
+               OpBranch %219
+        %242 = OpLabel
+        %252 = OpIAdd %int %217 %int_1
+        %215 = OpCompositeInsert %v2int %252 %214 1
+               OpBranch %216
+        %216 = OpLabel
+               OpBranch %213
+        %219 = OpLabel
+        %253 = OpPhi %v4float %192 %213 %251 %243
+        %254 = OpPhi %bool %false %213 %true %243
+               OpSelectionMerge %255 None
+               OpBranchConditional %254 %211 %255
+        %255 = OpLabel
+               OpBranch %211
+        %211 = OpLabel
+        %256 = OpPhi %v4float %253 %219 %183 %255
+               OpStore %_GLF_color %256
+               OpReturn
+               OpFunctionEnd

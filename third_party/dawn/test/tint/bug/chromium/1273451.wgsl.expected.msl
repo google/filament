@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct B {
+  int b;
+};
+
+struct A {
+  int a;
+};
+
+B f(A a) {
+  return B{};
+}

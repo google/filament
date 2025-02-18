@@ -1,0 +1,100 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpName %arg_0 "arg_0"
+               OpName %textureStore_b36bc1 "textureStore_b36bc1"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %fragment_main "fragment_main"
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 Coherent
+       %uint = OpTypeInt 32 0
+          %3 = OpTypeImage %uint 3D 0 0 0 2 Rgba8ui
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+      %arg_0 = OpVariable %_ptr_UniformConstant_3 UniformConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+     %uint_1 = OpConstant %uint 1
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %17 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+%textureStore_b36bc1 = OpFunction %void None %7
+          %8 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v3uint Function
+      %arg_2 = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_1 %12
+               OpStore %arg_2 %17
+         %18 = OpLoad %3 %arg_0 None
+         %19 = OpLoad %v3uint %arg_1 None
+         %20 = OpLoad %v4uint %arg_2 None
+               OpImageWrite %18 %19 %20 None
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %7
+         %23 = OpLabel
+         %24 = OpFunctionCall %void %textureStore_b36bc1
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %arg_0 "arg_0"
+               OpName %textureStore_b36bc1 "textureStore_b36bc1"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %compute_main "compute_main"
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 Coherent
+       %uint = OpTypeInt 32 0
+          %3 = OpTypeImage %uint 3D 0 0 0 2 Rgba8ui
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+      %arg_0 = OpVariable %_ptr_UniformConstant_3 UniformConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+     %uint_1 = OpConstant %uint 1
+         %12 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %17 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+%textureStore_b36bc1 = OpFunction %void None %7
+          %8 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v3uint Function
+      %arg_2 = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_1 %12
+               OpStore %arg_2 %17
+         %18 = OpLoad %3 %arg_0 None
+         %19 = OpLoad %v3uint %arg_1 None
+         %20 = OpLoad %v4uint %arg_2 None
+               OpImageWrite %18 %19 %20 None
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %7
+         %23 = OpLabel
+         %24 = OpFunctionCall %void %textureStore_b36bc1
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,53 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %main_position_Output %main___point_size_Output
+               OpName %gl_Position "gl_Position"
+               OpName %main_position_Output "main_position_Output"
+               OpName %main___point_size_Output "main___point_size_Output"
+               OpName %main_1 "main_1"
+               OpName %main_inner "main_inner"
+               OpMemberName %main_out 0 "gl_Position"
+               OpName %main_out "main_out"
+               OpName %main "main"
+               OpDecorate %main_position_Output BuiltIn Position
+               OpDecorate %main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %main_out 0 Offset 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Private_v4float = OpTypePointer Private %v4float
+          %5 = OpConstantNull %v4float
+%gl_Position = OpVariable %_ptr_Private_v4float Private %5
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%main___point_size_Output = OpVariable %_ptr_Output_float Output
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+   %main_out = OpTypeStruct %v4float
+         %16 = OpTypeFunction %main_out
+    %float_1 = OpConstant %float 1
+     %main_1 = OpFunction %void None %12
+         %13 = OpLabel
+               OpStore %gl_Position %5 None
+               OpReturn
+               OpFunctionEnd
+ %main_inner = OpFunction %main_out None %16
+         %17 = OpLabel
+         %18 = OpFunctionCall %void %main_1
+         %19 = OpLoad %v4float %gl_Position None
+         %20 = OpCompositeConstruct %main_out %19
+               OpReturnValue %20
+               OpFunctionEnd
+       %main = OpFunction %void None %12
+         %22 = OpLabel
+         %23 = OpFunctionCall %main_out %main_inner
+         %24 = OpCompositeExtract %v4float %23 0
+               OpStore %main_position_Output %24 None
+               OpStore %main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

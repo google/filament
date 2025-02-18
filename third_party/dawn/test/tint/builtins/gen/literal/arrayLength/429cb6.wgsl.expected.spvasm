@@ -1,0 +1,126 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpMemberName %SB_RW 0 "arg_0"
+               OpName %SB_RW "SB_RW"
+               OpName %sb_rw "sb_rw"
+               OpName %arrayLength_429cb6 "arrayLength_429cb6"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %_runtimearr_int ArrayStride 4
+               OpMemberDecorate %SB_RW 0 Offset 0
+               OpDecorate %SB_RW Block
+               OpDecorate %sb_rw DescriptorSet 0
+               OpDecorate %sb_rw Binding 1
+               OpDecorate %sb_rw Coherent
+       %uint = OpTypeInt 32 0
+%prevent_dce_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+        %int = OpTypeInt 32 1
+%_runtimearr_int = OpTypeRuntimeArray %int
+      %SB_RW = OpTypeStruct %_runtimearr_int
+%_ptr_StorageBuffer_SB_RW = OpTypePointer StorageBuffer %SB_RW
+      %sb_rw = OpVariable %_ptr_StorageBuffer_SB_RW StorageBuffer
+         %11 = OpTypeFunction %uint
+%_ptr_StorageBuffer__runtimearr_int = OpTypePointer StorageBuffer %_runtimearr_int
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %void = OpTypeVoid
+         %22 = OpTypeFunction %void
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%arrayLength_429cb6 = OpFunction %uint None %11
+         %12 = OpLabel
+        %res = OpVariable %_ptr_Function_uint Function
+         %13 = OpAccessChain %_ptr_StorageBuffer__runtimearr_int %sb_rw %uint_0
+         %16 = OpArrayLength %uint %sb_rw 0
+               OpStore %res %16
+         %19 = OpLoad %uint %res None
+               OpReturnValue %19
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %22
+         %23 = OpLabel
+         %24 = OpFunctionCall %uint %arrayLength_429cb6
+         %25 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+               OpStore %25 %24 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpMemberName %SB_RW 0 "arg_0"
+               OpName %SB_RW "SB_RW"
+               OpName %sb_rw "sb_rw"
+               OpName %arrayLength_429cb6 "arrayLength_429cb6"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %_runtimearr_int ArrayStride 4
+               OpMemberDecorate %SB_RW 0 Offset 0
+               OpDecorate %SB_RW Block
+               OpDecorate %sb_rw DescriptorSet 0
+               OpDecorate %sb_rw Binding 1
+               OpDecorate %sb_rw Coherent
+       %uint = OpTypeInt 32 0
+%prevent_dce_block = OpTypeStruct %uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+        %int = OpTypeInt 32 1
+%_runtimearr_int = OpTypeRuntimeArray %int
+      %SB_RW = OpTypeStruct %_runtimearr_int
+%_ptr_StorageBuffer_SB_RW = OpTypePointer StorageBuffer %SB_RW
+      %sb_rw = OpVariable %_ptr_StorageBuffer_SB_RW StorageBuffer
+         %11 = OpTypeFunction %uint
+%_ptr_StorageBuffer__runtimearr_int = OpTypePointer StorageBuffer %_runtimearr_int
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %void = OpTypeVoid
+         %22 = OpTypeFunction %void
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%arrayLength_429cb6 = OpFunction %uint None %11
+         %12 = OpLabel
+        %res = OpVariable %_ptr_Function_uint Function
+         %13 = OpAccessChain %_ptr_StorageBuffer__runtimearr_int %sb_rw %uint_0
+         %16 = OpArrayLength %uint %sb_rw 0
+               OpStore %res %16
+         %19 = OpLoad %uint %res None
+               OpReturnValue %19
+               OpFunctionEnd
+%compute_main = OpFunction %void None %22
+         %23 = OpLabel
+         %24 = OpFunctionCall %uint %arrayLength_429cb6
+         %25 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0
+               OpStore %25 %24 None
+               OpReturn
+               OpFunctionEnd

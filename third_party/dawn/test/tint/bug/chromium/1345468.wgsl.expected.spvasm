@@ -1,0 +1,61 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 41
+; Schema: 0
+               OpCapability Shader
+         %23 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %f "f"
+               OpName %i "i"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat4v2float = OpTypeMatrix %v2float 4
+%_ptr_Private_mat4v2float = OpTypePointer Private %mat4v2float
+          %7 = OpConstantNull %v2float
+    %float_4 = OpConstant %float 4
+    %float_0 = OpConstant %float 0
+          %8 = OpConstantComposite %v2float %float_4 %float_0
+          %6 = OpConstantComposite %mat4v2float %7 %7 %8 %7
+          %1 = OpVariable %_ptr_Private_mat4v2float Private %6
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+%_ptr_Private_v2float = OpTypePointer Private %v2float
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+     %uint_1 = OpConstant %uint 1
+      %v2int = OpTypeVector %int 2
+      %int_0 = OpConstant %int 0
+         %35 = OpConstantComposite %v2int %int_0 %int_1
+          %f = OpFunction %void None %13
+         %14 = OpLabel
+          %i = OpVariable %_ptr_Function_int Function
+          %a = OpVariable %_ptr_Function_v2float Function
+          %b = OpVariable %_ptr_Function_int Function
+               OpStore %i %int_1
+         %19 = OpLoad %int %i None
+         %21 = OpBitcast %uint %19
+         %22 = OpExtInst %uint %23 UMin %21 %uint_3
+         %25 = OpAccessChain %_ptr_Private_v2float %1 %22
+         %27 = OpLoad %v2float %25 None
+               OpStore %a %27
+         %30 = OpLoad %int %i None
+         %31 = OpBitcast %uint %30
+         %32 = OpExtInst %uint %23 UMin %31 %uint_1
+         %34 = OpVectorExtractDynamic %int %35 %32
+               OpStore %b %34
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %13
+         %40 = OpLabel
+               OpReturn
+               OpFunctionEnd

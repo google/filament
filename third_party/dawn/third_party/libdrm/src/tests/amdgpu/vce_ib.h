@@ -1,0 +1,335 @@
+/*
+ * Copyright 2015 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+*/
+
+#ifndef _vce_ib_h_
+#define _vce_ib_h_
+
+static const uint32_t vce_session[] = {
+	0x0000000c,
+	0x00000001,
+	0x400c0001,
+};
+
+static uint32_t vce_taskinfo[8] = {
+	0x00000020,
+	0x00000002,
+	0xffffffff,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+};
+
+static const uint32_t vce_create[] = {
+	0x00000030,
+	0x01000001,
+	0x00000000,
+	0x00000042,
+	0x0000002a,
+	0x00000000,
+	0x000000a0,
+	0x00000080,
+	0x000000a0,
+	0x000000a0,
+	0x00000010,
+	0x00000201,
+};
+
+static const uint32_t vce_rate_ctrl[] = {
+	0x00000070,
+	0x04000005,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x0000001c,
+	0x0000001c,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000033,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+};
+
+static const uint32_t vce_config_ext[] = {
+	0x0000000c,
+	0x04000001,
+	0x00000003,
+};
+
+static const uint32_t vce_motion_est[] = {
+	0x00000068,
+	0x04000007,
+	0x00000001,
+	0x00000001,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000010,
+	0x00000010,
+	0x00000010,
+	0x00000010,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x000000fe,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000001,
+	0x00000001,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+};
+
+static const uint32_t vce_rdo[] = {
+	0x0000004c,
+	0x04000008,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+};
+
+static const uint32_t vce_pic_ctrl[] = {
+	0x00000074,
+	0x04000002,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000aa0,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000040,
+	0x00000000,
+	0x00000000,
+	0x00000001,
+	0x00000002,
+	0x00000001,
+	0x00000001,
+	0x00000000,
+	0x00000000,
+};
+
+static const uint32_t vce_feedback[] = {
+	0x00000014,
+	0x05000005,
+	0x00000000,
+	0xffffffff,
+	0x00000001,
+};
+
+static const uint32_t vce_context_buffer[] = {
+	0x00000010,
+	0x05000001,
+	0x00000000,
+	0xffffffff,
+};
+
+static const uint32_t vce_bs_buffer[] = {
+	0x00000014,
+	0x05000004,
+	0x00000000,
+	0xffffffff,
+	0x00154000,
+};
+
+static const uint32_t vce_aux_buffer[] = {
+	0x00000048,
+	0x05000002,
+	0x0000f000,
+	0x00016800,
+	0x0001e000,
+	0x00025800,
+	0x0002d000,
+	0x00034800,
+	0x0003c000,
+	0x00043800,
+	0x00007800,
+	0x00007800,
+	0x00007800,
+	0x00007800,
+	0x00007800,
+	0x00007800,
+	0x00007800,
+	0x00007800,
+};
+
+static uint32_t vce_encode[88] = {
+	0x00000160,
+	0x03000001,
+	0x00000011,
+	0x00000000,
+	0x00154000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0xffffffff,
+	0x00000000,
+	0xffffffff,
+	0x00000080,
+	0x000000a0,
+	0x000000a0,
+	0x00010000,
+	0x00000000,
+	0x00000003,
+	0x00000001,
+	0x00000000,
+	0x00000000,
+	0x00000001,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0xffffffff,
+	0xffffffff,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0xffffffff,
+	0xffffffff,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+};
+
+static const uint32_t vce_destroy[] = {
+	0x00000008,
+	0x02000001,
+};
+
+static const uint32_t vce_mv_buffer[] = {
+	0x00000038,
+	0x0500000d,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+};
+#endif /*_vce_ib_h*/

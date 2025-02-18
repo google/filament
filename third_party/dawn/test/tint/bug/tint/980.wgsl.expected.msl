@@ -1,0 +1,26 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S_packed_vec3 {
+  /* 0x0000 */ packed_float3 v;
+  /* 0x000c */ uint i;
+};
+
+struct tint_module_vars_struct {
+  device S_packed_vec3* io;
+};
+
+float3 Bad(uint index, float3 rd) {
+  float3 normal = float3(0.0f);
+  normal[min(index, 2u)] = -(sign(rd[min(index, 2u)]));
+  return normalize(normal);
+}
+
+void main_inner(uint idx, tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.io).v = packed_float3(Bad((*tint_module_vars.io).i, float3((*tint_module_vars.io).v)));
+}
+
+kernel void v_1(uint idx [[thread_index_in_threadgroup]], device S_packed_vec3* io [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.io=io};
+  main_inner(idx, tint_module_vars);
+}

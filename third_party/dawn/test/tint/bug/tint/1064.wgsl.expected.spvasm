@@ -1,0 +1,68 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpName %main "main"
+               OpName %tint_loop_idx "tint_loop_idx"
+               OpName %tint_low_inc "tint_low_inc"
+               OpName %tint_carry "tint_carry"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+         %14 = OpConstantNull %v2uint
+%uint_4294967295 = OpConstant %uint 4294967295
+         %17 = OpConstantComposite %v2uint %uint_4294967295 %uint_4294967295
+       %bool = OpTypeBool
+     %v2bool = OpTypeVector %bool 2
+      %false = OpConstantFalse %bool
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+%tint_loop_idx = OpVariable %_ptr_Function_v2uint Function %14
+               OpBranch %5
+          %5 = OpLabel
+               OpBranch %8
+          %8 = OpLabel
+               OpLoopMerge %9 %7 None
+               OpBranch %6
+          %6 = OpLabel
+         %15 = OpLoad %v2uint %tint_loop_idx None
+         %16 = OpIEqual %v2bool %15 %17
+         %21 = OpAll %bool %16
+               OpSelectionMerge %22 None
+               OpBranchConditional %21 %23 %22
+         %23 = OpLabel
+               OpBranch %9
+         %22 = OpLabel
+               OpSelectionMerge %24 None
+               OpBranchConditional %false %24 %25
+         %25 = OpLabel
+               OpBranch %9
+         %24 = OpLabel
+               OpBranch %7
+          %7 = OpLabel
+         %27 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_0
+         %30 = OpLoad %uint %27 None
+%tint_low_inc = OpIAdd %uint %30 %uint_1
+         %33 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_0
+               OpStore %33 %tint_low_inc None
+         %34 = OpIEqual %bool %tint_low_inc %uint_0
+ %tint_carry = OpSelect %uint %34 %uint_1 %uint_0
+         %36 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_1
+         %37 = OpLoad %uint %36 None
+         %38 = OpIAdd %uint %37 %tint_carry
+         %39 = OpAccessChain %_ptr_Function_uint %tint_loop_idx %uint_1
+               OpStore %39 %38 None
+               OpBranchConditional %false %9 %8
+          %9 = OpLabel
+               OpReturn
+               OpFunctionEnd

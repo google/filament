@@ -1,0 +1,62 @@
+//
+// vert_main1
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+  int loc0;
+};
+
+struct vert_main1_outputs {
+  float4 VertexOutput_pos [[position]];
+  int VertexOutput_loc0 [[user(locn0)]] [[flat]];
+};
+
+VertexOutput foo(float x) {
+  return VertexOutput{.pos=float4(x, x, x, 1.0f), .loc0=42};
+}
+
+VertexOutput vert_main1_inner() {
+  return foo(0.5f);
+}
+
+vertex vert_main1_outputs vert_main1() {
+  VertexOutput const v = vert_main1_inner();
+  vert_main1_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v.pos;
+  tint_wrapper_result.VertexOutput_loc0 = v.loc0;
+  return tint_wrapper_result;
+}
+//
+// vert_main2
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+  int loc0;
+};
+
+struct vert_main2_outputs {
+  float4 VertexOutput_pos [[position]];
+  int VertexOutput_loc0 [[user(locn0)]] [[flat]];
+};
+
+VertexOutput foo(float x) {
+  return VertexOutput{.pos=float4(x, x, x, 1.0f), .loc0=42};
+}
+
+VertexOutput vert_main2_inner() {
+  return foo(0.25f);
+}
+
+vertex vert_main2_outputs vert_main2() {
+  VertexOutput const v = vert_main2_inner();
+  vert_main2_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v.pos;
+  tint_wrapper_result.VertexOutput_loc0 = v.loc0;
+  return tint_wrapper_result;
+}

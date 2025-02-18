@@ -1,0 +1,79 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+         %27 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %UBO 0 "dynamic_idx"
+               OpName %UBO "UBO"
+               OpMemberName %ubo_block 0 "inner"
+               OpName %ubo_block "ubo_block"
+               OpMemberName %Result 0 "out"
+               OpName %Result "Result"
+               OpMemberName %result_block 0 "inner"
+               OpName %result_block "result_block"
+               OpMemberName %SSBO 0 "data"
+               OpName %SSBO "SSBO"
+               OpMemberName %ssbo_block 0 "inner"
+               OpName %ssbo_block "ssbo_block"
+               OpName %f "f"
+               OpMemberDecorate %UBO 0 Offset 0
+               OpMemberDecorate %ubo_block 0 Offset 0
+               OpDecorate %ubo_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %Result 0 Offset 0
+               OpMemberDecorate %result_block 0 Offset 0
+               OpDecorate %result_block Block
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 2
+               OpDecorate %6 Coherent
+               OpDecorate %_arr_int_uint_4 ArrayStride 4
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %ssbo_block 0 Offset 0
+               OpDecorate %ssbo_block Block
+               OpDecorate %10 DescriptorSet 0
+               OpDecorate %10 Binding 1
+               OpDecorate %10 Coherent
+        %int = OpTypeInt 32 1
+        %UBO = OpTypeStruct %int
+  %ubo_block = OpTypeStruct %UBO
+%_ptr_Uniform_ubo_block = OpTypePointer Uniform %ubo_block
+          %1 = OpVariable %_ptr_Uniform_ubo_block Uniform
+     %Result = OpTypeStruct %int
+%result_block = OpTypeStruct %Result
+%_ptr_StorageBuffer_result_block = OpTypePointer StorageBuffer %result_block
+          %6 = OpVariable %_ptr_StorageBuffer_result_block StorageBuffer
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_int_uint_4 = OpTypeArray %int %uint_4
+       %SSBO = OpTypeStruct %_arr_int_uint_4
+ %ssbo_block = OpTypeStruct %SSBO
+%_ptr_StorageBuffer_ssbo_block = OpTypePointer StorageBuffer %ssbo_block
+         %10 = OpVariable %_ptr_StorageBuffer_ssbo_block StorageBuffer
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+     %uint_0 = OpConstant %uint 0
+     %uint_3 = OpConstant %uint 3
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+      %int_1 = OpConstant %int 1
+          %f = OpFunction %void None %19
+         %20 = OpLabel
+         %21 = OpAccessChain %_ptr_Uniform_int %1 %uint_0 %uint_0
+         %24 = OpLoad %int %21 None
+         %25 = OpBitcast %uint %24
+         %26 = OpExtInst %uint %27 UMin %25 %uint_3
+         %29 = OpAccessChain %_ptr_StorageBuffer_int %10 %uint_0 %uint_0 %26
+               OpStore %29 %int_1 None
+         %32 = OpAccessChain %_ptr_StorageBuffer_int %6 %uint_0 %uint_0
+         %33 = OpAccessChain %_ptr_StorageBuffer_int %10 %uint_0 %uint_0 %uint_3
+         %34 = OpLoad %int %33 None
+               OpStore %32 %34 None
+               OpReturn
+               OpFunctionEnd

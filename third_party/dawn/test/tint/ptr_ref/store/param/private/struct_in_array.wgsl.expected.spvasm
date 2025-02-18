@@ -1,0 +1,48 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %str 0 "i"
+               OpName %str "str"
+               OpName %P "P"
+               OpName %func "func"
+               OpName %pointer_indices "pointer_indices"
+               OpName %main "main"
+               OpMemberDecorate %str 0 Offset 0
+               OpDecorate %_arr_str_uint_4 ArrayStride 4
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+        %int = OpTypeInt 32 1
+        %str = OpTypeStruct %int
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_str_uint_4 = OpTypeArray %str %uint_4
+%_ptr_Private__arr_str_uint_4 = OpTypePointer Private %_arr_str_uint_4
+          %8 = OpConstantNull %_arr_str_uint_4
+          %P = OpVariable %_ptr_Private__arr_str_uint_4 Private %8
+       %void = OpTypeVoid
+     %uint_1 = OpConstant %uint 1
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+         %14 = OpTypeFunction %void %_arr_uint_uint_1
+%_ptr_Private_str = OpTypePointer Private %str
+         %19 = OpConstantNull %str
+         %21 = OpTypeFunction %void
+     %uint_2 = OpConstant %uint 2
+       %func = OpFunction %void None %14
+%pointer_indices = OpFunctionParameter %_arr_uint_uint_1
+         %15 = OpLabel
+         %16 = OpCompositeExtract %uint %pointer_indices 0
+         %17 = OpAccessChain %_ptr_Private_str %P %16
+               OpStore %17 %19 None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %21
+         %22 = OpLabel
+         %23 = OpCompositeConstruct %_arr_uint_uint_1 %uint_2
+         %25 = OpFunctionCall %void %func %23
+               OpReturn
+               OpFunctionEnd

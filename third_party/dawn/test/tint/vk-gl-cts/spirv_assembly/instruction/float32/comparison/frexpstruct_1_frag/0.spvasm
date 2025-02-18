@@ -1,0 +1,61 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %2 "main" %3 %4 %5
+               OpDecorate %3 Location 0
+               OpDecorate %4 Flat
+               OpDecorate %4 Location 0
+               OpMemberDecorate %_struct_6 0 BuiltIn Position
+               OpMemberDecorate %_struct_6 1 BuiltIn PointSize
+               OpMemberDecorate %_struct_6 2 BuiltIn ClipDistance
+               OpDecorate %_struct_6 Block
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+          %3 = OpVariable %_ptr_Input_v2float Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+    %float_1 = OpConstant %float 1
+     %uint_1 = OpConstant %uint 1
+%_ptr_Output_uint = OpTypePointer Output %uint
+          %4 = OpVariable %_ptr_Output_uint Output
+    %uint_36 = OpConstant %uint 36
+    %v4float = OpTypeVector %float 4
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+  %_struct_6 = OpTypeStruct %v4float %float %_arr_float_uint_1
+%_ptr_Output__struct_6 = OpTypePointer Output %_struct_6
+          %5 = OpVariable %_ptr_Output__struct_6 Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+    %float_0 = OpConstant %float 0
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%float_1_02777779 = OpConstant %float 1.02777779
+   %float_18 = OpConstant %float 18
+          %2 = OpFunction %void None %8
+         %28 = OpLabel
+         %29 = OpAccessChain %_ptr_Input_float %3 %uint_0
+         %30 = OpLoad %float %29
+         %31 = OpFAdd %float %30 %float_1_02777779
+         %32 = OpFMul %float %31 %float_18
+         %33 = OpFSub %float %32 %float_1
+         %34 = OpConvertFToU %uint %33
+         %35 = OpAccessChain %_ptr_Input_float %3 %uint_1
+         %36 = OpLoad %float %35
+         %37 = OpFAdd %float %36 %float_1_02777779
+         %38 = OpFMul %float %37 %float_18
+         %39 = OpFSub %float %38 %float_1
+         %40 = OpConvertFToU %uint %39
+         %41 = OpIMul %uint %40 %uint_36
+         %42 = OpIAdd %uint %34 %41
+               OpStore %4 %42
+         %43 = OpLoad %v2float %3
+         %44 = OpCompositeExtract %float %43 0
+         %45 = OpCompositeExtract %float %43 1
+         %46 = OpCompositeConstruct %v4float %44 %45 %float_0 %float_1
+         %47 = OpAccessChain %_ptr_Output_v4float %5 %int_0
+               OpStore %47 %46
+               OpReturn
+               OpFunctionEnd

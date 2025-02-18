@@ -1,0 +1,100 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpCapability SampleRateShading
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Input %main_loc1_Input %main_loc2_Input %main_loc3_Input %main_loc4_Input %main_loc5_Input %main_loc6_Input %main_loc7_Input %main_loc8_Input %main_loc9_Input
+               OpExecutionMode %main OriginUpperLeft
+               OpName %main_loc0_Input "main_loc0_Input"
+               OpName %main_loc1_Input "main_loc1_Input"
+               OpName %main_loc2_Input "main_loc2_Input"
+               OpName %main_loc3_Input "main_loc3_Input"
+               OpName %main_loc4_Input "main_loc4_Input"
+               OpName %main_loc5_Input "main_loc5_Input"
+               OpName %main_loc6_Input "main_loc6_Input"
+               OpName %main_loc7_Input "main_loc7_Input"
+               OpName %main_loc8_Input "main_loc8_Input"
+               OpName %main_loc9_Input "main_loc9_Input"
+               OpName %main_inner "main_inner"
+               OpMemberName %In 0 "none"
+               OpMemberName %In 1 "flat"
+               OpMemberName %In 2 "perspective_center"
+               OpMemberName %In 3 "perspective_centroid"
+               OpMemberName %In 4 "perspective_sample"
+               OpMemberName %In 5 "linear_center"
+               OpMemberName %In 6 "linear_centroid"
+               OpMemberName %In 7 "linear_sample"
+               OpMemberName %In 8 "perspective_default"
+               OpMemberName %In 9 "linear_default"
+               OpName %In "In"
+               OpName %in "in"
+               OpName %main "main"
+               OpDecorate %main_loc0_Input Location 0
+               OpDecorate %main_loc1_Input Location 1
+               OpDecorate %main_loc1_Input Flat
+               OpDecorate %main_loc2_Input Location 2
+               OpDecorate %main_loc3_Input Location 3
+               OpDecorate %main_loc3_Input Centroid
+               OpDecorate %main_loc4_Input Location 4
+               OpDecorate %main_loc4_Input Sample
+               OpDecorate %main_loc5_Input Location 5
+               OpDecorate %main_loc5_Input NoPerspective
+               OpDecorate %main_loc6_Input Location 6
+               OpDecorate %main_loc6_Input NoPerspective
+               OpDecorate %main_loc6_Input Centroid
+               OpDecorate %main_loc7_Input Location 7
+               OpDecorate %main_loc7_Input NoPerspective
+               OpDecorate %main_loc7_Input Sample
+               OpDecorate %main_loc8_Input Location 8
+               OpDecorate %main_loc9_Input Location 9
+               OpDecorate %main_loc9_Input NoPerspective
+               OpMemberDecorate %In 0 Offset 0
+               OpMemberDecorate %In 1 Offset 4
+               OpMemberDecorate %In 2 Offset 8
+               OpMemberDecorate %In 3 Offset 12
+               OpMemberDecorate %In 4 Offset 16
+               OpMemberDecorate %In 5 Offset 20
+               OpMemberDecorate %In 6 Offset 24
+               OpMemberDecorate %In 7 Offset 28
+               OpMemberDecorate %In 8 Offset 32
+               OpMemberDecorate %In 9 Offset 36
+      %float = OpTypeFloat 32
+%_ptr_Input_float = OpTypePointer Input %float
+%main_loc0_Input = OpVariable %_ptr_Input_float Input
+%main_loc1_Input = OpVariable %_ptr_Input_float Input
+%main_loc2_Input = OpVariable %_ptr_Input_float Input
+%main_loc3_Input = OpVariable %_ptr_Input_float Input
+%main_loc4_Input = OpVariable %_ptr_Input_float Input
+%main_loc5_Input = OpVariable %_ptr_Input_float Input
+%main_loc6_Input = OpVariable %_ptr_Input_float Input
+%main_loc7_Input = OpVariable %_ptr_Input_float Input
+%main_loc8_Input = OpVariable %_ptr_Input_float Input
+%main_loc9_Input = OpVariable %_ptr_Input_float Input
+       %void = OpTypeVoid
+         %In = OpTypeStruct %float %float %float %float %float %float %float %float %float %float
+         %17 = OpTypeFunction %void %In
+         %20 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %17
+         %in = OpFunctionParameter %In
+         %18 = OpLabel
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %20
+         %21 = OpLabel
+         %22 = OpLoad %float %main_loc0_Input None
+         %23 = OpLoad %float %main_loc1_Input None
+         %24 = OpLoad %float %main_loc2_Input None
+         %25 = OpLoad %float %main_loc3_Input None
+         %26 = OpLoad %float %main_loc4_Input None
+         %27 = OpLoad %float %main_loc5_Input None
+         %28 = OpLoad %float %main_loc6_Input None
+         %29 = OpLoad %float %main_loc7_Input None
+         %30 = OpLoad %float %main_loc8_Input None
+         %31 = OpLoad %float %main_loc9_Input None
+         %32 = OpCompositeConstruct %In %22 %23 %24 %25 %26 %27 %28 %29 %30 %31
+         %33 = OpFunctionCall %void %main_inner %32
+               OpReturn
+               OpFunctionEnd

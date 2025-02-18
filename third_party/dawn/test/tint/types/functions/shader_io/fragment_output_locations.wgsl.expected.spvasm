@@ -1,0 +1,137 @@
+;
+; main0
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 13
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main0 "main0" %main0_loc0_Output
+               OpExecutionMode %main0 OriginUpperLeft
+               OpName %main0_loc0_Output "main0_loc0_Output"
+               OpName %main0_inner "main0_inner"
+               OpName %main0 "main0"
+               OpDecorate %main0_loc0_Output Location 0
+        %int = OpTypeInt 32 1
+%_ptr_Output_int = OpTypePointer Output %int
+%main0_loc0_Output = OpVariable %_ptr_Output_int Output
+          %5 = OpTypeFunction %int
+      %int_1 = OpConstant %int 1
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+%main0_inner = OpFunction %int None %5
+          %6 = OpLabel
+               OpReturnValue %int_1
+               OpFunctionEnd
+      %main0 = OpFunction %void None %10
+         %11 = OpLabel
+         %12 = OpFunctionCall %int %main0_inner
+               OpStore %main0_loc0_Output %12 None
+               OpReturn
+               OpFunctionEnd
+;
+; main1
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 13
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main1 "main1" %main1_loc1_Output
+               OpExecutionMode %main1 OriginUpperLeft
+               OpName %main1_loc1_Output "main1_loc1_Output"
+               OpName %main1_inner "main1_inner"
+               OpName %main1 "main1"
+               OpDecorate %main1_loc1_Output Location 1
+       %uint = OpTypeInt 32 0
+%_ptr_Output_uint = OpTypePointer Output %uint
+%main1_loc1_Output = OpVariable %_ptr_Output_uint Output
+          %5 = OpTypeFunction %uint
+     %uint_1 = OpConstant %uint 1
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+%main1_inner = OpFunction %uint None %5
+          %6 = OpLabel
+               OpReturnValue %uint_1
+               OpFunctionEnd
+      %main1 = OpFunction %void None %10
+         %11 = OpLabel
+         %12 = OpFunctionCall %uint %main1_inner
+               OpStore %main1_loc1_Output %12 None
+               OpReturn
+               OpFunctionEnd
+;
+; main2
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 13
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main2 "main2" %main2_loc2_Output
+               OpExecutionMode %main2 OriginUpperLeft
+               OpName %main2_loc2_Output "main2_loc2_Output"
+               OpName %main2_inner "main2_inner"
+               OpName %main2 "main2"
+               OpDecorate %main2_loc2_Output Location 2
+      %float = OpTypeFloat 32
+%_ptr_Output_float = OpTypePointer Output %float
+%main2_loc2_Output = OpVariable %_ptr_Output_float Output
+          %5 = OpTypeFunction %float
+    %float_1 = OpConstant %float 1
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+%main2_inner = OpFunction %float None %5
+          %6 = OpLabel
+               OpReturnValue %float_1
+               OpFunctionEnd
+      %main2 = OpFunction %void None %10
+         %11 = OpLabel
+         %12 = OpFunctionCall %float %main2_inner
+               OpStore %main2_loc2_Output %12 None
+               OpReturn
+               OpFunctionEnd
+;
+; main3
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main3 "main3" %main3_loc3_Output
+               OpExecutionMode %main3 OriginUpperLeft
+               OpName %main3_loc3_Output "main3_loc3_Output"
+               OpName %main3_inner "main3_inner"
+               OpName %main3 "main3"
+               OpDecorate %main3_loc3_Output Location 3
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main3_loc3_Output = OpVariable %_ptr_Output_v4float Output
+          %6 = OpTypeFunction %v4float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+          %8 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+%main3_inner = OpFunction %v4float None %6
+          %7 = OpLabel
+               OpReturnValue %8
+               OpFunctionEnd
+      %main3 = OpFunction %void None %15
+         %16 = OpLabel
+         %17 = OpFunctionCall %v4float %main3_inner
+               OpStore %main3_loc3_Output %17 None
+               OpReturn
+               OpFunctionEnd

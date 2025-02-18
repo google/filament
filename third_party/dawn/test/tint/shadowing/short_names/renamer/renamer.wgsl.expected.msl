@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_struct {
+  float4 tint_member [[position]];
+};
+
+float4 v(uint v_1) {
+  return float4(0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+vertex tint_struct tint_entry_point(uint v_3 [[vertex_id]]) {
+  tint_struct v_4 = {};
+  v_4.tint_member = v(v_3);
+  return v_4;
+}

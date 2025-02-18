@@ -1,0 +1,60 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %t "t"
+               OpName %m "m"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %tint_f32_to_u32 "tint_f32_to_u32"
+               OpName %value "value"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+%_ptr_Private_float = OpTypePointer Private %float
+          %4 = OpConstantNull %float
+          %t = OpVariable %_ptr_Private_float Private %4
+          %6 = OpTypeFunction %float
+    %float_1 = OpConstant %float 1
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+         %21 = OpTypeFunction %uint %float
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+     %uint_0 = OpConstant %uint 0
+%float_4_29496704e_09 = OpConstant %float 4.29496704e+09
+%uint_4294967295 = OpConstant %uint 4294967295
+          %m = OpFunction %float None %6
+          %7 = OpLabel
+               OpStore %t %float_1 None
+          %9 = OpLoad %float %t None
+               OpReturnValue %9
+               OpFunctionEnd
+          %f = OpFunction %void None %12
+         %13 = OpLabel
+          %v = OpVariable %_ptr_Function_uint Function
+         %14 = OpFunctionCall %float %m
+         %15 = OpFunctionCall %uint %tint_f32_to_u32 %14
+               OpStore %v %15
+               OpReturn
+               OpFunctionEnd
+%tint_f32_to_u32 = OpFunction %uint None %21
+      %value = OpFunctionParameter %float
+         %22 = OpLabel
+         %23 = OpConvertFToU %uint %value
+         %24 = OpFOrdGreaterThanEqual %bool %value %float_0
+         %27 = OpSelect %uint %24 %23 %uint_0
+         %29 = OpFOrdLessThanEqual %bool %value %float_4_29496704e_09
+         %31 = OpSelect %uint %29 %27 %uint_4294967295
+               OpReturnValue %31
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %12
+         %34 = OpLabel
+               OpReturn
+               OpFunctionEnd

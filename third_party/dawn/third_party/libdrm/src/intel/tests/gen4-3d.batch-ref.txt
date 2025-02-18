@@ -1,0 +1,488 @@
+0x12300000:      0x61040000: 3DSTATE_PIPELINE_SELECT
+0x12300004:      0x79090000: 3DSTATE_GLOBAL_DEPTH_OFFSET_CLAMP
+0x12300008:      0x00000000:    dword 1
+0x1230000c:      0x61020000: STATE_SIP
+0x12300010:      0x00000000:    dword 1
+0x12300014:      0x780b0000: 3DSTATE_VF_STATISTICS
+0x12300018:      0x61010004: STATE_BASE_ADDRESS
+0x1230001c:      0x00000001:    general state base address 0x00000000
+0x12300020:      0x00000001:    surface state base address 0x00000000
+0x12300024:      0x00000001:    indirect state base address 0x00000000
+0x12300028:      0x00000001:    general state upper bound disabled
+0x1230002c:      0x00000001:    indirect state upper bound disabled
+0x12300030:      0x78010004: 3DSTATE_BINDING_TABLE_POINTERS
+0x12300034:      0x00007e20:    VS binding table
+0x12300038:      0x00000000:    GS binding table
+0x1230003c:      0x00000000:    Clip binding table
+0x12300040:      0x00000000:    SF binding table
+0x12300044:      0x00007e20:    WM binding table
+0x12300048:      0x79010003: 3DSTATE_CONSTANT_COLOR
+0x1230004c:      0x00000000:    dword 1
+0x12300050:      0x00000000:    dword 2
+0x12300054:      0x00000000:    dword 3
+0x12300058:      0x00000000:    dword 4
+0x1230005c:      0x79050003: 3DSTATE_DEPTH_BUFFER
+0x12300060:      0x2c0805ff:    2D, z24s8, pitch = 1536 bytes, tiled
+0x12300064:      0x00000000:    depth offset
+0x12300068:      0x09584ac0:    300x300
+0x1230006c:      0x00000000:    volume depth
+0x12300070:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300074:      0x00007d60:    VS state
+0x12300078:      0x00000000:    GS state
+0x1230007c:      0x00007d21:    Clip state
+0x12300080:      0x00007d80:    SF state
+0x12300084:      0x00007de0:    WM state
+0x12300088:      0x00007fc0:    CC state
+0x1230008c:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300090:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300094:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x12300098:      0x60010000: CS_URB_STATE
+0x1230009c:      0x00000024:    entry_size: 2 [192 bytes], n_entries: 4
+0x123000a0:      0x79000002: 3DSTATE_DRAWING_RECTANGLE
+0x123000a4:      0x00000000:    top left: 0,0
+0x123000a8:      0x012b012b:    bottom right: 299,299
+0x123000ac:      0x00000000:    origin: 0,0
+0x123000b0:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x123000b4:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x123000b8:      0x00000000:    buffer address
+0x123000bc:      0x00000000:    max index
+0x123000c0:      0x00000000:    mbz
+0x123000c4:      0x78090001: 3DSTATE_VERTEX_ELEMENTS
+0x123000c8:      0x04400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x123000cc:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123000d0:      0x60020100: CONSTANT_BUFFER: valid
+0x123000d4:      0x00000001:    offset: 0x00000000, length: 128 bytes
+0x123000d8:      0x7b001804: 3DPRIMITIVE: tri fan sequential
+0x123000dc:      0x00000004:    vertex count
+0x123000e0:      0x00000000:    start vertex
+0x123000e4:      0x00000001:    instance count
+0x123000e8:      0x00000000:    start instance
+0x123000ec:      0x00000000:    index bias
+0x123000f0:      0x78010004: 3DSTATE_BINDING_TABLE_POINTERS
+0x123000f4:      0x00007b40:    VS binding table
+0x123000f8:      0x00000000:    GS binding table
+0x123000fc:      0x00000000:    Clip binding table
+0x12300100:      0x00000000:    SF binding table
+0x12300104:      0x00007b40:    WM binding table
+0x12300108:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x1230010c:      0x00007aa0:    VS state
+0x12300110:      0x00007a41:    GS state
+0x12300114:      0x00007a61:    Clip state
+0x12300118:      0x00007ac0:    SF state
+0x1230011c:      0x00007b00:    WM state
+0x12300120:      0x00007cc0:    CC state
+0x12300124:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300128:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x1230012c:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x12300130:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300134:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x12300138:      0x00000000:    buffer address
+0x1230013c:      0x00000000:    max index
+0x12300140:      0x00000000:    mbz
+0x12300144:      0x60020100: CONSTANT_BUFFER: valid
+0x12300148:      0x00000082:    offset: 0x00000080, length: 192 bytes
+0x1230014c:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300150:      0x00000052:    vertex count
+0x12300154:      0x00000000:    start vertex
+0x12300158:      0x00000001:    instance count
+0x1230015c:      0x00000000:    start instance
+0x12300160:      0x00000000:    index bias
+0x12300164:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300168:      0x00007aa0:    VS state
+0x1230016c:      0x00007a21:    GS state
+0x12300170:      0x00007a61:    Clip state
+0x12300174:      0x00007ac0:    SF state
+0x12300178:      0x00007b00:    WM state
+0x1230017c:      0x00007cc0:    CC state
+0x12300180:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300184:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300188:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230018c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300190:      0x00000082:    offset: 0x00000080, length: 192 bytes
+0x12300194:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300198:      0x00000050:    vertex count
+0x1230019c:      0x00000052:    start vertex
+0x123001a0:      0x00000001:    instance count
+0x123001a4:      0x00000000:    start instance
+0x123001a8:      0x00000000:    index bias
+0x123001ac:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123001b0:      0x00007aa0:    VS state
+0x123001b4:      0x00007a01:    GS state
+0x123001b8:      0x00007a61:    Clip state
+0x123001bc:      0x00007ac0:    SF state
+0x123001c0:      0x00007b00:    WM state
+0x123001c4:      0x00007cc0:    CC state
+0x123001c8:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x123001cc:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x123001d0:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x123001d4:      0x60020100: CONSTANT_BUFFER: valid
+0x123001d8:      0x00000142:    offset: 0x00000140, length: 192 bytes
+0x123001dc:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123001e0:      0x00000052:    vertex count
+0x123001e4:      0x000000a2:    start vertex
+0x123001e8:      0x00000001:    instance count
+0x123001ec:      0x00000000:    start instance
+0x123001f0:      0x00000000:    index bias
+0x123001f4:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123001f8:      0x00007aa0:    VS state
+0x123001fc:      0x000079e1:    GS state
+0x12300200:      0x00007a61:    Clip state
+0x12300204:      0x00007ac0:    SF state
+0x12300208:      0x00007b00:    WM state
+0x1230020c:      0x00007cc0:    CC state
+0x12300210:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300214:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300218:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230021c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300220:      0x00000142:    offset: 0x00000140, length: 192 bytes
+0x12300224:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300228:      0x00000050:    vertex count
+0x1230022c:      0x000000f4:    start vertex
+0x12300230:      0x00000001:    instance count
+0x12300234:      0x00000000:    start instance
+0x12300238:      0x00000000:    index bias
+0x1230023c:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300240:      0x00007aa0:    VS state
+0x12300244:      0x000079c1:    GS state
+0x12300248:      0x00007a61:    Clip state
+0x1230024c:      0x00007ac0:    SF state
+0x12300250:      0x00007b00:    WM state
+0x12300254:      0x00007cc0:    CC state
+0x12300258:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x1230025c:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300260:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x12300264:      0x60020100: CONSTANT_BUFFER: valid
+0x12300268:      0x00000142:    offset: 0x00000140, length: 192 bytes
+0x1230026c:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300270:      0x000079a0:    VS state
+0x12300274:      0x000079c1:    GS state
+0x12300278:      0x00007a61:    Clip state
+0x1230027c:      0x00007ac0:    SF state
+0x12300280:      0x00007b00:    WM state
+0x12300284:      0x00007cc0:    CC state
+0x12300288:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x1230028c:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300290:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x12300294:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300298:      0x00000018:    buffer 0: sequential, pitch 24b
+0x1230029c:      0x00000f48:    buffer address
+0x123002a0:      0x00000000:    max index
+0x123002a4:      0x00000000:    mbz
+0x123002a8:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x123002ac:      0x04400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x123002b0:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123002b4:      0x0440000c:    buffer 0: valid, type 0x0040, src offset 0x000c bytes
+0x123002b8:      0x11130004:    (X, Y, Z, 1.0), dst offset 0x10 bytes
+0x123002bc:      0x60020100: CONSTANT_BUFFER: valid
+0x123002c0:      0x00000202:    offset: 0x00000200, length: 192 bytes
+0x123002c4:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123002c8:      0x000000a2:    vertex count
+0x123002cc:      0x00000000:    start vertex
+0x123002d0:      0x00000001:    instance count
+0x123002d4:      0x00000000:    start instance
+0x123002d8:      0x00000000:    index bias
+0x123002dc:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123002e0:      0x000079a0:    VS state
+0x123002e4:      0x00000000:    GS state
+0x123002e8:      0x00007901:    Clip state
+0x123002ec:      0x00007940:    SF state
+0x123002f0:      0x00007960:    WM state
+0x123002f4:      0x00007cc0:    CC state
+0x123002f8:      0x00000000: MI_NOOP
+0x123002fc:      0x00000000: MI_NOOP
+0x12300300:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300304:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300308:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230030c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300310:      0x00000202:    offset: 0x00000200, length: 192 bytes
+0x12300314:      0x7b001404: 3DPRIMITIVE: tri strip sequential
+0x12300318:      0x0000002a:    vertex count
+0x1230031c:      0x000000a2:    start vertex
+0x12300320:      0x00000001:    instance count
+0x12300324:      0x00000000:    start instance
+0x12300328:      0x00000000:    index bias
+0x1230032c:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300330:      0x00007860:    VS state
+0x12300334:      0x00007801:    GS state
+0x12300338:      0x00007821:    Clip state
+0x1230033c:      0x00007880:    SF state
+0x12300340:      0x000078a0:    WM state
+0x12300344:      0x00007cc0:    CC state
+0x12300348:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x1230034c:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300350:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x12300354:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300358:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x1230035c:      0x00002268:    buffer address
+0x12300360:      0x00000000:    max index
+0x12300364:      0x00000000:    mbz
+0x12300368:      0x78090001: 3DSTATE_VERTEX_ELEMENTS
+0x1230036c:      0x04400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x12300370:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300374:      0x60020100: CONSTANT_BUFFER: valid
+0x12300378:      0x000002c2:    offset: 0x000002c0, length: 192 bytes
+0x1230037c:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300380:      0x0000002a:    vertex count
+0x12300384:      0x00000000:    start vertex
+0x12300388:      0x00000001:    instance count
+0x1230038c:      0x00000000:    start instance
+0x12300390:      0x00000000:    index bias
+0x12300394:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300398:      0x00007860:    VS state
+0x1230039c:      0x000077e1:    GS state
+0x123003a0:      0x00007821:    Clip state
+0x123003a4:      0x00007880:    SF state
+0x123003a8:      0x000078a0:    WM state
+0x123003ac:      0x00007cc0:    CC state
+0x123003b0:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x123003b4:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x123003b8:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x123003bc:      0x60020100: CONSTANT_BUFFER: valid
+0x123003c0:      0x000002c2:    offset: 0x000002c0, length: 192 bytes
+0x123003c4:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x123003c8:      0x00000028:    vertex count
+0x123003cc:      0x0000002a:    start vertex
+0x123003d0:      0x00000001:    instance count
+0x123003d4:      0x00000000:    start instance
+0x123003d8:      0x00000000:    index bias
+0x123003dc:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123003e0:      0x00007860:    VS state
+0x123003e4:      0x000077c1:    GS state
+0x123003e8:      0x00007821:    Clip state
+0x123003ec:      0x00007880:    SF state
+0x123003f0:      0x000078a0:    WM state
+0x123003f4:      0x00007cc0:    CC state
+0x123003f8:      0x00000000: MI_NOOP
+0x123003fc:      0x00000000: MI_NOOP
+0x12300400:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300404:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300408:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230040c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300410:      0x00000382:    offset: 0x00000380, length: 192 bytes
+0x12300414:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300418:      0x0000002a:    vertex count
+0x1230041c:      0x00000052:    start vertex
+0x12300420:      0x00000001:    instance count
+0x12300424:      0x00000000:    start instance
+0x12300428:      0x00000000:    index bias
+0x1230042c:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300430:      0x00007860:    VS state
+0x12300434:      0x000077a1:    GS state
+0x12300438:      0x00007821:    Clip state
+0x1230043c:      0x00007880:    SF state
+0x12300440:      0x000078a0:    WM state
+0x12300444:      0x00007cc0:    CC state
+0x12300448:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x1230044c:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300450:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x12300454:      0x60020100: CONSTANT_BUFFER: valid
+0x12300458:      0x00000382:    offset: 0x00000380, length: 192 bytes
+0x1230045c:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300460:      0x00000028:    vertex count
+0x12300464:      0x0000007c:    start vertex
+0x12300468:      0x00000001:    instance count
+0x1230046c:      0x00000000:    start instance
+0x12300470:      0x00000000:    index bias
+0x12300474:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300478:      0x00007860:    VS state
+0x1230047c:      0x00007781:    GS state
+0x12300480:      0x00007821:    Clip state
+0x12300484:      0x00007880:    SF state
+0x12300488:      0x000078a0:    WM state
+0x1230048c:      0x00007cc0:    CC state
+0x12300490:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300494:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300498:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230049c:      0x60020100: CONSTANT_BUFFER: valid
+0x123004a0:      0x00000382:    offset: 0x00000380, length: 192 bytes
+0x123004a4:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123004a8:      0x00007760:    VS state
+0x123004ac:      0x00007781:    GS state
+0x123004b0:      0x00007821:    Clip state
+0x123004b4:      0x00007880:    SF state
+0x123004b8:      0x000078a0:    WM state
+0x123004bc:      0x00007cc0:    CC state
+0x123004c0:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x123004c4:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x123004c8:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x123004cc:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x123004d0:      0x00000018:    buffer 0: sequential, pitch 24b
+0x123004d4:      0x00002a30:    buffer address
+0x123004d8:      0x00000000:    max index
+0x123004dc:      0x00000000:    mbz
+0x123004e0:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x123004e4:      0x04400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x123004e8:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123004ec:      0x0440000c:    buffer 0: valid, type 0x0040, src offset 0x000c bytes
+0x123004f0:      0x11130004:    (X, Y, Z, 1.0), dst offset 0x10 bytes
+0x123004f4:      0x60020100: CONSTANT_BUFFER: valid
+0x123004f8:      0x00000442:    offset: 0x00000440, length: 192 bytes
+0x123004fc:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300500:      0x00000052:    vertex count
+0x12300504:      0x00000000:    start vertex
+0x12300508:      0x00000001:    instance count
+0x1230050c:      0x00000000:    start instance
+0x12300510:      0x00000000:    index bias
+0x12300514:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300518:      0x00007760:    VS state
+0x1230051c:      0x00000000:    GS state
+0x12300520:      0x000076c1:    Clip state
+0x12300524:      0x00007700:    SF state
+0x12300528:      0x00007720:    WM state
+0x1230052c:      0x00007cc0:    CC state
+0x12300530:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300534:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300538:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230053c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300540:      0x00000442:    offset: 0x00000440, length: 192 bytes
+0x12300544:      0x7b001404: 3DPRIMITIVE: tri strip sequential
+0x12300548:      0x00000016:    vertex count
+0x1230054c:      0x00000052:    start vertex
+0x12300550:      0x00000001:    instance count
+0x12300554:      0x00000000:    start instance
+0x12300558:      0x00000000:    index bias
+0x1230055c:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300560:      0x00007620:    VS state
+0x12300564:      0x000075c1:    GS state
+0x12300568:      0x000075e1:    Clip state
+0x1230056c:      0x00007640:    SF state
+0x12300570:      0x00007660:    WM state
+0x12300574:      0x00007cc0:    CC state
+0x12300578:      0x00000000: MI_NOOP
+0x1230057c:      0x00000000: MI_NOOP
+0x12300580:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300584:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300588:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230058c:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300590:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x12300594:      0x000033f0:    buffer address
+0x12300598:      0x00000000:    max index
+0x1230059c:      0x00000000:    mbz
+0x123005a0:      0x78090001: 3DSTATE_VERTEX_ELEMENTS
+0x123005a4:      0x04400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x123005a8:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123005ac:      0x60020100: CONSTANT_BUFFER: valid
+0x123005b0:      0x00000502:    offset: 0x00000500, length: 192 bytes
+0x123005b4:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123005b8:      0x0000002a:    vertex count
+0x123005bc:      0x00000000:    start vertex
+0x123005c0:      0x00000001:    instance count
+0x123005c4:      0x00000000:    start instance
+0x123005c8:      0x00000000:    index bias
+0x123005cc:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123005d0:      0x00007620:    VS state
+0x123005d4:      0x000075a1:    GS state
+0x123005d8:      0x000075e1:    Clip state
+0x123005dc:      0x00007640:    SF state
+0x123005e0:      0x00007660:    WM state
+0x123005e4:      0x00007cc0:    CC state
+0x123005e8:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x123005ec:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x123005f0:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x123005f4:      0x60020100: CONSTANT_BUFFER: valid
+0x123005f8:      0x00000502:    offset: 0x00000500, length: 192 bytes
+0x123005fc:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300600:      0x00000028:    vertex count
+0x12300604:      0x0000002a:    start vertex
+0x12300608:      0x00000001:    instance count
+0x1230060c:      0x00000000:    start instance
+0x12300610:      0x00000000:    index bias
+0x12300614:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300618:      0x00007620:    VS state
+0x1230061c:      0x00007581:    GS state
+0x12300620:      0x000075e1:    Clip state
+0x12300624:      0x00007640:    SF state
+0x12300628:      0x00007660:    WM state
+0x1230062c:      0x00007cc0:    CC state
+0x12300630:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300634:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300638:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230063c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300640:      0x000005c2:    offset: 0x000005c0, length: 192 bytes
+0x12300644:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300648:      0x0000002a:    vertex count
+0x1230064c:      0x00000052:    start vertex
+0x12300650:      0x00000001:    instance count
+0x12300654:      0x00000000:    start instance
+0x12300658:      0x00000000:    index bias
+0x1230065c:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300660:      0x00007620:    VS state
+0x12300664:      0x00007561:    GS state
+0x12300668:      0x000075e1:    Clip state
+0x1230066c:      0x00007640:    SF state
+0x12300670:      0x00007660:    WM state
+0x12300674:      0x00007cc0:    CC state
+0x12300678:      0x00000000: MI_NOOP
+0x1230067c:      0x00000000: MI_NOOP
+0x12300680:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300684:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300688:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230068c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300690:      0x000005c2:    offset: 0x000005c0, length: 192 bytes
+0x12300694:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300698:      0x00000028:    vertex count
+0x1230069c:      0x0000007c:    start vertex
+0x123006a0:      0x00000001:    instance count
+0x123006a4:      0x00000000:    start instance
+0x123006a8:      0x00000000:    index bias
+0x123006ac:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123006b0:      0x00007620:    VS state
+0x123006b4:      0x00007541:    GS state
+0x123006b8:      0x000075e1:    Clip state
+0x123006bc:      0x00007640:    SF state
+0x123006c0:      0x00007660:    WM state
+0x123006c4:      0x00007cc0:    CC state
+0x123006c8:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x123006cc:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x123006d0:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x123006d4:      0x60020100: CONSTANT_BUFFER: valid
+0x123006d8:      0x000005c2:    offset: 0x000005c0, length: 192 bytes
+0x123006dc:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x123006e0:      0x00007520:    VS state
+0x123006e4:      0x00007541:    GS state
+0x123006e8:      0x000075e1:    Clip state
+0x123006ec:      0x00007640:    SF state
+0x123006f0:      0x00007660:    WM state
+0x123006f4:      0x00007cc0:    CC state
+0x123006f8:      0x00000000: MI_NOOP
+0x123006fc:      0x00000000: MI_NOOP
+0x12300700:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300704:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300708:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230070c:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300710:      0x00000018:    buffer 0: sequential, pitch 24b
+0x12300714:      0x00003bb8:    buffer address
+0x12300718:      0x00000000:    max index
+0x1230071c:      0x00000000:    mbz
+0x12300720:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x12300724:      0x04400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x12300728:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x1230072c:      0x0440000c:    buffer 0: valid, type 0x0040, src offset 0x000c bytes
+0x12300730:      0x11130004:    (X, Y, Z, 1.0), dst offset 0x10 bytes
+0x12300734:      0x60020100: CONSTANT_BUFFER: valid
+0x12300738:      0x00000682:    offset: 0x00000680, length: 192 bytes
+0x1230073c:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300740:      0x00000052:    vertex count
+0x12300744:      0x00000000:    start vertex
+0x12300748:      0x00000001:    instance count
+0x1230074c:      0x00000000:    start instance
+0x12300750:      0x00000000:    index bias
+0x12300754:      0x78000005: 3DSTATE_PIPELINED_POINTERS
+0x12300758:      0x00007520:    VS state
+0x1230075c:      0x00000000:    GS state
+0x12300760:      0x00007481:    Clip state
+0x12300764:      0x000074c0:    SF state
+0x12300768:      0x000074e0:    WM state
+0x1230076c:      0x00007cc0:    CC state
+0x12300770:      0x60003f01: URB_FENCE: cs vfe sf clip gs vs 
+0x12300774:      0x0320a020:    vs fence: 32, clip_fence: 50, gs_fence: 40
+0x12300778:      0x10000042:    sf fence: 66, vfe_fence: 0, cs_fence: 256
+0x1230077c:      0x60020100: CONSTANT_BUFFER: valid
+0x12300780:      0x00000682:    offset: 0x00000680, length: 192 bytes
+0x12300784:      0x7b001404: 3DPRIMITIVE: tri strip sequential
+0x12300788:      0x00000016:    vertex count
+0x1230078c:      0x00000052:    start vertex
+0x12300790:      0x00000001:    instance count
+0x12300794:      0x00000000:    start instance
+0x12300798:      0x00000000:    index bias
+0x1230079c:      0x05000000: MI_BATCH_BUFFER_END

@@ -1,0 +1,14 @@
+{{/* A template file that can be used with tint-bench to time how long it takes
+     to emit 'Alpha' statements.
+     Example usage:
+
+     ./tools/run tint-bench --tmpl tint-bench.tmpl ./out/active/tint --format hlsl
+*/}}
+@compute @workgroup_size(1)
+fn main() {
+    var x = 1;
+    var y = 42;
+{{- range $i := Iterate Alpha }}
+    x = max(x*2, y+1);
+{{- end }}
+}

@@ -1,0 +1,142 @@
+;
+; main1
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 17
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main1 "main1"
+               OpExecutionMode %main1 LocalSize 1 1 1
+               OpMemberName %a_block 0 "inner"
+               OpName %a_block "a_block"
+               OpName %uses_a "uses_a"
+               OpName %foo "foo"
+               OpName %main1 "main1"
+               OpMemberDecorate %a_block 0 Offset 0
+               OpDecorate %a_block Block
+        %int = OpTypeInt 32 1
+    %a_block = OpTypeStruct %int
+%_ptr_PushConstant_a_block = OpTypePointer PushConstant %a_block
+          %1 = OpVariable %_ptr_PushConstant_a_block PushConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%_ptr_PushConstant_int = OpTypePointer PushConstant %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uses_a = OpFunction %void None %7
+          %8 = OpLabel
+          %9 = OpAccessChain %_ptr_PushConstant_int %1 %uint_0
+        %foo = OpLoad %int %9 None
+               OpReturn
+               OpFunctionEnd
+      %main1 = OpFunction %void None %7
+         %15 = OpLabel
+         %16 = OpFunctionCall %void %uses_a
+               OpReturn
+               OpFunctionEnd
+;
+; main2
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 20
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main2 "main2"
+               OpExecutionMode %main2 LocalSize 1 1 1
+               OpMemberName %a_block 0 "inner"
+               OpName %a_block "a_block"
+               OpName %uses_a "uses_a"
+               OpName %foo "foo"
+               OpName %uses_uses_a "uses_uses_a"
+               OpName %main2 "main2"
+               OpMemberDecorate %a_block 0 Offset 0
+               OpDecorate %a_block Block
+        %int = OpTypeInt 32 1
+    %a_block = OpTypeStruct %int
+%_ptr_PushConstant_a_block = OpTypePointer PushConstant %a_block
+          %1 = OpVariable %_ptr_PushConstant_a_block PushConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%_ptr_PushConstant_int = OpTypePointer PushConstant %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uses_a = OpFunction %void None %7
+          %8 = OpLabel
+          %9 = OpAccessChain %_ptr_PushConstant_int %1 %uint_0
+        %foo = OpLoad %int %9 None
+               OpReturn
+               OpFunctionEnd
+%uses_uses_a = OpFunction %void None %7
+         %15 = OpLabel
+         %16 = OpFunctionCall %void %uses_a
+               OpReturn
+               OpFunctionEnd
+      %main2 = OpFunction %void None %7
+         %18 = OpLabel
+         %19 = OpFunctionCall %void %uses_uses_a
+               OpReturn
+               OpFunctionEnd
+;
+; main3
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 17
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main3 "main3"
+               OpExecutionMode %main3 LocalSize 1 1 1
+               OpMemberName %b_block 0 "inner"
+               OpName %b_block "b_block"
+               OpName %uses_b "uses_b"
+               OpName %foo "foo"
+               OpName %main3 "main3"
+               OpMemberDecorate %b_block 0 Offset 0
+               OpDecorate %b_block Block
+        %int = OpTypeInt 32 1
+    %b_block = OpTypeStruct %int
+%_ptr_PushConstant_b_block = OpTypePointer PushConstant %b_block
+          %1 = OpVariable %_ptr_PushConstant_b_block PushConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+%_ptr_PushConstant_int = OpTypePointer PushConstant %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uses_b = OpFunction %void None %7
+          %8 = OpLabel
+          %9 = OpAccessChain %_ptr_PushConstant_int %1 %uint_0
+        %foo = OpLoad %int %9 None
+               OpReturn
+               OpFunctionEnd
+      %main3 = OpFunction %void None %7
+         %15 = OpLabel
+         %16 = OpFunctionCall %void %uses_b
+               OpReturn
+               OpFunctionEnd
+;
+; main4
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 5
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main4 "main4"
+               OpExecutionMode %main4 LocalSize 1 1 1
+               OpName %main4 "main4"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %main4 = OpFunction %void None %3
+          %4 = OpLabel
+               OpReturn
+               OpFunctionEnd

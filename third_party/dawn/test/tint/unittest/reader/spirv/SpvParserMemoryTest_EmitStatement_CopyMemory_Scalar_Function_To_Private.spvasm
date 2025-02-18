@@ -1,0 +1,24 @@
+; Test: SpvParserMemoryTest_EmitStatement_CopyMemory_Scalar_Function_To_Private.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%uint_42 = OpConstant %uint 42
+%_ptr_Function_uint = OpTypePointer Function %uint
+%_ptr_Private_uint = OpTypePointer Private %uint
+%2 = OpVariable %_ptr_Private_uint Private
+%100 = OpFunction %void None %4
+%9 = OpLabel
+%1 = OpVariable %_ptr_Function_uint Function
+OpCopyMemory %2 %1
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+         %20 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %a_block 0 "inner"
+               OpName %a_block "a_block"
+               OpName %main "main"
+               OpName %unused_entry_point "unused_entry_point"
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %a_block 0 Offset 0
+               OpDecorate %a_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+    %a_block = OpTypeStruct %_runtimearr_uint
+%_ptr_StorageBuffer_a_block = OpTypePointer StorageBuffer %a_block
+          %1 = OpVariable %_ptr_StorageBuffer_a_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_StorageBuffer__runtimearr_uint = OpTypePointer StorageBuffer %_runtimearr_uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+       %main = OpFunction %void None %8
+          %9 = OpLabel
+         %10 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %1 %uint_0
+         %13 = OpArrayLength %uint %1 0
+         %14 = OpISub %uint %13 %uint_1
+         %16 = OpBitcast %uint %int_1
+         %19 = OpExtInst %uint %20 UMin %16 %14
+         %21 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %19
+         %23 = OpLoad %uint %21 None
+         %24 = OpIAdd %uint %23 %uint_1
+               OpStore %21 %24 None
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %8
+         %26 = OpLabel
+               OpReturn
+               OpFunctionEnd

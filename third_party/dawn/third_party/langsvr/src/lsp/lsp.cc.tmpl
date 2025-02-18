@@ -1,0 +1,218 @@
+{{/*
+   * Copyright 2024 The langsvr Authors
+   *
+   * Redistribution and use in source and binary forms, with or without
+   * modification, are permitted provided that the following conditions are met:
+   *
+   * 1. Redistributions of source code must retain the above copyright notice, this
+   *    list of conditions and the following disclaimer.
+   *
+   * 2. Redistributions in binary form must reproduce the above copyright notice,
+   *    this list of conditions and the following disclaimer in the documentation
+   *    and/or other materials provided with the distribution.
+   *
+   * 3. Neither the name of the copyright holder nor the names of its
+   *    contributors may be used to endorse or promote products derived from
+   *    this software without specific prior written permission.
+   *
+   * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+   * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+   * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+   * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/}}
+
+{{- Import "src/lsp.common.tmpl" -}}
+
+#include "langsvr/lsp/lsp.h"
+
+#include <utility>
+
+#include "langsvr/json/types.h"
+#include "langsvr/lsp/decode.h"
+#include "langsvr/result.h"
+
+namespace langsvr::lsp {
+
+namespace {
+
+using V = const json::Value;
+
+Result<SuccessType> MatchKind(V& v, std::string_view want) {
+  auto got = v.Get<json::String>("kind");
+  if (got != Success) {
+      return got.Failure();
+  }
+  if (got.Get() != want) {
+      return Failure{"'kind' mismatch.\nGot '" + got.Get() + "'\nexpected ' + std:string(want) +'"};
+  }
+  return Success;
+}
+
+}  // namespace
+
+{{range $.Enumerations}}
+{{-   template "Enumeration" .}}
+
+{{end}}
+
+{{range $.Structures}}
+{{-   template "Structure" .}}
+
+{{end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                          define "Enumeration"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+Result<SuccessType> Decode(V& v, {{.Name}}& out) {
+  {{Eval "Type" .Type}} val;
+  auto res = Decode(v, val);
+  if (res != Success) {
+    return res.Failure();
+  }
+{{    range .Values}}
+  if (val == {{.Value}}) {
+    out = {{$.Name}}::k{{Title .Name}};
+    return Success;
+  }
+{{-   end }}
+  return Failure{"invalid value for enum {{.Name}}"};
+}
+
+Result<const json::Value*> Encode({{.Name}} in, json::Builder& b) {
+  switch (in) {
+{{    range .Values}}
+    case {{$.Name}}::k{{Title .Name}}:
+      return b.Create({{.Value}});
+{{    end}}
+  }
+  return Failure{"invalid value for enum {{.Name}}"};
+}
+
+{{end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                            define "Structure"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{$name := Join $.NestedNames "::"}}
+bool operator==(const {{$name}}& lhs, const {{$name}}& rhs) {
+{{-   range .Properties}}
+  if (lhs.{{.CppName}} != rhs.{{.CppName}}) {
+    return false;
+  }
+{{-   end}}
+{{-   range .Extends}}
+  if (static_cast<const {{.Name}}&>(lhs) != static_cast<const {{.Name}}&>(rhs)) {
+    return false;
+  }
+{{-   end}}
+  return true;
+}
+
+bool operator!=(const {{$name}}& lhs, const {{$name}}& rhs) {
+  return !(lhs == rhs);
+}
+
+Result<SuccessType> Decode([[maybe_unused]] V& v, [[maybe_unused]] {{$name}}& out) {
+  if (v.Kind() != json::Kind::kObject) {
+      return Failure{"value is not object"};
+  }
+{{-   if .Kind}}
+  if (auto res = MatchKind(v, "{{.Kind}}"); res != Success) {
+    return res.Failure();
+  }
+{{-   end}}
+
+{{-   range .Properties}}
+{{-     if .Optional}}
+  if (v.Has("{{.JsonName}}")) {
+    {{Eval "Type" .Type}} val;
+    auto member = v.Get("{{.JsonName}}");
+    if (member != Success) {
+      return member.Failure();
+    }
+    if (auto res = Decode(*member.Get(), val); res != Success) {
+        return res.Failure();
+    }
+    out.{{.CppName}} = std::move(val);
+  }
+{{-     else}}
+  {
+    auto member = v.Get("{{.JsonName}}");
+    if (member != Success) {
+      return member.Failure();
+    }
+    if (auto res = Decode(*member.Get(), out.{{.CppName}}); res != Success) {
+      return res.Failure();
+    }
+  }
+{{-     end}}
+{{-   end}}
+
+{{-   range .Extends}}
+  if (auto res = Decode(v, static_cast<{{.Name}}&>(out)); res != Success) {
+      return res.Failure();
+  }
+{{-   end}}
+
+  return Success;
+}
+
+static Result<SuccessType> EncodeMembers([[maybe_unused]] const {{$name}}& in, [[maybe_unused]] json::Builder& b, [[maybe_unused]] std::vector<json::Builder::Member>& members) {
+{{-   if .Kind}}
+  members.reserve({{Sum 1 (len .Properties)}});
+  members.push_back(json::Builder::Member{"kind", b.String("{{.Kind}}")});
+{{-   else}}
+  members.reserve({{len .Properties}});
+{{-   end}}
+{{-   range .Properties}}
+{{-     if .Optional}}if (in.{{.CppName}})
+  {
+    auto res = Encode(*in.{{.CppName}}, b);
+    if (res != Success) {
+      return res.Failure();
+    }
+    members.push_back(json::Builder::Member{"{{.JsonName}}", res.Get()});
+  }
+{{-     else}}
+  {
+    auto res = Encode(in.{{.CppName}}, b);
+    if (res != Success) {
+      return res.Failure();
+    }
+    members.push_back(json::Builder::Member{"{{.JsonName}}", res.Get()});
+  }
+{{-     end}}
+{{-   end}}
+
+{{-   range .Extends}}
+  if (auto res = EncodeMembers(static_cast<const {{.Name}}&>(in), b, members); res != Success) {
+    return res.Failure();
+  }
+{{-   end}}
+  return Success;
+}
+
+Result<const json::Value*> Encode([[maybe_unused]] const {{$name}}& in, [[maybe_unused]] json::Builder& b) {
+  std::vector<json::Builder::Member> members;
+  if (auto res = EncodeMembers(in, b, members); res != Success) {
+    return res.Failure();
+  }
+  return b.Object(members);
+}
+
+
+{{-   range $i, $n := $.NestedStructures}}
+{{-     template "Structure" $n}}
+{{-   end }}
+{{end}}
+
+
+}  // namespace langsvr::lsp {

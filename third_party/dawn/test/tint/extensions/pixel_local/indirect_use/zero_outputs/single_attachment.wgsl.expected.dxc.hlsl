@@ -1,0 +1,51 @@
+RasterizerOrderedTexture2D<uint4> pixel_local_a : register(u1);
+
+struct PixelLocal {
+  uint a;
+};
+
+static PixelLocal P = (PixelLocal)0;
+
+void load_from_pixel_local_storage(float4 my_input) {
+  uint2 rov_texcoord = uint2(my_input.xy);
+  P.a = pixel_local_a.Load(rov_texcoord).x;
+}
+
+void store_into_pixel_local_storage(float4 my_input) {
+  uint2 rov_texcoord = uint2(my_input.xy);
+  pixel_local_a[rov_texcoord] = uint4((P.a).xxxx);
+}
+
+struct tint_symbol_1 {
+  float4 my_pos : SV_Position;
+};
+
+void f0() {
+  P.a = (P.a + 9u);
+}
+
+void f1() {
+  f0();
+  P.a = (P.a + 8u);
+}
+
+void f2() {
+  P.a = (P.a + 7u);
+  f1();
+}
+
+void f_inner() {
+  f2();
+}
+
+void f_inner_1(float4 my_pos) {
+  float4 hlsl_sv_position = my_pos;
+  load_from_pixel_local_storage(hlsl_sv_position);
+  f_inner();
+  store_into_pixel_local_storage(hlsl_sv_position);
+}
+
+void f(tint_symbol_1 tint_symbol) {
+  f_inner_1(float4(tint_symbol.my_pos.xyz, (1.0f / tint_symbol.my_pos.w)));
+  return;
+}

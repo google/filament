@@ -1,0 +1,62 @@
+               OpCapability Shader
+               OpExtension "SPV_KHR_terminate_invocation"
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "main" %gl_FragCoord %3 %4
+               OpExecutionMode %1 OriginUpperLeft
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %3 Location 0
+               OpDecorate %3 Flat
+               OpDecorate %4 Location 0
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 0
+               OpDecorate %_struct_6 Block
+               OpMemberDecorate %_struct_6 0 Offset 0
+               OpDecorate %_runtimearr_int ArrayStride 4
+       %void = OpTypeVoid
+       %bool = OpTypeBool
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+      %int_8 = OpConstant %int 8
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Output_int = OpTypePointer Output %int
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+          %3 = OpVariable %_ptr_Input_int Input
+          %4 = OpVariable %_ptr_Output_int Output
+%_runtimearr_int = OpTypeRuntimeArray %int
+  %_struct_6 = OpTypeStruct %_runtimearr_int
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+%_ptr_StorageBuffer__struct_6 = OpTypePointer StorageBuffer %_struct_6
+          %5 = OpVariable %_ptr_StorageBuffer__struct_6 StorageBuffer
+         %21 = OpTypeFunction %void
+          %1 = OpFunction %void None %21
+         %22 = OpLabel
+               OpStore %4 %int_1
+         %23 = OpLoad %v4float %gl_FragCoord
+         %24 = OpCompositeExtract %float %23 0
+         %25 = OpCompositeExtract %float %23 1
+         %26 = OpCompositeExtract %float %23 2
+         %27 = OpConvertFToS %int %24
+         %28 = OpConvertFToS %int %25
+         %29 = OpConvertFToS %int %26
+         %30 = OpBitwiseAnd %int %27 %int_1
+         %31 = OpBitwiseAnd %int %28 %int_1
+         %32 = OpIAdd %int %30 %31
+         %33 = OpLoad %int %3
+         %34 = OpIAdd %int %32 %33
+         %35 = OpIMul %int %28 %int_8
+         %36 = OpIAdd %int %27 %35
+         %37 = OpAccessChain %_ptr_StorageBuffer_int %5 %int_0 %36
+               OpStore %37 %27
+         %38 = OpIEqual %bool %34 %29
+               OpSelectionMerge %39 None
+               OpBranchConditional %38 %40 %39
+         %40 = OpLabel
+               OpTerminateInvocation
+         %39 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texturecube_array<float, access::sample> t_f;
+  texturecube_array<int, access::sample> t_i;
+  texturecube_array<uint, access::sample> t_u;
+};
+
+kernel void v(texturecube_array<float, access::sample> t_f [[texture(0)]], texturecube_array<int, access::sample> t_i [[texture(1)]], texturecube_array<uint, access::sample> t_u [[texture(2)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t_f=t_f, .t_i=t_i, .t_u=t_u};
+  uint const v_1 = min(uint(1), (tint_module_vars.t_f.get_num_mip_levels() - 1u));
+  uint2 fdims = uint2(tint_module_vars.t_f.get_width(v_1), tint_module_vars.t_f.get_height(v_1));
+  uint const v_2 = min(uint(1), (tint_module_vars.t_i.get_num_mip_levels() - 1u));
+  uint2 idims = uint2(tint_module_vars.t_i.get_width(v_2), tint_module_vars.t_i.get_height(v_2));
+  uint const v_3 = min(uint(1), (tint_module_vars.t_u.get_num_mip_levels() - 1u));
+  uint2 udims = uint2(tint_module_vars.t_u.get_width(v_3), tint_module_vars.t_u.get_height(v_3));
+}

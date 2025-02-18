@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  half2 v2 = half2(3.0h);
+  half3 v3 = half3(3.0h);
+  half4 v4 = half4(3.0h);
+}

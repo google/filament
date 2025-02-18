@@ -1,0 +1,30 @@
+; Test: SpvParserTest_ConvertType_MatrixOverF32.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 45
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "x_100"
+OpExecutionMode %1 OriginUpperLeft
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%v3float = OpTypeVector %float 3
+%v4float = OpTypeVector %float 4
+%mat2v2float = OpTypeMatrix %v2float 2
+%mat3v2float = OpTypeMatrix %v2float 3
+%mat4v2float = OpTypeMatrix %v2float 4
+%mat2v3float = OpTypeMatrix %v3float 2
+%mat3v3float = OpTypeMatrix %v3float 3
+%mat4v3float = OpTypeMatrix %v3float 4
+%mat2v4float = OpTypeMatrix %v4float 2
+%mat3v4float = OpTypeMatrix %v4float 3
+%mat4v4float = OpTypeMatrix %v4float 4
+%void = OpTypeVoid
+%7 = OpTypeFunction %void
+%1 = OpFunction %void None %7
+%8 = OpLabel
+OpReturn
+OpFunctionEnd
+

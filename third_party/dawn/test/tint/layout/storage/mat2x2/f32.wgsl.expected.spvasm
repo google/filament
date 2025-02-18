@@ -1,0 +1,43 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %SSBO 0 "m"
+               OpName %SSBO "SSBO"
+               OpMemberName %ssbo_block 0 "inner"
+               OpName %ssbo_block "ssbo_block"
+               OpName %f "f"
+               OpName %v "v"
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 0 ColMajor
+               OpMemberDecorate %SSBO 0 MatrixStride 8
+               OpMemberDecorate %ssbo_block 0 Offset 0
+               OpDecorate %ssbo_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+       %SSBO = OpTypeStruct %mat2v2float
+ %ssbo_block = OpTypeStruct %SSBO
+%_ptr_StorageBuffer_ssbo_block = OpTypePointer StorageBuffer %ssbo_block
+          %1 = OpVariable %_ptr_StorageBuffer_ssbo_block StorageBuffer
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+%_ptr_StorageBuffer_mat2v2float = OpTypePointer StorageBuffer %mat2v2float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+          %f = OpFunction %void None %10
+         %11 = OpLabel
+         %12 = OpAccessChain %_ptr_StorageBuffer_mat2v2float %1 %uint_0 %uint_0
+          %v = OpLoad %mat2v2float %12 None
+         %17 = OpAccessChain %_ptr_StorageBuffer_mat2v2float %1 %uint_0 %uint_0
+               OpStore %17 %v None
+               OpReturn
+               OpFunctionEnd

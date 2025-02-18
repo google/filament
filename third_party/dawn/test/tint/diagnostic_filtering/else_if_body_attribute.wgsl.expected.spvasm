@@ -1,0 +1,77 @@
+<dawn>/test/tint/diagnostic_filtering/else_if_body_attribute.wgsl:8:9 warning: 'textureSample' must only be called from uniform control flow
+    _ = textureSample(t, s, vec2(0, 0));
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<dawn>/test/tint/diagnostic_filtering/else_if_body_attribute.wgsl:6:3 note: control flow depends on possibly non-uniform value
+  if (x > 0) {
+  ^^
+
+<dawn>/test/tint/diagnostic_filtering/else_if_body_attribute.wgsl:6:7 note: user-defined input 'x' of 'main' may be non-uniform
+  if (x > 0) {
+      ^
+
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Input
+               OpExecutionMode %main OriginUpperLeft
+               OpName %t "t"
+               OpName %s "s"
+               OpName %main_loc0_Input "main_loc0_Input"
+               OpName %main_inner "main_inner"
+               OpName %x "x"
+               OpName %main "main"
+               OpDecorate %t DescriptorSet 0
+               OpDecorate %t Binding 1
+               OpDecorate %s DescriptorSet 0
+               OpDecorate %s Binding 2
+               OpDecorate %main_loc0_Input Location 0
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 2D 0 0 0 1 Unknown
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+          %t = OpVariable %_ptr_UniformConstant_3 UniformConstant
+          %7 = OpTypeSampler
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+          %s = OpVariable %_ptr_UniformConstant_7 UniformConstant
+%_ptr_Input_float = OpTypePointer Input %float
+%main_loc0_Input = OpVariable %_ptr_Input_float Input
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void %float
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+         %26 = OpTypeSampledImage %3
+    %v4float = OpTypeVector %float 4
+    %v2float = OpTypeVector %float 2
+         %29 = OpConstantNull %v2float
+         %32 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %13
+          %x = OpFunctionParameter %float
+         %14 = OpLabel
+         %15 = OpFOrdGreaterThan %bool %x %float_0
+               OpSelectionMerge %18 None
+               OpBranchConditional %15 %18 %19
+         %19 = OpLabel
+         %20 = OpFOrdLessThan %bool %x %float_0
+               OpSelectionMerge %21 None
+               OpBranchConditional %20 %22 %21
+         %22 = OpLabel
+         %23 = OpLoad %3 %t None
+         %24 = OpLoad %7 %s None
+         %25 = OpSampledImage %26 %23 %24
+         %27 = OpImageSampleImplicitLod %v4float %25 %29 None
+               OpBranch %21
+         %21 = OpLabel
+               OpBranch %18
+         %18 = OpLabel
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %32
+         %33 = OpLabel
+         %34 = OpLoad %float %main_loc0_Input None
+         %35 = OpFunctionCall %void %main_inner %34
+               OpReturn
+               OpFunctionEnd

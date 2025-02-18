@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct ComputeInputs {
+  uint3 local_invocation_id;
+  uint local_invocation_index;
+  uint3 global_invocation_id;
+  uint3 workgroup_id;
+  uint3 num_workgroups;
+};
+
+void main_inner(ComputeInputs inputs) {
+  uint const foo = ((((inputs.local_invocation_id.x + inputs.local_invocation_index) + inputs.global_invocation_id.x) + inputs.workgroup_id.x) + inputs.num_workgroups.x);
+}
+
+kernel void v(uint3 ComputeInputs_local_invocation_id [[thread_position_in_threadgroup]], uint ComputeInputs_local_invocation_index [[thread_index_in_threadgroup]], uint3 ComputeInputs_global_invocation_id [[thread_position_in_grid]], uint3 ComputeInputs_workgroup_id [[threadgroup_position_in_grid]], uint3 ComputeInputs_num_workgroups [[threadgroups_per_grid]]) {
+  main_inner(ComputeInputs{.local_invocation_id=ComputeInputs_local_invocation_id, .local_invocation_index=ComputeInputs_local_invocation_index, .global_invocation_id=ComputeInputs_global_invocation_id, .workgroup_id=ComputeInputs_workgroup_id, .num_workgroups=ComputeInputs_num_workgroups});
+}

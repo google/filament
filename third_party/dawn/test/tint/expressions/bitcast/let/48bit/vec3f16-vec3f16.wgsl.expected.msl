@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  half3 const a = half3(1.0h, 2.0h, 3.0h);
+  half3 const b = as_type<half3>(a);
+}

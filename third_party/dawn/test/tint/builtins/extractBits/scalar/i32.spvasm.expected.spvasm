@@ -1,0 +1,47 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+         %18 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f_1 "f_1"
+               OpName %v "v"
+               OpName %offset_1 "offset_1"
+               OpName %count "count"
+               OpName %x_14 "x_14"
+               OpName %f "f"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+    %uint_32 = OpConstant %uint 32
+        %f_1 = OpFunction %void None %3
+          %4 = OpLabel
+          %v = OpVariable %_ptr_Function_int Function
+   %offset_1 = OpVariable %_ptr_Function_uint Function
+      %count = OpVariable %_ptr_Function_uint Function
+               OpStore %v %int_0
+               OpStore %offset_1 %uint_0
+               OpStore %count %uint_0
+         %14 = OpLoad %int %v None
+         %15 = OpLoad %uint %offset_1 None
+         %16 = OpLoad %uint %count None
+         %17 = OpExtInst %uint %18 UMin %15 %uint_32
+         %20 = OpISub %uint %uint_32 %17
+         %21 = OpExtInst %uint %18 UMin %16 %20
+       %x_14 = OpBitFieldSExtract %int %14 %17 %21
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %3
+         %24 = OpLabel
+         %25 = OpFunctionCall %void %f_1
+               OpReturn
+               OpFunctionEnd

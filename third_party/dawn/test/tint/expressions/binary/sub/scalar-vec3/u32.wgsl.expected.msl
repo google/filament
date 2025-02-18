@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  uint const a = 4u;
+  uint3 const b = uint3(1u, 2u, 3u);
+  uint3 const r = (a - b);
+}

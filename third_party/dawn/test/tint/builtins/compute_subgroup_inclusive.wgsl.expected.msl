@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  float const val = 2.0f;
+  float const subadd = simd_prefix_inclusive_sum(val);
+  float const submul = simd_prefix_inclusive_product(val);
+}

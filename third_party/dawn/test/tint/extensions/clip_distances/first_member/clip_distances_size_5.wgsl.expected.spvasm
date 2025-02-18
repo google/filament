@@ -1,0 +1,59 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+               OpCapability ClipDistance
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %main_clip_distances_Output %main_position_Output %main___point_size_Output
+               OpName %main_clip_distances_Output "main_clip_distances_Output"
+               OpName %main_position_Output "main_position_Output"
+               OpName %main___point_size_Output "main___point_size_Output"
+               OpName %main_inner "main_inner"
+               OpMemberName %VertexOutputs 0 "clipDistance"
+               OpMemberName %VertexOutputs 1 "position"
+               OpName %VertexOutputs "VertexOutputs"
+               OpName %main "main"
+               OpDecorate %_arr_float_uint_5 ArrayStride 4
+               OpDecorate %main_clip_distances_Output BuiltIn ClipDistance
+               OpDecorate %main_position_Output BuiltIn Position
+               OpDecorate %main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %VertexOutputs 0 Offset 0
+               OpMemberDecorate %VertexOutputs 1 Offset 32
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+     %uint_5 = OpConstant %uint 5
+%_arr_float_uint_5 = OpTypeArray %float %uint_5
+%_ptr_Output__arr_float_uint_5 = OpTypePointer Output %_arr_float_uint_5
+%main_clip_distances_Output = OpVariable %_ptr_Output__arr_float_uint_5 Output
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%main___point_size_Output = OpVariable %_ptr_Output_float Output
+%VertexOutputs = OpTypeStruct %_arr_float_uint_5 %v4float
+         %14 = OpTypeFunction %VertexOutputs
+         %17 = OpConstantNull %_arr_float_uint_5
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %18 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+         %16 = OpConstantComposite %VertexOutputs %17 %18
+       %void = OpTypeVoid
+         %25 = OpTypeFunction %void
+ %main_inner = OpFunction %VertexOutputs None %14
+         %15 = OpLabel
+               OpReturnValue %16
+               OpFunctionEnd
+       %main = OpFunction %void None %25
+         %26 = OpLabel
+         %27 = OpFunctionCall %VertexOutputs %main_inner
+         %28 = OpCompositeExtract %_arr_float_uint_5 %27 0
+               OpStore %main_clip_distances_Output %28 None
+         %29 = OpCompositeExtract %v4float %27 1
+               OpStore %main_position_Output %29 None
+               OpStore %main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

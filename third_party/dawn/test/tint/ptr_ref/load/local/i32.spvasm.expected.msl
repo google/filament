@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  int i = 0;
+  i = 123;
+  int const x_12 = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+}
+
+kernel void v() {
+  main_1();
+}

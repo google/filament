@@ -1,0 +1,35 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main" %3
+               OpExecutionMode %2 OriginUpperLeft
+               OpSource ESSL 310
+               OpDecorate %3 Location 0
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %_struct_4 Block
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 0
+               OpDecorate %6 RelaxedPrecision
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+          %3 = OpVariable %_ptr_Output_v4float Output
+  %_struct_4 = OpTypeStruct %v4float
+%_ptr_Uniform__struct_4 = OpTypePointer Uniform %_struct_4
+          %5 = OpVariable %_ptr_Uniform__struct_4 Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+ %_struct_16 = OpTypeStruct %v4float
+         %17 = OpUndef %_struct_16
+          %2 = OpFunction %void None %8
+         %18 = OpLabel
+         %19 = OpAccessChain %_ptr_Uniform_v4float %5 %int_0
+         %20 = OpLoad %v4float %19
+         %21 = OpCompositeInsert %_struct_16 %20 %17 0
+          %6 = OpCompositeExtract %v4float %21 0
+               OpStore %3 %6
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,45 @@
+               OpCapability Shader
+               OpExtension "SPV_KHR_terminate_invocation"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "main" %gl_FragCoord %3 %4
+               OpExecutionMode %1 OriginUpperLeft
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %3 Location 0
+               OpDecorate %3 Flat
+               OpDecorate %4 Location 0
+       %void = OpTypeVoid
+       %bool = OpTypeBool
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Output_int = OpTypePointer Output %int
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+          %3 = OpVariable %_ptr_Input_int Input
+          %4 = OpVariable %_ptr_Output_int Output
+         %14 = OpTypeFunction %void
+          %1 = OpFunction %void None %14
+         %15 = OpLabel
+         %16 = OpLoad %v4float %gl_FragCoord
+         %17 = OpCompositeExtract %float %16 0
+         %18 = OpCompositeExtract %float %16 1
+         %19 = OpCompositeExtract %float %16 2
+         %20 = OpConvertFToS %int %17
+         %21 = OpConvertFToS %int %18
+         %22 = OpConvertFToS %int %19
+         %23 = OpBitwiseAnd %int %20 %int_1
+         %24 = OpBitwiseAnd %int %21 %int_1
+         %25 = OpIAdd %int %23 %24
+         %26 = OpLoad %int %3
+         %27 = OpIAdd %int %25 %26
+         %28 = OpIEqual %bool %27 %22
+               OpSelectionMerge %29 None
+               OpBranchConditional %28 %30 %29
+         %30 = OpLabel
+               OpTerminateInvocation
+         %29 = OpLabel
+               OpStore %4 %int_1
+               OpReturn
+               OpFunctionEnd

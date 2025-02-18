@@ -1,0 +1,53 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpCapability DerivativeControl
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %dpdxFine_f92fb6 "dpdxFine_f92fb6"
+               OpName %arg_0 "arg_0"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%prevent_dce_block = OpTypeStruct %v3float
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v3float
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+    %float_1 = OpConstant %float 1
+         %11 = OpConstantComposite %v3float %float_1 %float_1 %float_1
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+%_ptr_StorageBuffer_v3float = OpTypePointer StorageBuffer %v3float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%dpdxFine_f92fb6 = OpFunction %v3float None %7
+          %8 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v3float Function
+        %res = OpVariable %_ptr_Function_v3float Function
+               OpStore %arg_0 %11
+         %13 = OpLoad %v3float %arg_0 None
+         %14 = OpDPdxFine %v3float %13
+               OpStore %res %14
+         %16 = OpLoad %v3float %res None
+               OpReturnValue %16
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %19
+         %20 = OpLabel
+         %21 = OpFunctionCall %v3float %dpdxFine_f92fb6
+         %22 = OpAccessChain %_ptr_StorageBuffer_v3float %1 %uint_0
+               OpStore %22 %21 None
+               OpReturn
+               OpFunctionEnd

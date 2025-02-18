@@ -1,0 +1,63 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 42
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f "f"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %r "r"
+               OpName %tint_div_v3i32 "tint_div_v3i32"
+               OpName %lhs "lhs"
+               OpName %rhs "rhs"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+%_ptr_Function_v3int = OpTypePointer Function %v3int
+      %int_1 = OpConstant %int 1
+      %int_2 = OpConstant %int 2
+      %int_3 = OpConstant %int 3
+          %9 = OpConstantComposite %v3int %int_1 %int_2 %int_3
+      %int_0 = OpConstant %int 0
+      %int_5 = OpConstant %int 5
+         %14 = OpConstantComposite %v3int %int_0 %int_5 %int_0
+         %25 = OpTypeFunction %v3int %v3int %v3int
+         %28 = OpConstantNull %v3int
+       %bool = OpTypeBool
+     %v3bool = OpTypeVector %bool 3
+%int_n2147483648 = OpConstant %int -2147483648
+         %32 = OpConstantComposite %v3int %int_n2147483648 %int_n2147483648 %int_n2147483648
+     %int_n1 = OpConstant %int -1
+         %35 = OpConstantComposite %v3int %int_n1 %int_n1 %int_n1
+         %40 = OpConstantComposite %v3int %int_1 %int_1 %int_1
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+          %a = OpVariable %_ptr_Function_v3int Function
+          %b = OpVariable %_ptr_Function_v3int Function
+               OpStore %a %9
+               OpStore %b %14
+         %17 = OpLoad %v3int %a None
+         %18 = OpLoad %v3int %b None
+         %19 = OpLoad %v3int %b None
+         %20 = OpIAdd %v3int %18 %19
+          %r = OpFunctionCall %v3int %tint_div_v3i32 %17 %20
+               OpReturn
+               OpFunctionEnd
+%tint_div_v3i32 = OpFunction %v3int None %25
+        %lhs = OpFunctionParameter %v3int
+        %rhs = OpFunctionParameter %v3int
+         %26 = OpLabel
+         %27 = OpIEqual %v3bool %rhs %28
+         %31 = OpIEqual %v3bool %lhs %32
+         %34 = OpIEqual %v3bool %rhs %35
+         %37 = OpLogicalAnd %v3bool %31 %34
+         %38 = OpLogicalOr %v3bool %27 %37
+         %39 = OpSelect %v3int %38 %40 %rhs
+         %41 = OpSDiv %v3int %lhs %39
+               OpReturnValue %41
+               OpFunctionEnd

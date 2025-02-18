@@ -1,0 +1,37 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 17
+; Schema: 0
+               OpCapability Shader
+         %14 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %in "in"
+               OpMemberName %__frexp_result_vec2_f32 0 "fract"
+               OpMemberName %__frexp_result_vec2_f32 1 "exp"
+               OpName %__frexp_result_vec2_f32 "__frexp_result_vec2_f32"
+               OpName %res "res"
+               OpName %fract "fract"
+               OpName %exp "exp"
+               OpMemberDecorate %__frexp_result_vec2_f32 0 Offset 0
+               OpMemberDecorate %__frexp_result_vec2_f32 1 Offset 8
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+ %float_1_25 = OpConstant %float 1.25
+ %float_3_75 = OpConstant %float 3.75
+         %in = OpConstantComposite %v2float %float_1_25 %float_3_75
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+%__frexp_result_vec2_f32 = OpTypeStruct %v2float %v2int
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+        %res = OpExtInst %__frexp_result_vec2_f32 %14 FrexpStruct %in
+      %fract = OpCompositeExtract %v2float %res 0
+        %exp = OpCompositeExtract %v2int %res 1
+               OpReturn
+               OpFunctionEnd

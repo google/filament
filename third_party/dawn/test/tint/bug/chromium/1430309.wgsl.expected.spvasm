@@ -1,0 +1,60 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Output
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberName %frexp_result_f32 0 "f"
+               OpName %frexp_result_f32 "frexp_result_f32"
+               OpName %a "a"
+               OpMemberName %__frexp_result_f32 0 "fract"
+               OpMemberName %__frexp_result_f32 1 "exp"
+               OpName %__frexp_result_f32 "__frexp_result_f32"
+               OpName %b "b"
+               OpName %main_loc0_Output "main_loc0_Output"
+               OpName %main_inner "main_inner"
+               OpName %main "main"
+               OpMemberDecorate %frexp_result_f32 0 Offset 0
+               OpMemberDecorate %__frexp_result_f32 0 Offset 0
+               OpMemberDecorate %__frexp_result_f32 1 Offset 4
+               OpDecorate %main_loc0_Output Location 0
+      %float = OpTypeFloat 32
+%frexp_result_f32 = OpTypeStruct %float
+%_ptr_Private_frexp_result_f32 = OpTypePointer Private %frexp_result_f32
+          %5 = OpConstantNull %frexp_result_f32
+          %a = OpVariable %_ptr_Private_frexp_result_f32 Private %5
+        %int = OpTypeInt 32 1
+%__frexp_result_f32 = OpTypeStruct %float %int
+%_ptr_Private___frexp_result_f32 = OpTypePointer Private %__frexp_result_f32
+  %float_0_5 = OpConstant %float 0.5
+      %int_1 = OpConstant %int 1
+         %10 = OpConstantComposite %__frexp_result_f32 %float_0_5 %int_1
+          %b = OpVariable %_ptr_Private___frexp_result_f32 Private %10
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_loc0_Output = OpVariable %_ptr_Output_v4float Output
+         %17 = OpTypeFunction %v4float
+%_ptr_Private_float = OpTypePointer Private %float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+    %float_0 = OpConstant %float 0
+       %void = OpTypeVoid
+         %30 = OpTypeFunction %void
+ %main_inner = OpFunction %v4float None %17
+         %18 = OpLabel
+         %19 = OpAccessChain %_ptr_Private_float %a %uint_0
+         %23 = OpLoad %float %19 None
+         %24 = OpAccessChain %_ptr_Private_float %b %uint_0
+         %25 = OpLoad %float %24 None
+         %26 = OpCompositeConstruct %v4float %23 %25 %float_0 %float_0
+               OpReturnValue %26
+               OpFunctionEnd
+       %main = OpFunction %void None %30
+         %31 = OpLabel
+         %32 = OpFunctionCall %v4float %main_inner
+               OpStore %main_loc0_Output %32 None
+               OpReturn
+               OpFunctionEnd

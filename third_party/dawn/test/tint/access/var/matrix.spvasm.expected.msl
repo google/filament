@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  float3x3 m = float3x3(float3(0.0f), float3(0.0f), float3(0.0f));
+  float const x_16 = m[1u].y;
+}
+
+kernel void v() {
+  main_1();
+}

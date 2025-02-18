@@ -1,0 +1,14 @@
+0x12300000:      0x54f08006: XY_SRC_COPY_BLT (rgb enabled, alpha enabled, src tile 1, dst tile 0)
+0x12300004:      0x03cc0190:    format 8888, pitch 400, rop 0xcc, clipping disabled,  
+0x12300008:      0x00000000:    dst (0,0)
+0x1230000c:      0x00640064:    dst (100,100)
+0x12300010:      0x122e9000:    dst offset 0x122e9000
+0x12300014:      0x00000000:    src (0,0)
+0x12300018:      0x00000080:    src pitch 128
+0x1230001c:      0x02ff1000:    src offset 0x02ff1000
+0x12300020:      0x13000002: MI_FLUSH_DW post_sync_op='no write' 
+0x12300024:      0x00000000:    address
+0x12300028:      0x00000000:    dword
+0x1230002c:      0x00000000:    upper dword
+0x12300030:      0x05000000: MI_BATCH_BUFFER_END
+0x12300034:      0x00000000:    

@@ -1,0 +1,40 @@
+The release criteria for libdrm is essentially "if you need a release,
+make one".  There is no designated release engineer or maintainer.
+Anybody is free to make a release if there's a certain feature or bug
+fix they need in a released version of libdrm.
+
+When new ioctl definitions are merged into drm-next, we will add
+support to libdrm, at which point we typically create a new release.
+However, this is up to whoever is driving the feature in question.
+
+Follow these steps to release a new version of libdrm:
+
+  1) Bump the version number in meson.build. We seem to have settled for
+     2.4.x as the versioning scheme for libdrm, so just bump the micro
+     version.
+
+  2) Run `ninja -C builddir/ dist` to generate the tarballs.
+     Make sure that the version number of the tarball name in
+     builddir/meson-dist/ matches the number you bumped to. Move that
+     tarball to the libdrm repo root for the release script to pick up.
+
+  3) Push the updated main branch with the bumped version number:
+
+	git push origin main
+
+     assuming the remote for the upstream libdrm repo is called origin.
+
+  4) Use the release.sh script from the xorg/util/modular repo to
+     upload the tarballs to the freedesktop.org download area and
+     create an announce email template.  The script takes one argument:
+     the path to the libdrm checkout. So, if a checkout of modular is
+     at the same level than the libdrm repo:
+
+	./modular/release.sh libdrm
+
+     This copies the two tarballs to freedesktop.org and creates
+     libdrm-2.4.16.announce which has a detailed summary of the
+     changes, links to the tarballs, MD5 and SHA1 sums and pre-filled
+     out email headers.  Fill out the blank between the email headers
+     and the list of changes with a brief message of what changed or
+     what prompted this release.  Send out the email and you're done!

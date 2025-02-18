@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int m;
+  uint n;
+};
+
+uint f() {
+  S const a = S{};
+  return a.n;
+}

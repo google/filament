@@ -1,0 +1,44 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 21
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %f "f"
+               OpName %v2 "v2"
+               OpName %v3 "v3"
+               OpName %v4 "v4"
+               OpName %unused_entry_point "unused_entry_point"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v2half = OpTypeVector %half 2
+%_ptr_Function_v2half = OpTypePointer Function %v2half
+%half_0x1_8p_1 = OpConstant %half 0x1.8p+1
+          %9 = OpConstantComposite %v2half %half_0x1_8p_1 %half_0x1_8p_1
+     %v3half = OpTypeVector %half 3
+%_ptr_Function_v3half = OpTypePointer Function %v3half
+         %14 = OpConstantComposite %v3half %half_0x1_8p_1 %half_0x1_8p_1 %half_0x1_8p_1
+     %v4half = OpTypeVector %half 4
+%_ptr_Function_v4half = OpTypePointer Function %v4half
+         %18 = OpConstantComposite %v4half %half_0x1_8p_1 %half_0x1_8p_1 %half_0x1_8p_1 %half_0x1_8p_1
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+         %v2 = OpVariable %_ptr_Function_v2half Function
+         %v3 = OpVariable %_ptr_Function_v3half Function
+         %v4 = OpVariable %_ptr_Function_v4half Function
+               OpStore %v2 %9
+               OpStore %v3 %14
+               OpStore %v4 %18
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %3
+         %20 = OpLabel
+               OpReturn
+               OpFunctionEnd

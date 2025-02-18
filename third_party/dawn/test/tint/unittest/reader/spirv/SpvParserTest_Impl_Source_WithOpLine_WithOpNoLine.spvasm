@@ -1,0 +1,22 @@
+; Test: SpvParserTest_Impl_Source_WithOpLine_WithOpNoLine.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 61
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint GLCompute %2 "main"
+OpExecutionMode %2 LocalSize 1 1 1
+%15 = OpString "myfile"
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+OpLine %15 42 53
+%uint = OpTypeInt 32 0
+%60 = OpConstantNull %uint
+OpNoLine
+%2 = OpFunction %void None %4
+%1 = OpLabel
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,9 @@
+LIBDRM_NOUVEAU_FILES := \
+	nouveau.c \
+	pushbuf.c \
+	bufctx.c \
+	abi16.c \
+	private.h
+
+LIBDRM_NOUVEAU_H_FILES := \
+	nouveau.h

@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct VertexOutputs {
+  tint_array<float, 3> clipDistance;
+  float4 position;
+};
+
+struct main_outputs {
+  float VertexOutputs_clipDistance [[clip_distance]] [3];
+  float4 VertexOutputs_position [[position]];
+};
+
+VertexOutputs main_inner() {
+  return VertexOutputs{.clipDistance=tint_array<float, 3>{}, .position=float4(1.0f, 2.0f, 3.0f, 4.0f)};
+}
+
+vertex main_outputs v() {
+  VertexOutputs const v_1 = main_inner();
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutputs_clipDistance[0u] = v_1.clipDistance[0u];
+  tint_wrapper_result.VertexOutputs_clipDistance[1u] = v_1.clipDistance[1u];
+  tint_wrapper_result.VertexOutputs_clipDistance[2u] = v_1.clipDistance[2u];
+  tint_wrapper_result.VertexOutputs_position = v_1.position;
+  return tint_wrapper_result;
+}

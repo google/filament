@@ -1,0 +1,212 @@
+0x12300000:      0x69040000: 3DSTATE_PIPELINE_SELECT
+0x12300004:      0x790d0002: 3DSTATE_MULTISAMPLE
+0x12300008:      0x00000000:    dword 1
+0x1230000c:      0x00000000:    dword 2
+0x12300010:      0x00000000:    dword 3
+0x12300014:      0x78180000: 3DSTATE_SAMPLE_MASK
+0x12300018:      0x00000001:    dword 1
+0x1230001c:      0x61020000: STATE_SIP
+0x12300020:      0x00000000:    dword 1
+0x12300024:      0x680b0000: 3DSTATE_VF_STATISTICS
+0x12300028:      0x61010008: STATE_BASE_ADDRESS
+0x1230002c:      0x00000001:    general state base address 0x00000000
+0x12300030:      0x091ba001:    surface state base address 0x091ba000
+0x12300034:      0x091ba001:    dynamic state base address 0x091ba000
+0x12300038:      0x00000001:    indirect state base address 0x00000000
+0x1230003c:      0x091c2001:    instruction state base address 0x091c2000
+0x12300040:      0x00000001:    general state upper bound disabled
+0x12300044:      0x091c2001:    dynamic state upper bound 0x091c2000
+0x12300048:      0x00000001:    indirect state upper bound disabled
+0x1230004c:      0x00000001:    instruction state upper bound disabled
+0x12300050:      0x78230000: 3DSTATE_VIEWPORT_STATE_POINTERS_CC
+0x12300054:      0x00007fe0:    pointer to CC viewport
+0x12300058:      0x78210000: 3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP
+0x1230005c:      0x00007f80:    pointer to SF_CLIP viewport
+0x12300060:      0x78300000: 3DSTATE_URB_VS
+0x12300064:      0x040002c0:    16KB start, size=1 64B rows, nr_entries=704, total size 45056B
+0x12300068:      0x78330000: 3DSTATE_URB_GS
+0x1230006c:      0x04000000:    16KB start, size=1 64B rows, nr_entries=0, total size 0B
+0x12300070:      0x78310000: 3DSTATE_URB_HS
+0x12300074:      0x04000000:    16KB start, size=1 64B rows, nr_entries=0, total size 0B
+0x12300078:      0x78320000: 3DSTATE_URB_DS
+0x1230007c:      0x04000000:    16KB start, size=1 64B rows, nr_entries=0, total size 0B
+0x12300080:      0x78240000: 3DSTATE_BLEND_STATE_POINTERS
+0x12300084:      0x00007f41:    pointer to BLEND_STATE at 0x00007f40 (changed)
+0x12300088:      0x780e0000: 3DSTATE_CC_STATE_POINTERS
+0x1230008c:      0x00007f01:    pointer to COLOR_CALC_STATE at 0x00007f00 (changed)
+0x12300090:      0x78250000: 3DSTATE_DEPTH_STENCIL_STATE_POINTERS
+0x12300094:      0x00007ec1:    pointer to DEPTH_STENCIL_STATE at 0x00007ec0 (changed)
+0x12300098:      0x78160005: 3DSTATE_CONSTANT_GS
+0x1230009c:      0x00000000:    len 0 = 0, len 1 = 0
+0x123000a0:      0x00000000:    len 2 = 0, len 3 = 0
+0x123000a4:      0x00000000:    pointer to constbuf 0
+0x123000a8:      0x00000000:    pointer to constbuf 1
+0x123000ac:      0x00000000:    pointer to constbuf 2
+0x123000b0:      0x00000000:    pointer to constbuf 3
+0x123000b4:      0x78110005: 3DSTATE_GS
+0x123000b8:      0x00000000:    kernel pointer
+0x123000bc:      0x00000000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123000c0:      0x00000000:    scratch offset
+0x123000c4:      0x00000401:    Dispatch GRF start 1, VUE read length 0, VUE read offset 0
+0x123000c8:      0x00000400:    Max Threads 1, Rendering disable
+0x123000cc:      0x00000000:    Reorder disable, Discard Adjaceny disable, GS disable
+0x123000d0:      0x78290000: 3DSTATE_BINDING_TABLE_POINTERS_GS
+0x123000d4:      0x00000000:    dword 1
+0x123000d8:      0x78190005: 3DSTATE_CONSTANT_HS
+0x123000dc:      0x00000000:    len 0 = 0, len 1 = 0
+0x123000e0:      0x00000000:    len 2 = 0, len 3 = 0
+0x123000e4:      0x00000000:    pointer to constbuf 0
+0x123000e8:      0x00000000:    pointer to constbuf 1
+0x123000ec:      0x00000000:    pointer to constbuf 2
+0x123000f0:      0x00000000:    pointer to constbuf 3
+0x123000f4:      0x781b0005: 3DSTATE_HS
+0x123000f8:      0x00000000:    dword 1
+0x123000fc:      0x00000000:    dword 2
+0x12300100:      0x00000000:    dword 3
+0x12300104:      0x00000000:    dword 4
+0x12300108:      0x00000000:    dword 5
+0x1230010c:      0x00000000:    dword 6
+0x12300110:      0x78270000: 3DSTATE_BINDING_TABLE_POINTERS_HS
+0x12300114:      0x00000000:    dword 1
+0x12300118:      0x781c0002: 3DSTATE_TE
+0x1230011c:      0x00000000:    dword 1
+0x12300120:      0x00000000:    dword 2
+0x12300124:      0x00000000:    dword 3
+0x12300128:      0x781a0005: 3DSTATE_CONSTANT_DS
+0x1230012c:      0x00000000:    len 0 = 0, len 1 = 0
+0x12300130:      0x00000000:    len 2 = 0, len 3 = 0
+0x12300134:      0x00000000:    pointer to constbuf 0
+0x12300138:      0x00000000:    pointer to constbuf 1
+0x1230013c:      0x00000000:    pointer to constbuf 2
+0x12300140:      0x00000000:    pointer to constbuf 3
+0x12300144:      0x781d0004: 3DSTATE_DS
+0x12300148:      0x00000000:    dword 1
+0x1230014c:      0x00000000:    dword 2
+0x12300150:      0x00000000:    dword 3
+0x12300154:      0x00000000:    dword 4
+0x12300158:      0x00000000:    dword 5
+0x1230015c:      0x78280000: 3DSTATE_BINDING_TABLE_POINTERS_DS
+0x12300160:      0x00000000:    dword 1
+0x12300164:      0x78260000: 3DSTATE_BINDING_TABLE_POINTERS_VS
+0x12300168:      0x00007c40:    dword 1
+0x1230016c:      0x782b0000: 3DSTATE_SAMPLER_STATE_POINTERS_VS
+0x12300170:      0x00007c20:    dword 1
+0x12300174:      0x79120000: 3DSTATE_PUSH_CONSTANT_ALLOC_VS
+0x12300178:      0x00000008:    dword 1
+0x1230017c:      0x78150005: 3DSTATE_CONSTANT_VS
+0x12300180:      0x00000002:    len 0 = 2, len 1 = 0
+0x12300184:      0x00000000:    len 2 = 0, len 3 = 0
+0x12300188:      0x00007e00:    pointer to constbuf 0
+0x1230018c:      0x00000000:    pointer to constbuf 1
+0x12300190:      0x00000000:    pointer to constbuf 2
+0x12300194:      0x00000000:    pointer to constbuf 3
+0x12300198:      0x78100004: 3DSTATE_VS
+0x1230019c:      0x00000000:    kernel pointer
+0x123001a0:      0x08000000:    SPF=0, VME=0, Sampler Count 1, Binding table count 0
+0x123001a4:      0x00000000:    scratch offset
+0x123001a8:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x123001ac:      0xfe000401:    Max Threads 128, Vertex Cache enable, VS func enable
+0x123001b0:      0x781e0001: 3DSTATE_STREAMOUT
+0x123001b4:      0x00000000:    dword 1
+0x123001b8:      0x00000000:    dword 2
+0x123001bc:      0x78120002: 3DSTATE_CLIP
+0x123001c0:      0x00150400:    UserClip distance cull test mask 0x0
+0x123001c4:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x123001c8:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x123001cc:      0x781f000c: 3DSTATE_SBE
+0x123001d0:      0x00600810:    dword 1
+0x123001d4:      0x00000000:    dword 2
+0x123001d8:      0x00000000:    dword 3
+0x123001dc:      0x00000000:    dword 4
+0x123001e0:      0x00000000:    dword 5
+0x123001e4:      0x00000000:    dword 6
+0x123001e8:      0x00000000:    dword 7
+0x123001ec:      0x00000000:    dword 8
+0x123001f0:      0x00000000:    dword 9
+0x123001f4:      0x00000000:    dword 10
+0x123001f8:      0x00000000:    dword 11
+0x123001fc:      0x00000000:    dword 12
+0x12300200:      0x00000000:    dword 13
+0x12300204:      0x78130005: 3DSTATE_SF
+0x12300208:      0x00001403:    dword 1
+0x1230020c:      0x22000000:    dword 2
+0x12300210:      0x4c000808:    dword 3
+0x12300214:      0x00000000:    dword 4
+0x12300218:      0x00000000:    dword 5
+0x1230021c:      0x00000000:    dword 6
+0x12300220:      0x78140001: 3DSTATE_WM
+0x12300224:      0xa0000840:    (PP ), point UR
+0x12300228:      0x00000000:    MS
+0x1230022c:      0x782a0000: 3DSTATE_BINDING_TABLE_POINTERS_PS
+0x12300230:      0x00007c40:    dword 1
+0x12300234:      0x782f0000: 3DSTATE_SAMPLER_STATE_POINTERS_PS
+0x12300238:      0x00007c20:    dword 1
+0x1230023c:      0x79160000: 3DSTATE_PUSH_CONSTANT_ALLOC_PS
+0x12300240:      0x00080008:    dword 1
+0x12300244:      0x78170005: 3DSTATE_CONSTANT_PS
+0x12300248:      0x00000000:    len 0 = 0, len 1 = 0
+0x1230024c:      0x00000000:    len 2 = 0, len 3 = 0
+0x12300250:      0x00000000:    pointer to constbuf 0
+0x12300254:      0x00000000:    pointer to constbuf 1
+0x12300258:      0x00000000:    pointer to constbuf 2
+0x1230025c:      0x00000000:    pointer to constbuf 3
+0x12300260:      0x78200006: 3DSTATE_PS
+0x12300264:      0x00000140:    dword 1
+0x12300268:      0x08000000:    dword 2
+0x1230026c:      0x00000000:    dword 3
+0x12300270:      0x55000403:    dword 4
+0x12300274:      0x00040006:    dword 5
+0x12300278:      0x00000000:    dword 6
+0x1230027c:      0x00000240:    dword 7
+0x12300280:      0x780f0000: 3DSTATE_SCISSOR_POINTERS
+0x12300284:      0x00007be0:    scissor rect offset
+0x12300288:      0x7a000002: PIPE_CONTROL
+0x1230028c:      0x00002000:    no write, depth stall, 
+0x12300290:      0x00000000:    
+0x12300294:      0x00000000:    
+0x12300298:      0x7a000002: PIPE_CONTROL
+0x1230029c:      0x00000001:    no write, depth cache flush, 
+0x123002a0:      0x00000000:    
+0x123002a4:      0x00000000:    
+0x123002a8:      0x7a000002: PIPE_CONTROL
+0x123002ac:      0x00002000:    no write, depth stall, 
+0x123002b0:      0x00000000:    
+0x123002b4:      0x00000000:    
+0x123002b8:      0x78050005: 3DSTATE_DEPTH_BUFFER
+0x123002bc:      0xe0040000:    dword 1
+0x123002c0:      0x00000000:    dword 2
+0x123002c4:      0x00000000:    dword 3
+0x123002c8:      0x00000000:    dword 4
+0x123002cc:      0x00000000:    dword 5
+0x123002d0:      0x00000000:    dword 6
+0x123002d4:      0x78070001: 3DSTATE_HIER_DEPTH_BUFFER
+0x123002d8:      0x00000000:    pitch 1b
+0x123002dc:      0x00000000:    pointer to HiZ buffer
+0x123002e0:      0x78060001: 3DSTATE_STENCIL_BUFFER
+0x123002e4:      0x00000000:    dword 1
+0x123002e8:      0x00000000:    dword 2
+0x123002ec:      0x78040001: 3DSTATE_CLEAR_PARAMS
+0x123002f0:      0x00000000:    dword 1
+0x123002f4:      0x00000000:    dword 2
+0x123002f8:      0x79000002: 3DSTATE_DRAWING_RECTANGLE
+0x123002fc:      0x00000000:    top left: 0,0
+0x12300300:      0x00130077:    bottom right: 119,19
+0x12300304:      0x00000000:    origin: 0,0
+0x12300308:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x1230030c:      0x00004014:    buffer 0: sequential, pitch 20b
+0x12300310:      0x158b3000:    buffer address
+0x12300314:      0x158c2fff:    max index
+0x12300318:      0x00000000:    mbz
+0x1230031c:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x12300320:      0x02850000:    buffer 0: valid, type 0x0085, src offset 0x0000 bytes
+0x12300324:      0x11230000:    (X, Y, 0.0, 1.0), dst offset 0x00 bytes
+0x12300328:      0x02400008:    buffer 0: valid, type 0x0040, src offset 0x0008 bytes
+0x1230032c:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300330:      0x7b000005: 3DPRIMITIVE: 
+0x12300334:      0x00000007:    quad list sequential
+0x12300338:      0x00000004:    vertex count
+0x1230033c:      0x00000000:    start vertex
+0x12300340:      0x00000001:    instance count
+0x12300344:      0x00000000:    start instance
+0x12300348:      0x00000000:    index bias
+0x1230034c:      0x05000000: MI_BATCH_BUFFER_END

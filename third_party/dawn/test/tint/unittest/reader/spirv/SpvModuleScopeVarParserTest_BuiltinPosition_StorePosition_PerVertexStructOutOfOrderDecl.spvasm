@@ -1,0 +1,35 @@
+; Test: SpvModuleScopeVarParserTest_BuiltinPosition_StorePosition_PerVertexStructOutOfOrderDecl.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Vertex %2 "main" %1
+OpDecorate %_struct_10 Block
+OpMemberDecorate %_struct_10 0 BuiltIn ClipDistance
+OpMemberDecorate %_struct_10 1 BuiltIn CullDistance
+OpMemberDecorate %_struct_10 2 BuiltIn Position
+OpMemberDecorate %_struct_10 3 BuiltIn PointSize
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+%_struct_10 = OpTypeStruct %_arr_float_uint_1 %_arr_float_uint_1 %v4float %float
+%_ptr_Output__struct_10 = OpTypePointer Output %_struct_10
+%1 = OpVariable %_ptr_Output__struct_10 Output
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%15 = OpConstantNull %v4float
+%2 = OpFunction %void None %4
+%16 = OpLabel
+%100 = OpAccessChain %_ptr_Output_v4float %1 %uint_2
+OpStore %100 %15
+OpReturn
+OpFunctionEnd
+

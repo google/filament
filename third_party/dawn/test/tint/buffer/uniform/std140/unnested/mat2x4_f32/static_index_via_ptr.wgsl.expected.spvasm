@@ -1,0 +1,44 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 20
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %m_block 0 "inner"
+               OpName %m_block "m_block"
+               OpName %f "f"
+               OpName %p_m "p_m"
+               OpName %p_m_1 "p_m_1"
+               OpName %l_m "l_m"
+               OpName %l_m_1 "l_m_1"
+               OpMemberDecorate %m_block 0 Offset 0
+               OpMemberDecorate %m_block 0 ColMajor
+               OpMemberDecorate %m_block 0 MatrixStride 16
+               OpDecorate %m_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat2v4float = OpTypeMatrix %v4float 2
+    %m_block = OpTypeStruct %mat2v4float
+%_ptr_Uniform_m_block = OpTypePointer Uniform %m_block
+          %1 = OpVariable %_ptr_Uniform_m_block Uniform
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+%_ptr_Uniform_mat2v4float = OpTypePointer Uniform %mat2v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+     %uint_1 = OpConstant %uint 1
+          %f = OpFunction %void None %9
+         %10 = OpLabel
+        %p_m = OpAccessChain %_ptr_Uniform_mat2v4float %1 %uint_0
+      %p_m_1 = OpAccessChain %_ptr_Uniform_v4float %p_m %uint_1
+        %l_m = OpLoad %mat2v4float %p_m None
+      %l_m_1 = OpLoad %v4float %p_m_1 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,65 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 32
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %i "i"
+               OpName %i_0 "i"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+      %int_2 = OpConstant %int 2
+       %bool = OpTypeBool
+      %int_1 = OpConstant %int 1
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+          %i = OpVariable %_ptr_Function_int Function
+        %i_0 = OpVariable %_ptr_Function_int Function
+               OpStore %i %int_0
+               OpBranch %9
+          %9 = OpLabel
+               OpStore %i_0 %int_0
+               OpBranch %12
+         %12 = OpLabel
+               OpLoopMerge %13 %11 None
+               OpBranch %10
+         %10 = OpLabel
+         %15 = OpLoad %int %i_0 None
+         %16 = OpSLessThan %bool %15 %int_2
+               OpSelectionMerge %19 None
+               OpBranchConditional %16 %19 %20
+         %20 = OpLabel
+               OpBranch %13
+         %19 = OpLabel
+         %21 = OpLoad %int %i_0 None
+               OpSelectionMerge %24 None
+               OpSwitch %21 %22 0 %23
+         %23 = OpLabel
+               OpBranch %11
+         %22 = OpLabel
+               OpBranch %24
+         %24 = OpLabel
+         %25 = OpLoad %int %i_0 None
+               OpSelectionMerge %28 None
+               OpSwitch %25 %26 0 %27
+         %27 = OpLabel
+               OpBranch %11
+         %26 = OpLabel
+               OpBranch %28
+         %28 = OpLabel
+               OpBranch %11
+         %11 = OpLabel
+         %29 = OpLoad %int %i_0 None
+         %30 = OpIAdd %int %29 %int_1
+               OpStore %i_0 %30 None
+               OpBranch %12
+         %13 = OpLabel
+               OpReturn
+               OpFunctionEnd

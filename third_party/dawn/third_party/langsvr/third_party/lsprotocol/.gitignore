@@ -1,0 +1,14 @@
+out
+dist
+.venv*/
+.nox/
+**/__pycache__
+**/.pytest_cache
+**/.vs
+**/.mypy_cache
+packages/rust/**/target/
+packages/rust/**/Cargo.lock
+packages/dotnet/lsprotocol/bin/
+packages/dotnet/lsprotocol/obj/
+tests/rust/**/target/
+tests/rust/**/Cargo.lock

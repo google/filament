@@ -1,0 +1,61 @@
+SKIP: FAILED
+
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %f "f" %f_position_Input %f_Input
+               OpExecutionMode %f OriginUpperLeft
+               OpName %f_position_Input "f_position_Input"
+               OpName %f_Input "f_Input"
+               OpName %g "g"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %f_inner "f_inner"
+               OpMemberName %In 0 "pos"
+               OpName %In "In"
+               OpName %in "in"
+               OpName %fbf "fbf"
+               OpName %f "f"
+               OpDecorate %f_position_Input BuiltIn FragCoord
+               OpDecorate %f_position_Input Invariant
+               OpMemberDecorate %In 0 Offset 0
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%f_position_Input = OpVariable %_ptr_Input_v4float Input
+    %f_Input = OpVariable %_ptr_Input_v4float Input
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void %float %float
+         %In = OpTypeStruct %v4float
+         %16 = OpTypeFunction %void %In %v4float
+         %22 = OpTypeFunction %void
+          %g = OpFunction %void None %10
+          %a = OpFunctionParameter %float
+          %b = OpFunctionParameter %float
+         %11 = OpLabel
+               OpReturn
+               OpFunctionEnd
+    %f_inner = OpFunction %void None %16
+         %in = OpFunctionParameter %In
+        %fbf = OpFunctionParameter %v4float
+         %17 = OpLabel
+         %18 = OpCompositeExtract %float %in 0 0
+         %19 = OpCompositeExtract %float %fbf 1
+         %20 = OpFunctionCall %void %g %18 %19
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %22
+         %23 = OpLabel
+         %24 = OpLoad %v4float %f_position_Input None
+         %25 = OpCompositeConstruct %In %24
+         %26 = OpLoad %v4float %f_Input None
+         %27 = OpFunctionCall %void %f_inner %25 %26
+               OpReturn
+               OpFunctionEnd
+1:1: [VUID-StandaloneSpirv-Location-04916] Variable must be decorated with a location
+  %f_Input = OpVariable %_ptr_Input_v4float Input
+

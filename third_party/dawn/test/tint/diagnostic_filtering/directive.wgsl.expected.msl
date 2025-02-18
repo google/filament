@@ -1,0 +1,34 @@
+<dawn>/test/tint/diagnostic_filtering/directive.wgsl:9:9 warning: 'textureSample' must only be called from uniform control flow
+    _ = textureSample(t, s, vec2(0, 0));
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<dawn>/test/tint/diagnostic_filtering/directive.wgsl:8:3 note: control flow depends on possibly non-uniform value
+  if (x > 0) {
+  ^^
+
+<dawn>/test/tint/diagnostic_filtering/directive.wgsl:8:7 note: user-defined input 'x' of 'main' may be non-uniform
+  if (x > 0) {
+      ^
+
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::sample> t;
+  sampler s;
+};
+
+struct main_inputs {
+  float x [[user(locn0)]];
+};
+
+void main_inner(float x, tint_module_vars_struct tint_module_vars) {
+  if ((x > 0.0f)) {
+    tint_module_vars.t.sample(tint_module_vars.s, float2(0.0f));
+  }
+}
+
+fragment void v(main_inputs inputs [[stage_in]], texture2d<float, access::sample> t [[texture(0)]], sampler s [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t=t, .s=s};
+  main_inner(inputs.x, tint_module_vars);
+}

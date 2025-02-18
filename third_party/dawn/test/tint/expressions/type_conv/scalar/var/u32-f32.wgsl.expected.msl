@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread uint* u;
+};
+
+void f(tint_module_vars_struct tint_module_vars) {
+  float const v = float((*tint_module_vars.u));
+}

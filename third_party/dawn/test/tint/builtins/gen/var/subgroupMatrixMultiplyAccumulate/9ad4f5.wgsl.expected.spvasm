@@ -1,0 +1,78 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 44
+; Schema: 0
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpCapability VulkanMemoryModelDeviceScope
+               OpCapability CooperativeMatrixKHR
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupMatrixMultiplyAccumulate_9ad4f5 "subgroupMatrixMultiplyAccumulate_9ad4f5"
+               OpName %arg_0 "arg_0"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpDecorate %_arr_uint_uint_1024 ArrayStride 4
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+       %uint = OpTypeInt 32 0
+  %uint_1024 = OpConstant %uint 1024
+%_arr_uint_uint_1024 = OpTypeArray %uint %uint_1024
+%prevent_dce_block = OpTypeStruct %_arr_uint_uint_1024
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+     %uint_2 = OpConstant %uint 2
+          %8 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_8 %uint_8 %uint_2
+         %12 = OpTypeFunction %8
+     %uint_0 = OpConstant %uint 0
+         %15 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_8 %uint_8 %uint_0
+         %14 = OpConstantNull %15
+%_ptr_Function_15 = OpTypePointer Function %15
+     %uint_1 = OpConstant %uint 1
+         %20 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_8 %uint_8 %uint_1
+         %19 = OpConstantNull %20
+%_ptr_Function_20 = OpTypePointer Function %20
+         %24 = OpConstantNull %8
+%_ptr_Function_8 = OpTypePointer Function %8
+       %void = OpTypeVoid
+         %35 = OpTypeFunction %void
+%_ptr_StorageBuffer__arr_uint_uint_1024 = OpTypePointer StorageBuffer %_arr_uint_uint_1024
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+    %uint_64 = OpConstant %uint 64
+%subgroupMatrixMultiplyAccumulate_9ad4f5 = OpFunction %8 None %12
+         %13 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_15 Function
+      %arg_1 = OpVariable %_ptr_Function_20 Function
+      %arg_2 = OpVariable %_ptr_Function_8 Function
+        %res = OpVariable %_ptr_Function_8 Function
+               OpStore %arg_0 %14
+               OpStore %arg_1 %19
+               OpStore %arg_2 %24
+         %27 = OpLoad %15 %arg_0 None
+         %28 = OpLoad %20 %arg_1 None
+         %29 = OpLoad %8 %arg_2 None
+         %30 = OpCooperativeMatrixMulAddKHR %8 %27 %28 %29
+               OpStore %res %30
+         %32 = OpLoad %8 %res None
+               OpReturnValue %32
+               OpFunctionEnd
+%compute_main = OpFunction %void None %35
+         %36 = OpLabel
+         %37 = OpFunctionCall %8 %subgroupMatrixMultiplyAccumulate_9ad4f5
+         %38 = OpAccessChain %_ptr_StorageBuffer__arr_uint_uint_1024 %1 %uint_0
+         %40 = OpAccessChain %_ptr_StorageBuffer_uint %38 %uint_0
+               OpCooperativeMatrixStoreKHR %40 %37 %uint_0 %uint_64 NonPrivatePointer
+               OpReturn
+               OpFunctionEnd

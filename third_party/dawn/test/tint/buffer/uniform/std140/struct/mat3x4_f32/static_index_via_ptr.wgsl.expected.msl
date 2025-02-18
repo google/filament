@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct Inner {
+  /* 0x0000 */ float3x4 m;
+  /* 0x0030 */ tint_array<int8_t, 16> tint_pad;
+};
+
+struct Outer {
+  /* 0x0000 */ tint_array<Inner, 4> a;
+};
+
+struct tint_module_vars_struct {
+  const constant tint_array<Outer, 4>* a;
+};
+
+kernel void f(const constant tint_array<Outer, 4>* a [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=a};
+  const constant tint_array<Outer, 4>* const p_a = tint_module_vars.a;
+  const constant Outer* const p_a_3 = (&(*p_a)[3u]);
+  const constant tint_array<Inner, 4>* const p_a_3_a = (&(*p_a_3).a);
+  const constant Inner* const p_a_3_a_2 = (&(*p_a_3_a)[2u]);
+  const constant float3x4* const p_a_3_a_2_m = (&(*p_a_3_a_2).m);
+  const constant float4* const p_a_3_a_2_m_1 = (&(*p_a_3_a_2_m)[1u]);
+  tint_array<Outer, 4> const l_a = (*p_a);
+  Outer const l_a_3 = (*p_a_3);
+  tint_array<Inner, 4> const l_a_3_a = (*p_a_3_a);
+  Inner const l_a_3_a_2 = (*p_a_3_a_2);
+  float3x4 const l_a_3_a_2_m = (*p_a_3_a_2_m);
+  float4 const l_a_3_a_2_m_1 = (*p_a_3_a_2_m_1);
+  float const l_a_3_a_2_m_1_0 = (*p_a_3_a_2_m_1).x;
+}

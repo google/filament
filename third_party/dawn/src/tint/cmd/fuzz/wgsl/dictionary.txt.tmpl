@@ -1,0 +1,144 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate dictionary.txt
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- SetCommentPrefix "#" -}}
+{{- $W := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
+{{- $C := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+
+{{- $tokens := List}}
+
+{{- /* ========================= Operators & Keywords ======================== */ -}}
+{{- $tokens = Append $tokens
+    "!"
+    "!="
+    "%"
+    "%="
+    "&"
+    "&&"
+    "&="
+    "("
+    ")"
+    "*"
+    "*="
+    "+"
+    "++"
+    "+="
+    ","
+    "-"
+    "--"
+    "-="
+    "->"
+    "."
+    "/"
+    "/="
+    ":"
+    ";"
+    "<"
+    "<<"
+    "<<="
+    "<="
+    "="
+    "=="
+    ">"
+    ">="
+    ">>"
+    ">>="
+    "@"
+    "["
+    "]"
+    "^"
+    "^="
+    "_"
+    "{"
+    "|"
+    "|="
+    "||"
+    "}"
+    "~"
+    "alias"
+    "break"
+    "case"
+    "const"
+    "const_assert"
+    "continue"
+    "continuing"
+    "diagnostic"
+    "discard"
+    "default"
+    "else"
+    "enable"
+    "fallthrough"
+    "false"
+    "fn"
+    "for"
+    "if"
+    "let"
+    "loop"
+    "override"
+    "return"
+    "requires"
+    "struct"
+    "switch"
+    "true"
+    "var"
+    "while"
+-}}
+
+{{- /* ============================== Swizzles =============================== */ -}}
+{{- $tokens = Append $tokens
+    "x" "y" "z" "w"
+    "r" "g" "b" "a"
+-}}
+
+{{- /* ============================ Boolean values =========================== */ -}}
+{{- $tokens = Append $tokens
+    "true" "false"
+-}}
+
+{{- /* =========================== Base64 comments =========================== */ -}}
+{{- $tokens = Append $tokens
+    "// AAAA"
+    "// AAAB"
+    "// ABBB"
+    "// BAAA"
+    "// BBBA"
+    "// BBBB"
+-}}
+
+{{- /* ========================= Interesting patterns ======================== */ -}}
+{{- $tokens = Append $tokens
+    "for (;true;) {}"
+-}}
+
+{{- /* ========================== Builtin functions ========================== */ -}}
+{{- range $W.Sem.Builtins}}{{$tokens = Append $tokens .Name}}{{end -}}
+
+{{- /* ================================ Types ================================ */ -}}
+{{- range $W.Sem.Types}}{{$tokens = Append $tokens .Name}}{{end -}}
+
+{{- /* ============================= Enumerators ============================= */ -}}
+{{- range $W.Sem.Enums}}
+    {{- range .Entries}}
+        {{- $tokens = Append $tokens .Name}}
+    {{- end}}
+{{- end}}
+{{- range $C.Sem.Enums}}
+    {{- range .Entries}}
+        {{- $tokens = Append $tokens .Name}}
+    {{- end}}
+{{- end}}
+
+{{- $tokens = SortUnique $tokens}}
+
+{{- range $tokens}}"{{.}}"
+{{end -}}

@@ -1,0 +1,40 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture1d<int, access::write> arg_0;
+};
+
+void textureStore_3d6f01(tint_module_vars_struct tint_module_vars) {
+  uint arg_1 = 1u;
+  int4 arg_2 = int4(1);
+  tint_module_vars.arg_0.write(arg_2, arg_1);
+}
+
+fragment void fragment_main(texture1d<int, access::write> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  textureStore_3d6f01(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture1d<int, access::write> arg_0;
+};
+
+void textureStore_3d6f01(tint_module_vars_struct tint_module_vars) {
+  uint arg_1 = 1u;
+  int4 arg_2 = int4(1);
+  tint_module_vars.arg_0.write(arg_2, arg_1);
+}
+
+kernel void compute_main(texture1d<int, access::write> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  textureStore_3d6f01(tint_module_vars);
+}

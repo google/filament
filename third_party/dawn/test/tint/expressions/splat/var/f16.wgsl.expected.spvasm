@@ -1,0 +1,51 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %f "f"
+               OpName %v "v"
+               OpName %v2 "v2"
+               OpName %v3 "v3"
+               OpName %v4 "v4"
+               OpName %unused_entry_point "unused_entry_point"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+%_ptr_Function_half = OpTypePointer Function %half
+%half_0x1_8p_1 = OpConstant %half 0x1.8p+1
+     %v2half = OpTypeVector %half 2
+%_ptr_Function_v2half = OpTypePointer Function %v2half
+     %v3half = OpTypeVector %half 3
+%_ptr_Function_v3half = OpTypePointer Function %v3half
+     %v4half = OpTypeVector %half 4
+%_ptr_Function_v4half = OpTypePointer Function %v4half
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+          %v = OpVariable %_ptr_Function_half Function
+         %v2 = OpVariable %_ptr_Function_v2half Function
+         %v3 = OpVariable %_ptr_Function_v3half Function
+         %v4 = OpVariable %_ptr_Function_v4half Function
+               OpStore %v %half_0x1_8p_1
+          %9 = OpLoad %half %v None
+         %11 = OpCompositeConstruct %v2half %9 %9
+               OpStore %v2 %11
+         %14 = OpLoad %half %v None
+         %16 = OpCompositeConstruct %v3half %14 %14 %14
+               OpStore %v3 %16
+         %19 = OpLoad %half %v None
+         %21 = OpCompositeConstruct %v4half %19 %19 %19 %19
+               OpStore %v4 %21
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %3
+         %25 = OpLabel
+               OpReturn
+               OpFunctionEnd

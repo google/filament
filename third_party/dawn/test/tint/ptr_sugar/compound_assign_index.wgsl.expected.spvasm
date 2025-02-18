@@ -1,0 +1,81 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 46
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %deref "deref"
+               OpName %a "a"
+               OpName %a "p"
+               OpName %no_deref "no_deref"
+               OpName %a_0 "a"
+               OpName %a_0 "p"
+               OpName %deref_inc "deref_inc"
+               OpName %a_1 "a"
+               OpName %a_1 "p"
+               OpName %no_deref_inc "no_deref_inc"
+               OpName %a_2 "a"
+               OpName %a_2 "p"
+               OpName %main "main"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+%_ptr_Function_v3int = OpTypePointer Function %v3int
+          %9 = OpConstantNull %v3int
+%_ptr_Function_int = OpTypePointer Function %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %int_42 = OpConstant %int 42
+      %int_1 = OpConstant %int 1
+      %deref = OpFunction %void None %3
+          %4 = OpLabel
+          %a = OpVariable %_ptr_Function_v3int Function %9
+         %10 = OpAccessChain %_ptr_Function_int %a %uint_0
+         %14 = OpLoad %int %10 None
+         %15 = OpIAdd %int %14 %int_42
+         %17 = OpAccessChain %_ptr_Function_int %a %uint_0
+               OpStore %17 %15 None
+               OpReturn
+               OpFunctionEnd
+   %no_deref = OpFunction %void None %3
+         %19 = OpLabel
+        %a_0 = OpVariable %_ptr_Function_v3int Function %9
+         %21 = OpAccessChain %_ptr_Function_int %a_0 %uint_0
+         %22 = OpLoad %int %21 None
+         %23 = OpIAdd %int %22 %int_42
+         %24 = OpAccessChain %_ptr_Function_int %a_0 %uint_0
+               OpStore %24 %23 None
+               OpReturn
+               OpFunctionEnd
+  %deref_inc = OpFunction %void None %3
+         %26 = OpLabel
+        %a_1 = OpVariable %_ptr_Function_v3int Function %9
+         %28 = OpAccessChain %_ptr_Function_int %a_1 %uint_0
+         %29 = OpLoad %int %28 None
+         %30 = OpIAdd %int %29 %int_1
+         %32 = OpAccessChain %_ptr_Function_int %a_1 %uint_0
+               OpStore %32 %30 None
+               OpReturn
+               OpFunctionEnd
+%no_deref_inc = OpFunction %void None %3
+         %34 = OpLabel
+        %a_2 = OpVariable %_ptr_Function_v3int Function %9
+         %36 = OpAccessChain %_ptr_Function_int %a_2 %uint_0
+         %37 = OpLoad %int %36 None
+         %38 = OpIAdd %int %37 %int_1
+         %39 = OpAccessChain %_ptr_Function_int %a_2 %uint_0
+               OpStore %39 %38 None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %3
+         %41 = OpLabel
+         %42 = OpFunctionCall %void %deref
+         %43 = OpFunctionCall %void %no_deref
+         %44 = OpFunctionCall %void %deref_inc
+         %45 = OpFunctionCall %void %no_deref_inc
+               OpReturn
+               OpFunctionEnd

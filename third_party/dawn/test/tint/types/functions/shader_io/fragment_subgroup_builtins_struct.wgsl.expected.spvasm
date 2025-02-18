@@ -1,0 +1,70 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniform
+         %23 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_subgroup_invocation_id_Input %main_subgroup_size_Input
+               OpExecutionMode %main OriginUpperLeft
+               OpMemberName %output_block 0 "inner"
+               OpName %output_block "output_block"
+               OpName %main_subgroup_invocation_id_Input "main_subgroup_invocation_id_Input"
+               OpName %main_subgroup_size_Input "main_subgroup_size_Input"
+               OpName %main_inner "main_inner"
+               OpMemberName %FragmentInputs 0 "subgroup_invocation_id"
+               OpMemberName %FragmentInputs 1 "subgroup_size"
+               OpName %FragmentInputs "FragmentInputs"
+               OpName %inputs "inputs"
+               OpName %main "main"
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %output_block 0 Offset 0
+               OpDecorate %output_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %main_subgroup_invocation_id_Input Flat
+               OpDecorate %main_subgroup_invocation_id_Input BuiltIn SubgroupLocalInvocationId
+               OpDecorate %main_subgroup_size_Input Flat
+               OpDecorate %main_subgroup_size_Input BuiltIn SubgroupSize
+               OpMemberDecorate %FragmentInputs 0 Offset 0
+               OpMemberDecorate %FragmentInputs 1 Offset 4
+       %uint = OpTypeInt 32 0
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+%output_block = OpTypeStruct %_runtimearr_uint
+%_ptr_StorageBuffer_output_block = OpTypePointer StorageBuffer %output_block
+          %1 = OpVariable %_ptr_StorageBuffer_output_block StorageBuffer
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_subgroup_invocation_id_Input = OpVariable %_ptr_Input_uint Input
+%main_subgroup_size_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+%FragmentInputs = OpTypeStruct %uint %uint
+         %13 = OpTypeFunction %void %FragmentInputs
+%_ptr_StorageBuffer__runtimearr_uint = OpTypePointer StorageBuffer %_runtimearr_uint
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+         %28 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %13
+     %inputs = OpFunctionParameter %FragmentInputs
+         %14 = OpLabel
+         %15 = OpCompositeExtract %uint %inputs 0
+         %16 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %1 %uint_0
+         %19 = OpArrayLength %uint %1 0
+         %20 = OpISub %uint %19 %uint_1
+         %22 = OpExtInst %uint %23 UMin %15 %20
+         %24 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %22
+         %26 = OpCompositeExtract %uint %inputs 1
+               OpStore %24 %26 None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %28
+         %29 = OpLabel
+         %30 = OpLoad %uint %main_subgroup_invocation_id_Input None
+         %31 = OpLoad %uint %main_subgroup_size_Input None
+         %32 = OpCompositeConstruct %FragmentInputs %30 %31
+         %33 = OpFunctionCall %void %main_inner %32
+               OpReturn
+               OpFunctionEnd

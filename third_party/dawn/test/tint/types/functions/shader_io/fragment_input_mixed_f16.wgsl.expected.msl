@@ -1,0 +1,40 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentInputs0 {
+  float4 position;
+  int loc0;
+};
+
+struct FragmentInputs1 {
+  float4 loc3;
+  half3 loc5;
+  uint sample_mask;
+};
+
+struct main_inputs {
+  int FragmentInputs0_loc0 [[user(locn0)]] [[flat]];
+  uint loc1 [[user(locn1)]] [[flat]];
+  float4 FragmentInputs1_loc3 [[user(locn3)]];
+  half3 FragmentInputs1_loc5 [[user(locn5)]];
+  float loc2 [[user(locn2)]];
+  half loc4 [[user(locn4)]];
+};
+
+void main_inner(FragmentInputs0 inputs0, bool front_facing, uint loc1, uint sample_index, FragmentInputs1 inputs1, float loc2, half loc4) {
+  if (front_facing) {
+    float4 const foo = inputs0.position;
+    uint const bar = (sample_index + inputs1.sample_mask);
+    int const i = inputs0.loc0;
+    uint const u = loc1;
+    float const f = loc2;
+    float4 const v = inputs1.loc3;
+    half const x = loc4;
+    half3 const y = inputs1.loc5;
+  }
+}
+
+fragment void v_1(float4 FragmentInputs0_position [[position]], main_inputs inputs [[stage_in]], bool front_facing [[front_facing]], uint sample_index [[sample_id]], uint FragmentInputs1_sample_mask [[sample_mask]]) {
+  FragmentInputs0 const v_2 = FragmentInputs0{.position=FragmentInputs0_position, .loc0=inputs.FragmentInputs0_loc0};
+  main_inner(v_2, front_facing, inputs.loc1, sample_index, FragmentInputs1{.loc3=inputs.FragmentInputs1_loc3, .loc5=inputs.FragmentInputs1_loc5, .sample_mask=FragmentInputs1_sample_mask}, inputs.loc2, inputs.loc4);
+}

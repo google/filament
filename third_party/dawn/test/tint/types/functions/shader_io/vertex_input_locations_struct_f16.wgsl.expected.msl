@@ -1,0 +1,40 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexInputs {
+  int loc0;
+  uint loc1;
+  float loc2;
+  float4 loc3;
+  half loc4;
+  half3 loc5;
+};
+
+struct main_outputs {
+  float4 tint_symbol [[position]];
+};
+
+struct main_inputs {
+  int VertexInputs_loc0 [[attribute(0)]];
+  uint VertexInputs_loc1 [[attribute(1)]];
+  float VertexInputs_loc2 [[attribute(2)]];
+  float4 VertexInputs_loc3 [[attribute(3)]];
+  half VertexInputs_loc4 [[attribute(4)]];
+  half3 VertexInputs_loc5 [[attribute(5)]];
+};
+
+float4 main_inner(VertexInputs inputs) {
+  int const i = inputs.loc0;
+  uint const u = inputs.loc1;
+  float const f = inputs.loc2;
+  float4 const v = inputs.loc3;
+  half const x = inputs.loc4;
+  half3 const y = inputs.loc5;
+  return float4(0.0f);
+}
+
+vertex main_outputs v_1(main_inputs inputs [[stage_in]]) {
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(VertexInputs{.loc0=inputs.VertexInputs_loc0, .loc1=inputs.VertexInputs_loc1, .loc2=inputs.VertexInputs_loc2, .loc3=inputs.VertexInputs_loc3, .loc4=inputs.VertexInputs_loc4, .loc5=inputs.VertexInputs_loc5});
+  return tint_wrapper_result;
+}

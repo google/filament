@@ -1,0 +1,26 @@
+This is a historical description of what is now the kgsl backend
+in libdrm freedreno (before the upstream drm/msm driver).  Note
+that the kgsl backend requires the "kgsl-drm" shim driver, which
+usually is in disrepair (QCOM does not build it for android), and
+due to random differences between different downstream android
+kernel branches it may or may not work.  So YMMV.
+
+Original README:
+----------------
+
+Note that current msm kernel driver is a bit strange.  It provides a
+DRM interface for GEM, which is basically sufficient to have DRI2
+working.  But it does not provide KMS.  And interface to 2d and 3d
+cores is via different other devices (/dev/kgsl-*).  This is not
+quite how I'd write a DRM driver, but at this stage it is useful for
+xf86-video-freedreno and fdre (and eventual gallium driver) to be
+able to work on existing kernel driver from QCOM, to allow to
+capture cmdstream dumps from the binary blob drivers without having
+to reboot.  So libdrm_freedreno attempts to hide most of the crazy.
+The intention is that when there is a proper kernel driver, it will
+be mostly just changes in libdrm_freedreno to adapt the gallium
+driver and xf86-video-freedreno (ignoring the fbdev->KMS changes).
+
+So don't look at freedreno as an example of how to write a libdrm
+module or a DRM driver.. it is just an attempt to paper over a non-
+standard kernel driver architecture.

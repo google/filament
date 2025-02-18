@@ -1,0 +1,6 @@
+MODETEST_FILES := \
+	buffers.c \
+	buffers.h \
+	cursor.c \
+	cursor.h \
+	modetest.c

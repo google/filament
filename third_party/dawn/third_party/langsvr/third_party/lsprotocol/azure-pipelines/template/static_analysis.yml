@@ -1,0 +1,72 @@
+jobs:
+  - job: SourceScan
+    displayName: Source Scan
+
+    pool:
+      vmImage: windows-latest
+
+    steps:
+      - task: securedevelopmentteam.vss-secure-development-tools.build-task-credscan.CredScan@3
+        displayName: 'Run Credential Scanner'
+        inputs:
+          outputFormat: pre
+          debugMode: false
+        continueOnError: true
+
+      - task: securedevelopmentteam.vss-secure-development-tools.build-task-policheck.PoliCheck@2
+        displayName: 'Run PoliCheck'
+        inputs:
+          targetType: F
+        continueOnError: true
+
+      - task: securedevelopmentteam.vss-secure-development-tools.build-task-antimalware.AntiMalware@4
+        displayName: 'Run AntiMalware'
+        inputs:
+          FileDirPath: '$(Build.SourcesDirectory)'
+          EnableServices: true
+        continueOnError: true
+
+      - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+        displayName: Component Detection
+        inputs:
+          ignoreDirectories: '$(Build.SourcesDirectory)/tests'
+        continueOnError: true
+
+      - task: securedevelopmentteam.vss-secure-development-tools.build-task-report.SdtReport@2
+        displayName: Create Security Analysis Report
+        inputs:
+          AllTools: false
+          AntiMalware: true
+          BinSkim: false
+          CredScan: true
+          PoliCheck: true
+          APIScan: false
+          CodesignValidation: false
+          FortifySCA: false
+          FxCop: false
+          ModernCop: false
+          MSRD: false
+          RoslynAnalyzers: false
+          SDLNativeRules: false
+          Semmle: false
+          TSLint: false
+          WebScout: false
+        continueOnError: true
+
+      - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
+        displayName: Publish Security Analysis Logs
+
+  - job: VersionChk
+    displayName: Version Check
+
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+      - task: UsePythonVersion@0
+        displayName: 'Use Python 3.11'
+        inputs:
+          versionSpec: 3.11
+
+      - script: python ./.github/workflows/version_check.py
+        displayName: Version Check

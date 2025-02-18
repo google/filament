@@ -1,0 +1,51 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+         %22 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %u_block 0 "inner"
+               OpName %u_block "u_block"
+               OpName %f "f"
+               OpName %t "t"
+               OpName %l "l"
+               OpName %a "a"
+               OpMemberDecorate %u_block 0 Offset 0
+               OpMemberDecorate %u_block 0 ColMajor
+               OpMemberDecorate %u_block 0 MatrixStride 16
+               OpDecorate %u_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+    %u_block = OpTypeStruct %mat4v4float
+%_ptr_Uniform_u_block = OpTypePointer Uniform %u_block
+          %1 = OpVariable %_ptr_Uniform_u_block Uniform
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+%_ptr_Uniform_mat4v4float = OpTypePointer Uniform %mat4v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+     %uint_1 = OpConstant %uint 1
+          %f = OpFunction %void None %9
+         %10 = OpLabel
+         %11 = OpAccessChain %_ptr_Uniform_mat4v4float %1 %uint_0
+         %15 = OpLoad %mat4v4float %11 None
+          %t = OpTranspose %mat4v4float %15
+         %17 = OpAccessChain %_ptr_Uniform_v4float %1 %uint_0 %uint_1
+         %20 = OpLoad %v4float %17 None
+          %l = OpExtInst %float %22 Length %20
+         %23 = OpAccessChain %_ptr_Uniform_v4float %1 %uint_0 %uint_0
+         %24 = OpLoad %v4float %23 None
+         %25 = OpVectorShuffle %v4float %24 %24 1 3 0 2
+         %26 = OpCompositeExtract %float %25 0
+          %a = OpExtInst %float %22 FAbs %26
+               OpReturn
+               OpFunctionEnd

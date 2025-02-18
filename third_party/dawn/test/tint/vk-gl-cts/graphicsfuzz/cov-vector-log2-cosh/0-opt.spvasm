@@ -1,0 +1,51 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %v "v"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+    %float_1 = OpConstant %float 1
+  %float_10 = OpConstant %float 10
+         %12 = OpConstantComposite %v2float %float_1 %float_10
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_float = OpTypePointer Function %float
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_0 = OpConstant %float 0
+         %21 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %22 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+       %main = OpFunction %void None %6
+         %23 = OpLabel
+          %v = OpVariable %_ptr_Function_v2float Function
+         %24 = OpExtInst %v2float %1 Cosh %12
+         %25 = OpExtInst %v2float %1 Log2 %24
+               OpStore %v %25
+         %26 = OpAccessChain %_ptr_Function_float %v %uint_0
+         %27 = OpLoad %float %26
+         %28 = OpAccessChain %_ptr_Function_float %v %uint_1
+         %29 = OpLoad %float %28
+         %30 = OpFOrdLessThan %bool %27 %29
+               OpSelectionMerge %31 None
+               OpBranchConditional %30 %32 %33
+         %32 = OpLabel
+               OpStore %_GLF_color %21
+               OpBranch %31
+         %33 = OpLabel
+               OpStore %_GLF_color %22
+               OpBranch %31
+         %31 = OpLabel
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,990 @@
+0x12300000:      0x7a000002: PIPE_CONTROL
+0x12300004:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300008:      0x00000000:    
+0x1230000c:      0x00000000:    
+0x12300010:      0x7a000002: PIPE_CONTROL
+0x12300014:      0x00004000:    qword write, 
+0x12300018:      0x00000000:    
+0x1230001c:      0x00000000:    
+0x12300020:      0x69040000: 3DSTATE_PIPELINE_SELECT
+0x12300024:      0x790d0001: 3DSTATE_MULTISAMPLE
+0x12300028:      0x00000000:    dword 1
+0x1230002c:      0x00000000:    dword 2
+0x12300030:      0x78180000: 3DSTATE_SAMPLE_MASK
+0x12300034:      0x00000001:    dword 1
+0x12300038:      0x790b0002: 3DSTATE_GS_SVB_INDEX
+0x1230003c:      0x00000000:    dword 1
+0x12300040:      0x00000000:    dword 2
+0x12300044:      0xffffffff:    dword 3
+0x12300048:      0x790b0002: 3DSTATE_GS_SVB_INDEX
+0x1230004c:      0x20000000:    dword 1
+0x12300050:      0x00000000:    dword 2
+0x12300054:      0xffffffff:    dword 3
+0x12300058:      0x790b0002: 3DSTATE_GS_SVB_INDEX
+0x1230005c:      0x40000000:    dword 1
+0x12300060:      0x00000000:    dword 2
+0x12300064:      0xffffffff:    dword 3
+0x12300068:      0x790b0002: 3DSTATE_GS_SVB_INDEX
+0x1230006c:      0x60000000:    dword 1
+0x12300070:      0x00000000:    dword 2
+0x12300074:      0xffffffff:    dword 3
+0x12300078:      0x61020000: STATE_SIP
+0x1230007c:      0x00000000:    dword 1
+0x12300080:      0x680b0000: 3DSTATE_VF_STATISTICS
+0x12300084:      0x61010008: STATE_BASE_ADDRESS
+0x12300088:      0x00000001:    general state base address 0x00000000
+0x1230008c:      0x00000001:    surface state base address 0x00000000
+0x12300090:      0x00000001:    dynamic state base address 0x00000000
+0x12300094:      0x00000001:    indirect state base address 0x00000000
+0x12300098:      0x00000001:    instruction state base address 0x00000000
+0x1230009c:      0x00000001:    general state upper bound disabled
+0x123000a0:      0x00000001:    dynamic state upper bound disabled
+0x123000a4:      0x00000001:    indirect state upper bound disabled
+0x123000a8:      0x00000001:    instruction state upper bound disabled
+0x123000ac:      0x780d1c02: 3DSTATE_VIEWPORT_STATE_POINTERS
+0x123000b0:      0x00007fe0:    clip
+0x123000b4:      0x00007fc0:    sf
+0x123000b8:      0x00007fa0:    cc
+0x123000bc:      0x78050001: 3DSTATE_URB
+0x123000c0:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x123000c4:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x123000c8:      0x780e0002: 3DSTATE_CC_STATE_POINTERS
+0x123000cc:      0x00007f81:    blend change 1
+0x123000d0:      0x00007f01:    depth stencil change 1
+0x123000d4:      0x00007f41:    cc change 1
+0x123000d8:      0x78021302: 3DSTATE_SAMPLER_STATE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x123000dc:      0x00000000:    VS sampler state
+0x123000e0:      0x00000000:    GS sampler state
+0x123000e4:      0x00000000:    WM sampler state
+0x123000e8:      0x78150003: 3DSTATE_CONSTANT_VS_STATE
+0x123000ec:      0x00000000:    dword 1
+0x123000f0:      0x00000000:    dword 2
+0x123000f4:      0x00000000:    dword 3
+0x123000f8:      0x00000000:    dword 4
+0x123000fc:      0x78100004: 3DSTATE_VS
+0x12300100:      0x00000000:    kernel pointer
+0x12300104:      0x00000000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300108:      0x00000000:    scratch offset
+0x1230010c:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300110:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300114:      0x7a000002: PIPE_CONTROL
+0x12300118:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x1230011c:      0x00000000:    
+0x12300120:      0x00000000:    
+0x12300124:      0x78160003: 3DSTATE_CONSTANT_GS_STATE
+0x12300128:      0x00000000:    dword 1
+0x1230012c:      0x00000000:    dword 2
+0x12300130:      0x00000000:    dword 3
+0x12300134:      0x00000000:    dword 4
+0x12300138:      0x78110005: 3DSTATE_GS
+0x1230013c:      0x00000000:    kernel pointer
+0x12300140:      0x00000000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300144:      0x00000000:    scratch offset
+0x12300148:      0x00000001:    Dispatch GRF start 1, VUE read length 0, VUE read offset 0
+0x1230014c:      0x00000500:    Max Threads 1, Rendering enable
+0x12300150:      0x00000000:    Reorder disable, Discard Adjaceny disable, GS disable
+0x12300154:      0x78120002: 3DSTATE_CLIP
+0x12300158:      0x00000400:    UserClip distance cull test mask 0x0
+0x1230015c:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x12300160:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x12300164:      0x78130012: 3DSTATE_SF
+0x12300168:      0x00200810:    Attrib Out 0, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x1230016c:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300170:      0x22000000:    AA disable, CullMode 1, Scissor disable, Multisample m ode 0
+0x12300174:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300178:      0x00000000:    Global Depth Offset Constant 0.000000
+0x1230017c:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300180:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300184:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300188:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230018c:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300190:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300194:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300198:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230019c:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123001a0:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123001a4:      0x00000000:    Point Sprite TexCoord Enable
+0x123001a8:      0x00000000:    Const Interp Enable
+0x123001ac:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x123001b0:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x123001b4:      0x78171003: 3DSTATE_CONSTANT_PS_STATE
+0x123001b8:      0x00007ee0:    dword 1
+0x123001bc:      0x00000000:    dword 2
+0x123001c0:      0x00000000:    dword 3
+0x123001c4:      0x00000000:    dword 4
+0x123001c8:      0x78140007: 3DSTATE_WM
+0x123001cc:      0x000000c0:    kernel start pointer 0
+0x123001d0:      0x00000000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123001d4:      0x00000000:    scratch offset
+0x123001d8:      0x80020002:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 2
+0x123001dc:      0x4e084003:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 1
+0x123001e0:      0x00000000:    Num SF output 0, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x123001e4:      0x00000000:    kernel start pointer 1
+0x123001e8:      0x00000140:    kernel start pointer 2
+0x123001ec:      0x780f0000: 3DSTATE_SCISSOR_POINTERS
+0x123001f0:      0x00007d20:    scissor rect offset
+0x123001f4:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x123001f8:      0x00007d40:    VS binding table
+0x123001fc:      0x00007d40:    GS binding table
+0x12300200:      0x00007d40:    WM binding table
+0x12300204:      0x7a000002: PIPE_CONTROL
+0x12300208:      0x00002000:    no write, depth stall, 
+0x1230020c:      0x00000000:    
+0x12300210:      0x00000000:    
+0x12300214:      0x7a000002: PIPE_CONTROL
+0x12300218:      0x00000001:    no write, depth cache flush, 
+0x1230021c:      0x00000000:    
+0x12300220:      0x00000000:    
+0x12300224:      0x7a000002: PIPE_CONTROL
+0x12300228:      0x00002000:    no write, depth stall, 
+0x1230022c:      0x00000000:    
+0x12300230:      0x00000000:    
+0x12300234:      0x79050005: 3DSTATE_DEPTH_BUFFER
+0x12300238:      0x2c6c05ff:    2D, unknown, pitch = 1536 bytes, tiled, HiZ 1, Separate Stencil 1
+0x1230023c:      0x00000000:    depth offset
+0x12300240:      0x09584ac0:    300x300
+0x12300244:      0x00000000:    volume depth
+0x12300248:      0x00000000:    
+0x1230024c:      0x00000000:    
+0x12300250:      0x790f0001: 3DSTATE_HIER_DEPTH_BUFFER
+0x12300254:      0x000005ff:    dword 1
+0x12300258:      0x00000000:    dword 2
+0x1230025c:      0x790e0001: 3D UNKNOWN: 3d_965 opcode = 0x790e
+0x12300260:      0x0000027f: MI_NOOP
+0x12300264:      0x00000000: MI_NOOP
+0x12300268:      0x79100000: 3DSTATE_CLEAR_PARAMS
+0x1230026c:      0x00000000:    dword 1
+0x12300270:      0x79000002: 3DSTATE_DRAWING_RECTANGLE
+0x12300274:      0x00000000:    top left: 0,0
+0x12300278:      0x012b012b:    bottom right: 299,299
+0x1230027c:      0x00000000:    origin: 0,0
+0x12300280:      0x790b0002: 3DSTATE_GS_SVB_INDEX
+0x12300284:      0x00000000:    dword 1
+0x12300288:      0x00000000:    dword 2
+0x1230028c:      0x00000000:    dword 3
+0x12300290:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300294:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x12300298:      0x00000000:    buffer address
+0x1230029c:      0x0000ffff:    max index
+0x123002a0:      0x00000000:    mbz
+0x123002a4:      0x78090001: 3DSTATE_VERTEX_ELEMENTS
+0x123002a8:      0x02400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x123002ac:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123002b0:      0x7b001804: 3DPRIMITIVE: tri fan sequential
+0x123002b4:      0x00000004:    vertex count
+0x123002b8:      0x00000000:    start vertex
+0x123002bc:      0x00000001:    instance count
+0x123002c0:      0x00000000:    start instance
+0x123002c4:      0x00000000:    index bias
+0x123002c8:      0x78050001: 3DSTATE_URB
+0x123002cc:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x123002d0:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x123002d4:      0x780e0002: 3DSTATE_CC_STATE_POINTERS
+0x123002d8:      0x00007f81:    blend change 1
+0x123002dc:      0x00007cc1:    depth stencil change 1
+0x123002e0:      0x00007d01:    cc change 1
+0x123002e4:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x123002e8:      0x00007b85:    dword 1
+0x123002ec:      0x00000000:    dword 2
+0x123002f0:      0x00000000:    dword 3
+0x123002f4:      0x00000000:    dword 4
+0x123002f8:      0x78100004: 3DSTATE_VS
+0x123002fc:      0x00000240:    kernel pointer
+0x12300300:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300304:      0x00000000:    scratch offset
+0x12300308:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x1230030c:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300310:      0x7a000002: PIPE_CONTROL
+0x12300314:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300318:      0x00000000:    
+0x1230031c:      0x00000000:    
+0x12300320:      0x7a000002: PIPE_CONTROL
+0x12300324:      0x00004000:    qword write, 
+0x12300328:      0x00000000:    
+0x1230032c:      0x00000000:    
+0x12300330:      0x7a000002: PIPE_CONTROL
+0x12300334:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300338:      0x00000000:    
+0x1230033c:      0x00000000:    
+0x12300340:      0x78120002: 3DSTATE_CLIP
+0x12300344:      0x00000400:    UserClip distance cull test mask 0x0
+0x12300348:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x1230034c:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x12300350:      0x78130012: 3DSTATE_SF
+0x12300354:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300358:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x1230035c:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300360:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300364:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300368:      0x00000000:    Global Depth Offset Scale 0.000000
+0x1230036c:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300370:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300374:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300378:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230037c:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300380:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300384:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300388:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230038c:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300390:      0x00000000:    Point Sprite TexCoord Enable
+0x12300394:      0x00000001:    Const Interp Enable
+0x12300398:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x1230039c:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x123003a0:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x123003a4:      0x00000000:    dword 1
+0x123003a8:      0x00000000:    dword 2
+0x123003ac:      0x00000000:    dword 3
+0x123003b0:      0x00000000:    dword 4
+0x123003b4:      0x78140007: 3DSTATE_WM
+0x123003b8:      0x00000500:    kernel start pointer 0
+0x123003bc:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123003c0:      0x00000000:    scratch offset
+0x123003c4:      0x80020000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 0
+0x123003c8:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x123003cc:      0x00100000:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x123003d0:      0x00000000:    kernel start pointer 1
+0x123003d4:      0x00000500:    kernel start pointer 2
+0x123003d8:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x123003dc:      0x00007a00:    VS binding table
+0x123003e0:      0x00007a00:    GS binding table
+0x123003e4:      0x00007a00:    WM binding table
+0x123003e8:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x123003ec:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x123003f0:      0x00000000:    buffer address
+0x123003f4:      0x00007fff:    max index
+0x123003f8:      0x00000000:    mbz
+0x123003fc:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300400:      0x00000052:    vertex count
+0x12300404:      0x00000000:    start vertex
+0x12300408:      0x00000001:    instance count
+0x1230040c:      0x00000000:    start instance
+0x12300410:      0x00000000:    index bias
+0x12300414:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300418:      0x00000050:    vertex count
+0x1230041c:      0x00000052:    start vertex
+0x12300420:      0x00000001:    instance count
+0x12300424:      0x00000000:    start instance
+0x12300428:      0x00000000:    index bias
+0x1230042c:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300430:      0x000078c5:    dword 1
+0x12300434:      0x00000000:    dword 2
+0x12300438:      0x00000000:    dword 3
+0x1230043c:      0x00000000:    dword 4
+0x12300440:      0x78100004: 3DSTATE_VS
+0x12300444:      0x00000240:    kernel pointer
+0x12300448:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x1230044c:      0x00000000:    scratch offset
+0x12300450:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300454:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300458:      0x7a000002: PIPE_CONTROL
+0x1230045c:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300460:      0x00000000:    
+0x12300464:      0x00000000:    
+0x12300468:      0x7a000002: PIPE_CONTROL
+0x1230046c:      0x00004000:    qword write, 
+0x12300470:      0x00000000:    
+0x12300474:      0x00000000:    
+0x12300478:      0x7a000002: PIPE_CONTROL
+0x1230047c:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300480:      0x00000000:    
+0x12300484:      0x00000000:    
+0x12300488:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x1230048c:      0x00000000:    dword 1
+0x12300490:      0x00000000:    dword 2
+0x12300494:      0x00000000:    dword 3
+0x12300498:      0x00000000:    dword 4
+0x1230049c:      0x78140007: 3DSTATE_WM
+0x123004a0:      0x00000500:    kernel start pointer 0
+0x123004a4:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123004a8:      0x00000000:    scratch offset
+0x123004ac:      0x80020000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 0
+0x123004b0:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x123004b4:      0x00100000:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x123004b8:      0x00000000:    kernel start pointer 1
+0x123004bc:      0x00000500:    kernel start pointer 2
+0x123004c0:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123004c4:      0x00000052:    vertex count
+0x123004c8:      0x000000a2:    start vertex
+0x123004cc:      0x00000001:    instance count
+0x123004d0:      0x00000000:    start instance
+0x123004d4:      0x00000000:    index bias
+0x123004d8:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x123004dc:      0x00000050:    vertex count
+0x123004e0:      0x000000f4:    start vertex
+0x123004e4:      0x00000001:    instance count
+0x123004e8:      0x00000000:    start instance
+0x123004ec:      0x00000000:    index bias
+0x123004f0:      0x78050001: 3DSTATE_URB
+0x123004f4:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x123004f8:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x123004fc:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300500:      0x00007785:    dword 1
+0x12300504:      0x00000000:    dword 2
+0x12300508:      0x00000000:    dword 3
+0x1230050c:      0x00000000:    dword 4
+0x12300510:      0x78100004: 3DSTATE_VS
+0x12300514:      0x00000640:    kernel pointer
+0x12300518:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x1230051c:      0x00000000:    scratch offset
+0x12300520:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300524:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300528:      0x7a000002: PIPE_CONTROL
+0x1230052c:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300530:      0x00000000:    
+0x12300534:      0x00000000:    
+0x12300538:      0x7a000002: PIPE_CONTROL
+0x1230053c:      0x00004000:    qword write, 
+0x12300540:      0x00000000:    
+0x12300544:      0x00000000:    
+0x12300548:      0x7a000002: PIPE_CONTROL
+0x1230054c:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300550:      0x00000000:    
+0x12300554:      0x00000000:    
+0x12300558:      0x78130012: 3DSTATE_SF
+0x1230055c:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300560:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300564:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300568:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x1230056c:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300570:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300574:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300578:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230057c:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300580:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300584:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300588:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230058c:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300590:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300594:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300598:      0x00000000:    Point Sprite TexCoord Enable
+0x1230059c:      0x00000001:    Const Interp Enable
+0x123005a0:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x123005a4:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x123005a8:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x123005ac:      0x00007600:    VS binding table
+0x123005b0:      0x00007600:    GS binding table
+0x123005b4:      0x00007600:    WM binding table
+0x123005b8:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x123005bc:      0x00000018:    buffer 0: sequential, pitch 24b
+0x123005c0:      0x00000f48:    buffer address
+0x123005c4:      0x00007fff:    max index
+0x123005c8:      0x00000000:    mbz
+0x123005cc:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x123005d0:      0x02400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x123005d4:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123005d8:      0x0240000c:    buffer 0: valid, type 0x0040, src offset 0x000c bytes
+0x123005dc:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x123005e0:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123005e4:      0x000000a2:    vertex count
+0x123005e8:      0x00000000:    start vertex
+0x123005ec:      0x00000001:    instance count
+0x123005f0:      0x00000000:    start instance
+0x123005f4:      0x00000000:    index bias
+0x123005f8:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x123005fc:      0x000074c5:    dword 1
+0x12300600:      0x00000000:    dword 2
+0x12300604:      0x00000000:    dword 3
+0x12300608:      0x00000000:    dword 4
+0x1230060c:      0x78100004: 3DSTATE_VS
+0x12300610:      0x00000640:    kernel pointer
+0x12300614:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300618:      0x00000000:    scratch offset
+0x1230061c:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300620:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300624:      0x7a000002: PIPE_CONTROL
+0x12300628:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x1230062c:      0x00000000:    
+0x12300630:      0x00000000:    
+0x12300634:      0x7a000002: PIPE_CONTROL
+0x12300638:      0x00004000:    qword write, 
+0x1230063c:      0x00000000:    
+0x12300640:      0x00000000:    
+0x12300644:      0x7a000002: PIPE_CONTROL
+0x12300648:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x1230064c:      0x00000000:    
+0x12300650:      0x00000000:    
+0x12300654:      0x78120002: 3DSTATE_CLIP
+0x12300658:      0x00000400:    UserClip distance cull test mask 0x0
+0x1230065c:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x12300660:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x12300664:      0x78130012: 3DSTATE_SF
+0x12300668:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x1230066c:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300670:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300674:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300678:      0x00000000:    Global Depth Offset Constant 0.000000
+0x1230067c:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300680:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300684:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300688:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230068c:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300690:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300694:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300698:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x1230069c:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123006a0:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123006a4:      0x00000000:    Point Sprite TexCoord Enable
+0x123006a8:      0x00000000:    Const Interp Enable
+0x123006ac:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x123006b0:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x123006b4:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x123006b8:      0x00000000:    dword 1
+0x123006bc:      0x00000000:    dword 2
+0x123006c0:      0x00000000:    dword 3
+0x123006c4:      0x00000000:    dword 4
+0x123006c8:      0x78140007: 3DSTATE_WM
+0x123006cc:      0x00000900:    kernel start pointer 0
+0x123006d0:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123006d4:      0x00000000:    scratch offset
+0x123006d8:      0x80060000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 6, start[1] 0, start[2] 0
+0x123006dc:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x123006e0:      0x00100400:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x1, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x123006e4:      0x00000000:    kernel start pointer 1
+0x123006e8:      0x00000900:    kernel start pointer 2
+0x123006ec:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123006f0:      0x0000002a:    vertex count
+0x123006f4:      0x000000a2:    start vertex
+0x123006f8:      0x00000001:    instance count
+0x123006fc:      0x00000000:    start instance
+0x12300700:      0x00000000:    index bias
+0x12300704:      0x78050001: 3DSTATE_URB
+0x12300708:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x1230070c:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x12300710:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300714:      0x00007385:    dword 1
+0x12300718:      0x00000000:    dword 2
+0x1230071c:      0x00000000:    dword 3
+0x12300720:      0x00000000:    dword 4
+0x12300724:      0x78100004: 3DSTATE_VS
+0x12300728:      0x00000240:    kernel pointer
+0x1230072c:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300730:      0x00000000:    scratch offset
+0x12300734:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300738:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x1230073c:      0x7a000002: PIPE_CONTROL
+0x12300740:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300744:      0x00000000:    
+0x12300748:      0x00000000:    
+0x1230074c:      0x7a000002: PIPE_CONTROL
+0x12300750:      0x00004000:    qword write, 
+0x12300754:      0x00000000:    
+0x12300758:      0x00000000:    
+0x1230075c:      0x7a000002: PIPE_CONTROL
+0x12300760:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300764:      0x00000000:    
+0x12300768:      0x00000000:    
+0x1230076c:      0x78120002: 3DSTATE_CLIP
+0x12300770:      0x00000400:    UserClip distance cull test mask 0x0
+0x12300774:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x12300778:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x1230077c:      0x78130012: 3DSTATE_SF
+0x12300780:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300784:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300788:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x1230078c:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300790:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300794:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300798:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x1230079c:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007a0:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007a4:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007a8:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007ac:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007b0:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007b4:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007b8:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123007bc:      0x00000000:    Point Sprite TexCoord Enable
+0x123007c0:      0x00000001:    Const Interp Enable
+0x123007c4:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x123007c8:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x123007cc:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x123007d0:      0x00000000:    dword 1
+0x123007d4:      0x00000000:    dword 2
+0x123007d8:      0x00000000:    dword 3
+0x123007dc:      0x00000000:    dword 4
+0x123007e0:      0x78140007: 3DSTATE_WM
+0x123007e4:      0x00000500:    kernel start pointer 0
+0x123007e8:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123007ec:      0x00000000:    scratch offset
+0x123007f0:      0x80020000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 0
+0x123007f4:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x123007f8:      0x00100000:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x123007fc:      0x00000000:    kernel start pointer 1
+0x12300800:      0x00000500:    kernel start pointer 2
+0x12300804:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x12300808:      0x00007200:    VS binding table
+0x1230080c:      0x00007200:    GS binding table
+0x12300810:      0x00007200:    WM binding table
+0x12300814:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300818:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x1230081c:      0x00002268:    buffer address
+0x12300820:      0x00007fff:    max index
+0x12300824:      0x00000000:    mbz
+0x12300828:      0x78090001: 3DSTATE_VERTEX_ELEMENTS
+0x1230082c:      0x02400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x12300830:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300834:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300838:      0x0000002a:    vertex count
+0x1230083c:      0x00000000:    start vertex
+0x12300840:      0x00000001:    instance count
+0x12300844:      0x00000000:    start instance
+0x12300848:      0x00000000:    index bias
+0x1230084c:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300850:      0x00000028:    vertex count
+0x12300854:      0x0000002a:    start vertex
+0x12300858:      0x00000001:    instance count
+0x1230085c:      0x00000000:    start instance
+0x12300860:      0x00000000:    index bias
+0x12300864:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300868:      0x000070c5:    dword 1
+0x1230086c:      0x00000000:    dword 2
+0x12300870:      0x00000000:    dword 3
+0x12300874:      0x00000000:    dword 4
+0x12300878:      0x78100004: 3DSTATE_VS
+0x1230087c:      0x00000240:    kernel pointer
+0x12300880:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300884:      0x00000000:    scratch offset
+0x12300888:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x1230088c:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300890:      0x7a000002: PIPE_CONTROL
+0x12300894:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300898:      0x00000000:    
+0x1230089c:      0x00000000:    
+0x123008a0:      0x7a000002: PIPE_CONTROL
+0x123008a4:      0x00004000:    qword write, 
+0x123008a8:      0x00000000:    
+0x123008ac:      0x00000000:    
+0x123008b0:      0x7a000002: PIPE_CONTROL
+0x123008b4:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x123008b8:      0x00000000:    
+0x123008bc:      0x00000000:    
+0x123008c0:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x123008c4:      0x00000000:    dword 1
+0x123008c8:      0x00000000:    dword 2
+0x123008cc:      0x00000000:    dword 3
+0x123008d0:      0x00000000:    dword 4
+0x123008d4:      0x78140007: 3DSTATE_WM
+0x123008d8:      0x00000500:    kernel start pointer 0
+0x123008dc:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x123008e0:      0x00000000:    scratch offset
+0x123008e4:      0x80020000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 0
+0x123008e8:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x123008ec:      0x00100000:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x123008f0:      0x00000000:    kernel start pointer 1
+0x123008f4:      0x00000500:    kernel start pointer 2
+0x123008f8:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x123008fc:      0x0000002a:    vertex count
+0x12300900:      0x00000052:    start vertex
+0x12300904:      0x00000001:    instance count
+0x12300908:      0x00000000:    start instance
+0x1230090c:      0x00000000:    index bias
+0x12300910:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300914:      0x00000028:    vertex count
+0x12300918:      0x0000007c:    start vertex
+0x1230091c:      0x00000001:    instance count
+0x12300920:      0x00000000:    start instance
+0x12300924:      0x00000000:    index bias
+0x12300928:      0x78050001: 3DSTATE_URB
+0x1230092c:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x12300930:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x12300934:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300938:      0x00006f85:    dword 1
+0x1230093c:      0x00000000:    dword 2
+0x12300940:      0x00000000:    dword 3
+0x12300944:      0x00000000:    dword 4
+0x12300948:      0x78100004: 3DSTATE_VS
+0x1230094c:      0x00000640:    kernel pointer
+0x12300950:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300954:      0x00000000:    scratch offset
+0x12300958:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x1230095c:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300960:      0x7a000002: PIPE_CONTROL
+0x12300964:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300968:      0x00000000:    
+0x1230096c:      0x00000000:    
+0x12300970:      0x7a000002: PIPE_CONTROL
+0x12300974:      0x00004000:    qword write, 
+0x12300978:      0x00000000:    
+0x1230097c:      0x00000000:    
+0x12300980:      0x7a000002: PIPE_CONTROL
+0x12300984:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300988:      0x00000000:    
+0x1230098c:      0x00000000:    
+0x12300990:      0x78130012: 3DSTATE_SF
+0x12300994:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300998:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x1230099c:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x123009a0:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x123009a4:      0x00000000:    Global Depth Offset Constant 0.000000
+0x123009a8:      0x00000000:    Global Depth Offset Scale 0.000000
+0x123009ac:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x123009b0:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009b4:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009b8:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009bc:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009c0:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009c4:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009c8:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009cc:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x123009d0:      0x00000000:    Point Sprite TexCoord Enable
+0x123009d4:      0x00000001:    Const Interp Enable
+0x123009d8:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x123009dc:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x123009e0:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x123009e4:      0x00006e00:    VS binding table
+0x123009e8:      0x00006e00:    GS binding table
+0x123009ec:      0x00006e00:    WM binding table
+0x123009f0:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x123009f4:      0x00000018:    buffer 0: sequential, pitch 24b
+0x123009f8:      0x00002a30:    buffer address
+0x123009fc:      0x00007fff:    max index
+0x12300a00:      0x00000000:    mbz
+0x12300a04:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x12300a08:      0x02400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x12300a0c:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300a10:      0x0240000c:    buffer 0: valid, type 0x0040, src offset 0x000c bytes
+0x12300a14:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300a18:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300a1c:      0x00000052:    vertex count
+0x12300a20:      0x00000000:    start vertex
+0x12300a24:      0x00000001:    instance count
+0x12300a28:      0x00000000:    start instance
+0x12300a2c:      0x00000000:    index bias
+0x12300a30:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300a34:      0x00006cc5:    dword 1
+0x12300a38:      0x00000000:    dword 2
+0x12300a3c:      0x00000000:    dword 3
+0x12300a40:      0x00000000:    dword 4
+0x12300a44:      0x78100004: 3DSTATE_VS
+0x12300a48:      0x00000640:    kernel pointer
+0x12300a4c:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300a50:      0x00000000:    scratch offset
+0x12300a54:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300a58:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300a5c:      0x7a000002: PIPE_CONTROL
+0x12300a60:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300a64:      0x00000000:    
+0x12300a68:      0x00000000:    
+0x12300a6c:      0x7a000002: PIPE_CONTROL
+0x12300a70:      0x00004000:    qword write, 
+0x12300a74:      0x00000000:    
+0x12300a78:      0x00000000:    
+0x12300a7c:      0x7a000002: PIPE_CONTROL
+0x12300a80:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300a84:      0x00000000:    
+0x12300a88:      0x00000000:    
+0x12300a8c:      0x78120002: 3DSTATE_CLIP
+0x12300a90:      0x00000400:    UserClip distance cull test mask 0x0
+0x12300a94:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x12300a98:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x12300a9c:      0x78130012: 3DSTATE_SF
+0x12300aa0:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300aa4:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300aa8:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300aac:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300ab0:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300ab4:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300ab8:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300abc:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ac0:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ac4:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ac8:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300acc:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ad0:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ad4:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ad8:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300adc:      0x00000000:    Point Sprite TexCoord Enable
+0x12300ae0:      0x00000000:    Const Interp Enable
+0x12300ae4:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x12300ae8:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x12300aec:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x12300af0:      0x00000000:    dword 1
+0x12300af4:      0x00000000:    dword 2
+0x12300af8:      0x00000000:    dword 3
+0x12300afc:      0x00000000:    dword 4
+0x12300b00:      0x78140007: 3DSTATE_WM
+0x12300b04:      0x00000900:    kernel start pointer 0
+0x12300b08:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300b0c:      0x00000000:    scratch offset
+0x12300b10:      0x80060000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 6, start[1] 0, start[2] 0
+0x12300b14:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x12300b18:      0x00100400:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x1, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x12300b1c:      0x00000000:    kernel start pointer 1
+0x12300b20:      0x00000900:    kernel start pointer 2
+0x12300b24:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300b28:      0x00000016:    vertex count
+0x12300b2c:      0x00000052:    start vertex
+0x12300b30:      0x00000001:    instance count
+0x12300b34:      0x00000000:    start instance
+0x12300b38:      0x00000000:    index bias
+0x12300b3c:      0x78050001: 3DSTATE_URB
+0x12300b40:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x12300b44:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x12300b48:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300b4c:      0x00006b85:    dword 1
+0x12300b50:      0x00000000:    dword 2
+0x12300b54:      0x00000000:    dword 3
+0x12300b58:      0x00000000:    dword 4
+0x12300b5c:      0x78100004: 3DSTATE_VS
+0x12300b60:      0x00000240:    kernel pointer
+0x12300b64:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300b68:      0x00000000:    scratch offset
+0x12300b6c:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300b70:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300b74:      0x7a000002: PIPE_CONTROL
+0x12300b78:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300b7c:      0x00000000:    
+0x12300b80:      0x00000000:    
+0x12300b84:      0x7a000002: PIPE_CONTROL
+0x12300b88:      0x00004000:    qword write, 
+0x12300b8c:      0x00000000:    
+0x12300b90:      0x00000000:    
+0x12300b94:      0x7a000002: PIPE_CONTROL
+0x12300b98:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300b9c:      0x00000000:    
+0x12300ba0:      0x00000000:    
+0x12300ba4:      0x78120002: 3DSTATE_CLIP
+0x12300ba8:      0x00000400:    UserClip distance cull test mask 0x0
+0x12300bac:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x12300bb0:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x12300bb4:      0x78130012: 3DSTATE_SF
+0x12300bb8:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300bbc:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300bc0:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300bc4:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300bc8:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300bcc:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300bd0:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300bd4:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300bd8:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300bdc:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300be0:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300be4:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300be8:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300bec:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300bf0:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300bf4:      0x00000000:    Point Sprite TexCoord Enable
+0x12300bf8:      0x00000001:    Const Interp Enable
+0x12300bfc:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x12300c00:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x12300c04:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x12300c08:      0x00000000:    dword 1
+0x12300c0c:      0x00000000:    dword 2
+0x12300c10:      0x00000000:    dword 3
+0x12300c14:      0x00000000:    dword 4
+0x12300c18:      0x78140007: 3DSTATE_WM
+0x12300c1c:      0x00000500:    kernel start pointer 0
+0x12300c20:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300c24:      0x00000000:    scratch offset
+0x12300c28:      0x80020000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 0
+0x12300c2c:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x12300c30:      0x00100000:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x12300c34:      0x00000000:    kernel start pointer 1
+0x12300c38:      0x00000500:    kernel start pointer 2
+0x12300c3c:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x12300c40:      0x00006a00:    VS binding table
+0x12300c44:      0x00006a00:    GS binding table
+0x12300c48:      0x00006a00:    WM binding table
+0x12300c4c:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300c50:      0x0000000c:    buffer 0: sequential, pitch 12b
+0x12300c54:      0x000033f0:    buffer address
+0x12300c58:      0x00007fff:    max index
+0x12300c5c:      0x00000000:    mbz
+0x12300c60:      0x78090001: 3DSTATE_VERTEX_ELEMENTS
+0x12300c64:      0x02400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x12300c68:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300c6c:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300c70:      0x0000002a:    vertex count
+0x12300c74:      0x00000000:    start vertex
+0x12300c78:      0x00000001:    instance count
+0x12300c7c:      0x00000000:    start instance
+0x12300c80:      0x00000000:    index bias
+0x12300c84:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300c88:      0x00000028:    vertex count
+0x12300c8c:      0x0000002a:    start vertex
+0x12300c90:      0x00000001:    instance count
+0x12300c94:      0x00000000:    start instance
+0x12300c98:      0x00000000:    index bias
+0x12300c9c:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300ca0:      0x000068c5:    dword 1
+0x12300ca4:      0x00000000:    dword 2
+0x12300ca8:      0x00000000:    dword 3
+0x12300cac:      0x00000000:    dword 4
+0x12300cb0:      0x78100004: 3DSTATE_VS
+0x12300cb4:      0x00000240:    kernel pointer
+0x12300cb8:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300cbc:      0x00000000:    scratch offset
+0x12300cc0:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300cc4:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300cc8:      0x7a000002: PIPE_CONTROL
+0x12300ccc:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300cd0:      0x00000000:    
+0x12300cd4:      0x00000000:    
+0x12300cd8:      0x7a000002: PIPE_CONTROL
+0x12300cdc:      0x00004000:    qword write, 
+0x12300ce0:      0x00000000:    
+0x12300ce4:      0x00000000:    
+0x12300ce8:      0x7a000002: PIPE_CONTROL
+0x12300cec:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300cf0:      0x00000000:    
+0x12300cf4:      0x00000000:    
+0x12300cf8:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x12300cfc:      0x00000000:    dword 1
+0x12300d00:      0x00000000:    dword 2
+0x12300d04:      0x00000000:    dword 3
+0x12300d08:      0x00000000:    dword 4
+0x12300d0c:      0x78140007: 3DSTATE_WM
+0x12300d10:      0x00000500:    kernel start pointer 0
+0x12300d14:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300d18:      0x00000000:    scratch offset
+0x12300d1c:      0x80020000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 2, start[1] 0, start[2] 0
+0x12300d20:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x12300d24:      0x00100000:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x0, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x12300d28:      0x00000000:    kernel start pointer 1
+0x12300d2c:      0x00000500:    kernel start pointer 2
+0x12300d30:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300d34:      0x0000002a:    vertex count
+0x12300d38:      0x00000052:    start vertex
+0x12300d3c:      0x00000001:    instance count
+0x12300d40:      0x00000000:    start instance
+0x12300d44:      0x00000000:    index bias
+0x12300d48:      0x7b001c04: 3DPRIMITIVE: quad list sequential
+0x12300d4c:      0x00000028:    vertex count
+0x12300d50:      0x0000007c:    start vertex
+0x12300d54:      0x00000001:    instance count
+0x12300d58:      0x00000000:    start instance
+0x12300d5c:      0x00000000:    index bias
+0x12300d60:      0x78050001: 3DSTATE_URB
+0x12300d64:      0x00000100:    VS entries 256, alloc size 1 (1024bit row)
+0x12300d68:      0x00000000:    GS entries 0, alloc size 1 (1024bit row)
+0x12300d6c:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300d70:      0x00006785:    dword 1
+0x12300d74:      0x00000000:    dword 2
+0x12300d78:      0x00000000:    dword 3
+0x12300d7c:      0x00000000:    dword 4
+0x12300d80:      0x78100004: 3DSTATE_VS
+0x12300d84:      0x00000640:    kernel pointer
+0x12300d88:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300d8c:      0x00000000:    scratch offset
+0x12300d90:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300d94:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300d98:      0x7a000002: PIPE_CONTROL
+0x12300d9c:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300da0:      0x00000000:    
+0x12300da4:      0x00000000:    
+0x12300da8:      0x7a000002: PIPE_CONTROL
+0x12300dac:      0x00004000:    qword write, 
+0x12300db0:      0x00000000:    
+0x12300db4:      0x00000000:    
+0x12300db8:      0x7a000002: PIPE_CONTROL
+0x12300dbc:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300dc0:      0x00000000:    
+0x12300dc4:      0x00000000:    
+0x12300dc8:      0x78130012: 3DSTATE_SF
+0x12300dcc:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300dd0:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300dd4:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300dd8:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300ddc:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300de0:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300de4:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300de8:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300dec:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300df0:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300df4:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300df8:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300dfc:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300e00:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300e04:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300e08:      0x00000000:    Point Sprite TexCoord Enable
+0x12300e0c:      0x00000001:    Const Interp Enable
+0x12300e10:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x12300e14:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x12300e18:      0x78011302: 3DSTATE_BINDING_TABLE_POINTERS: VS mod 1, GS mod 1, PS mod 1
+0x12300e1c:      0x00006600:    VS binding table
+0x12300e20:      0x00006600:    GS binding table
+0x12300e24:      0x00006600:    WM binding table
+0x12300e28:      0x78080003: 3DSTATE_VERTEX_BUFFERS
+0x12300e2c:      0x00000018:    buffer 0: sequential, pitch 24b
+0x12300e30:      0x00003bb8:    buffer address
+0x12300e34:      0x00007fff:    max index
+0x12300e38:      0x00000000:    mbz
+0x12300e3c:      0x78090003: 3DSTATE_VERTEX_ELEMENTS
+0x12300e40:      0x02400000:    buffer 0: valid, type 0x0040, src offset 0x0000 bytes
+0x12300e44:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300e48:      0x0240000c:    buffer 0: valid, type 0x0040, src offset 0x000c bytes
+0x12300e4c:      0x11130000:    (X, Y, Z, 1.0), dst offset 0x00 bytes
+0x12300e50:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300e54:      0x00000052:    vertex count
+0x12300e58:      0x00000000:    start vertex
+0x12300e5c:      0x00000001:    instance count
+0x12300e60:      0x00000000:    start instance
+0x12300e64:      0x00000000:    index bias
+0x12300e68:      0x78151003: 3DSTATE_CONSTANT_VS_STATE
+0x12300e6c:      0x000064c5:    dword 1
+0x12300e70:      0x00000000:    dword 2
+0x12300e74:      0x00000000:    dword 3
+0x12300e78:      0x00000000:    dword 4
+0x12300e7c:      0x78100004: 3DSTATE_VS
+0x12300e80:      0x00000640:    kernel pointer
+0x12300e84:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300e88:      0x00000000:    scratch offset
+0x12300e8c:      0x00100800:    Dispatch GRF start 1, VUE read length 1, VUE read offset 0
+0x12300e90:      0x76000401:    Max Threads 60, Vertex Cache enable, VS func enable
+0x12300e94:      0x7a000002: PIPE_CONTROL
+0x12300e98:      0x00100002:    no write, cs stall, stall at scoreboard, 
+0x12300e9c:      0x00000000:    
+0x12300ea0:      0x00000000:    
+0x12300ea4:      0x7a000002: PIPE_CONTROL
+0x12300ea8:      0x00004000:    qword write, 
+0x12300eac:      0x00000000:    
+0x12300eb0:      0x00000000:    
+0x12300eb4:      0x7a000002: PIPE_CONTROL
+0x12300eb8:      0x00002804:    no write, depth stall, instruction cache invalidate, state cache invalidate, 
+0x12300ebc:      0x00000000:    
+0x12300ec0:      0x00000000:    
+0x12300ec4:      0x78120002: 3DSTATE_CLIP
+0x12300ec8:      0x00000400:    UserClip distance cull test mask 0x0
+0x12300ecc:      0x98000026:    Clip enable, API mode OGL, Viewport XY test enable, Viewport Z test enable, Guardband test disable, Clip mode 0, Perspective Divide enable, Non-Perspective Barycentric disable, Tri Provoking 2, Line Provoking 1, Trifan Provoking 2
+0x12300ed0:      0x0003ffe0:    Min PointWidth 1, Max PointWidth 2047, Force Zero RTAIndex enable, Max VPIndex 0
+0x12300ed4:      0x78130012: 3DSTATE_SF
+0x12300ed8:      0x00600810:    Attrib Out 1, Attrib Swizzle enable, VUE read length 1, VUE read offset 1
+0x12300edc:      0x00000403:    Legacy Global DepthBias disable, FrontFace fill 0, BF fill 0, VP transform enable, FrontWinding_CCW
+0x12300ee0:      0x62000000:    AA disable, CullMode 3, Scissor disable, Multisample m ode 0
+0x12300ee4:      0x4c000808:    Last Pixel disable, SubPixel Precision 8, Use PixelWidth 1
+0x12300ee8:      0x00000000:    Global Depth Offset Constant 0.000000
+0x12300eec:      0x00000000:    Global Depth Offset Scale 0.000000
+0x12300ef0:      0x00000000:    Global Depth Offset Clamp 0.000000
+0x12300ef4:      0x00000000:    Attrib 1 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 0 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300ef8:      0x00000000:    Attrib 3 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 2 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300efc:      0x00000000:    Attrib 5 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 4 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300f00:      0x00000000:    Attrib 7 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 6 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300f04:      0x00000000:    Attrib 9 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 8 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300f08:      0x00000000:    Attrib 11 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 10 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300f0c:      0x00000000:    Attrib 13 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 12 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300f10:      0x00000000:    Attrib 15 (Override , Const Source 0, Swizzle Select 0, Source 0); Attrib 14 (Override , Const Source 0, Swizzle Select 0, Source 0)
+0x12300f14:      0x00000000:    Point Sprite TexCoord Enable
+0x12300f18:      0x00000000:    Const Interp Enable
+0x12300f1c:      0x00000000:    Attrib 7-0 WrapShortest Enable
+0x12300f20:      0x00000000:    Attrib 15-8 WrapShortest Enable
+0x12300f24:      0x78170003: 3DSTATE_CONSTANT_PS_STATE
+0x12300f28:      0x00000000:    dword 1
+0x12300f2c:      0x00000000:    dword 2
+0x12300f30:      0x00000000:    dword 3
+0x12300f34:      0x00000000:    dword 4
+0x12300f38:      0x78140007: 3DSTATE_WM
+0x12300f3c:      0x00000900:    kernel start pointer 0
+0x12300f40:      0x00010000:    SPF=0, VME=0, Sampler Count 0, Binding table count 0
+0x12300f44:      0x00000000:    scratch offset
+0x12300f48:      0x80060000:    Depth Clear 0, Depth Resolve 0, HiZ Resolve 0, Dispatch GRF start[0] 6, start[1] 0, start[2] 0
+0x12300f4c:      0x4e084002:    MaxThreads 40, PS KillPixel 0, PS computed Z 0, PS use sourceZ 0, Thread Dispatch 1, PS use sourceW 0, Dispatch32 0, Dispatch16 1, Dispatch8 0
+0x12300f50:      0x00100400:    Num SF output 1, Pos XY offset 0, ZW interp mode 0 , Barycentric interp mode 0x1, Point raster rule 0, Multisample mode 0, Multisample Dispatch mode 0
+0x12300f54:      0x00000000:    kernel start pointer 1
+0x12300f58:      0x00000900:    kernel start pointer 2
+0x12300f5c:      0x7b002004: 3DPRIMITIVE: quad strip sequential
+0x12300f60:      0x00000016:    vertex count
+0x12300f64:      0x00000052:    start vertex
+0x12300f68:      0x00000001:    instance count
+0x12300f6c:      0x00000000:    start instance
+0x12300f70:      0x00000000:    index bias
+0x12300f74:      0x05000000: MI_BATCH_BUFFER_END

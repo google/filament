@@ -1,0 +1,37 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 12
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %Light 0 "position"
+               OpMemberName %Light 1 "colour"
+               OpName %Light "Light"
+               OpMemberName %Lights 0 "light"
+               OpName %Lights "Lights"
+               OpName %lights "lights"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %Light 0 Offset 0
+               OpMemberDecorate %Light 1 Offset 16
+               OpDecorate %_runtimearr_Light ArrayStride 32
+               OpMemberDecorate %Lights 0 Offset 0
+               OpDecorate %Lights Block
+               OpDecorate %lights DescriptorSet 0
+               OpDecorate %lights Binding 1
+               OpDecorate %lights NonWritable
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+      %Light = OpTypeStruct %v3float %v3float
+%_runtimearr_Light = OpTypeRuntimeArray %Light
+     %Lights = OpTypeStruct %_runtimearr_Light
+%_ptr_StorageBuffer_Lights = OpTypePointer StorageBuffer %Lights
+     %lights = OpVariable %_ptr_StorageBuffer_Lights StorageBuffer
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+%unused_entry_point = OpFunction %void None %10
+         %11 = OpLabel
+               OpReturn
+               OpFunctionEnd

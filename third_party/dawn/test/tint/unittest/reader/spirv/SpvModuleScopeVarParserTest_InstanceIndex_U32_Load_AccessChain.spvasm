@@ -1,0 +1,29 @@
+; Test: SpvModuleScopeVarParserTest_InstanceIndex_U32_Load_AccessChain.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 15
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Vertex %3 "main" %position %gl_InstanceIndex
+OpName %position "position"
+OpDecorate %position BuiltIn Position
+OpDecorate %gl_InstanceIndex BuiltIn InstanceIndex
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_InstanceIndex = OpVariable %_ptr_Input_uint Input
+%v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%position = OpVariable %_ptr_Output_v4float Output
+%3 = OpFunction %void None %6
+%13 = OpLabel
+%14 = OpAccessChain %_ptr_Input_uint %gl_InstanceIndex
+%2 = OpLoad %uint %14
+OpReturn
+OpFunctionEnd
+

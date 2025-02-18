@@ -1,0 +1,18 @@
+               OpCapability ClipDistance
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %distance "distance"
+       %void = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+      %float = OpTypeFloat 32
+     %float2 = OpConstant %float 2.0
+    %v2float = OpTypeVector %float 2
+         %22 = OpConstantComposite %v2float %float2 %float2
+       %main = OpFunction %void None %void_fn
+      %start = OpLabel
+   %distance = OpCopyObject %v2float %22
+     %result = OpExtInst %float %1 Distance %distance %22
+               OpUnreachable
+               OpFunctionEnd

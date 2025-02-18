@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  int i = 1;
+  float2 a = float4x2(float2(0.0f), float2(0.0f), float2(4.0f, 0.0f), float2(0.0f))[min(uint(i), 3u)];
+  int b = int2(0, 1)[min(uint(i), 1u)];
+}

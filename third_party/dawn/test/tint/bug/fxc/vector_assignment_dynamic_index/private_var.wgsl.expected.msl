@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant uint* i;
+  thread float3* v1;
+};
+
+kernel void v(const constant uint* i [[buffer(0)]]) {
+  thread float3 v1 = 0.0f;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.i=i, .v1=(&v1)};
+  (*tint_module_vars.v1)[min((*tint_module_vars.i), 2u)] = 1.0f;
+}

@@ -1,0 +1,56 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 37
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f "f"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %r "r"
+               OpName %tint_mod_v3i32 "tint_mod_v3i32"
+               OpName %lhs "lhs"
+               OpName %rhs "rhs"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+      %int_1 = OpConstant %int 1
+      %int_2 = OpConstant %int 2
+      %int_3 = OpConstant %int 3
+          %a = OpConstantComposite %v3int %int_1 %int_2 %int_3
+      %int_0 = OpConstant %int 0
+      %int_5 = OpConstant %int 5
+          %b = OpConstantComposite %v3int %int_0 %int_5 %int_0
+         %18 = OpTypeFunction %v3int %v3int %v3int
+         %21 = OpConstantNull %v3int
+       %bool = OpTypeBool
+     %v3bool = OpTypeVector %bool 3
+%int_n2147483648 = OpConstant %int -2147483648
+         %25 = OpConstantComposite %v3int %int_n2147483648 %int_n2147483648 %int_n2147483648
+     %int_n1 = OpConstant %int -1
+         %28 = OpConstantComposite %v3int %int_n1 %int_n1 %int_n1
+         %33 = OpConstantComposite %v3int %int_1 %int_1 %int_1
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+          %r = OpFunctionCall %v3int %tint_mod_v3i32 %a %b
+               OpReturn
+               OpFunctionEnd
+%tint_mod_v3i32 = OpFunction %v3int None %18
+        %lhs = OpFunctionParameter %v3int
+        %rhs = OpFunctionParameter %v3int
+         %19 = OpLabel
+         %20 = OpIEqual %v3bool %rhs %21
+         %24 = OpIEqual %v3bool %lhs %25
+         %27 = OpIEqual %v3bool %rhs %28
+         %30 = OpLogicalAnd %v3bool %24 %27
+         %31 = OpLogicalOr %v3bool %20 %30
+         %32 = OpSelect %v3int %31 %33 %rhs
+         %34 = OpSDiv %v3int %lhs %32
+         %35 = OpIMul %v3int %34 %32
+         %36 = OpISub %v3int %lhs %35
+               OpReturnValue %36
+               OpFunctionEnd

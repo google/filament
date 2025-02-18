@@ -1,0 +1,38 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device packed_half3* prevent_dce;
+};
+
+half3 quadBroadcast_ef7d5d() {
+  half3 res = quad_broadcast(half3(1.0h), 1u);
+  return res;
+}
+
+fragment void fragment_main(device packed_half3* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = packed_half3(quadBroadcast_ef7d5d());
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device packed_half3* prevent_dce;
+};
+
+half3 quadBroadcast_ef7d5d() {
+  half3 res = quad_broadcast(half3(1.0h), 1u);
+  return res;
+}
+
+kernel void compute_main(device packed_half3* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = packed_half3(quadBroadcast_ef7d5d());
+}

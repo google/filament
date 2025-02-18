@@ -1,0 +1,93 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 48
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %foo "foo" %foo_loc0_Output
+               OpExecutionMode %foo OriginUpperLeft
+               OpMemberName %a_block 0 "inner"
+               OpName %a_block "a_block"
+               OpName %continue_execution "continue_execution"
+               OpName %foo_loc0_Output "foo_loc0_Output"
+               OpName %foo_inner "foo_inner"
+               OpName %x "x"
+               OpMemberName %__atomic_compare_exchange_result_i32 0 "old_value"
+               OpMemberName %__atomic_compare_exchange_result_i32 1 "exchanged"
+               OpName %__atomic_compare_exchange_result_i32 "__atomic_compare_exchange_result_i32"
+               OpName %result "result"
+               OpName %foo "foo"
+               OpMemberDecorate %a_block 0 Offset 0
+               OpDecorate %a_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %foo_loc0_Output Location 0
+               OpMemberDecorate %__atomic_compare_exchange_result_i32 0 Offset 0
+               OpMemberDecorate %__atomic_compare_exchange_result_i32 1 Offset 4
+        %int = OpTypeInt 32 1
+    %a_block = OpTypeStruct %int
+%_ptr_StorageBuffer_a_block = OpTypePointer StorageBuffer %a_block
+          %1 = OpVariable %_ptr_StorageBuffer_a_block StorageBuffer
+       %bool = OpTypeBool
+%_ptr_Private_bool = OpTypePointer Private %bool
+       %true = OpConstantTrue %bool
+%continue_execution = OpVariable %_ptr_Private_bool Private %true
+%_ptr_Output_int = OpTypePointer Output %int
+%foo_loc0_Output = OpVariable %_ptr_Output_int Output
+         %12 = OpTypeFunction %int
+      %false = OpConstantFalse %bool
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+      %int_1 = OpConstant %int 1
+%__atomic_compare_exchange_result_i32 = OpTypeStruct %int %bool
+         %33 = OpUndef %__atomic_compare_exchange_result_i32
+       %void = OpTypeVoid
+         %45 = OpTypeFunction %void
+  %foo_inner = OpFunction %int None %12
+         %13 = OpLabel
+          %x = OpVariable %_ptr_Function_int Function
+               OpStore %continue_execution %false None
+               OpStore %x %int_0
+         %18 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+         %22 = OpLoad %bool %continue_execution None
+               OpSelectionMerge %23 None
+               OpBranchConditional %22 %24 %25
+         %24 = OpLabel
+         %26 = OpAtomicCompareExchange %int %18 %uint_1 %uint_0 %uint_0 %int_1 %int_0
+         %29 = OpIEqual %bool %26 %int_0
+         %31 = OpCompositeConstruct %__atomic_compare_exchange_result_i32 %26 %29
+               OpBranch %23
+         %25 = OpLabel
+               OpBranch %23
+         %23 = OpLabel
+     %result = OpPhi %__atomic_compare_exchange_result_i32 %31 %24 %33 %25
+         %34 = OpCompositeExtract %bool %result 1
+               OpSelectionMerge %35 None
+               OpBranchConditional %34 %36 %35
+         %36 = OpLabel
+         %37 = OpCompositeExtract %int %result 0
+               OpStore %x %37 None
+               OpBranch %35
+         %35 = OpLabel
+         %38 = OpLoad %int %x None
+         %39 = OpLoad %bool %continue_execution None
+         %40 = OpLogicalNot %bool %39
+               OpSelectionMerge %41 None
+               OpBranchConditional %40 %42 %41
+         %42 = OpLabel
+               OpKill
+         %41 = OpLabel
+               OpReturnValue %38
+               OpFunctionEnd
+        %foo = OpFunction %void None %45
+         %46 = OpLabel
+         %47 = OpFunctionCall %int %foo_inner
+               OpStore %foo_loc0_Output %47 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,9 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void a(thread int* const x) {
+}
+
+void b(thread int* const x) {
+  a(x);
+}

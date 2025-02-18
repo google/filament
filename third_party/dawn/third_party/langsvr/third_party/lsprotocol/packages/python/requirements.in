@@ -1,0 +1,8 @@
+# This file is used to generate requirements.txt.
+# To update requirements.txt, run the following commands.
+# 1) pip install pip-tools
+# 2) pip-compile --generate-hashes --upgrade ./packages/python/requirements.in
+
+# `lsprotocol` package dependencies
+attrs
+cattrs

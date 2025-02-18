@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  float a = 0.0f;
+  float b = 0.0f;
+  a = 42.0f;
+  b = (a * 57.295780181884765625f);
+}
+
+kernel void v() {
+  main_1();
+}

@@ -1,0 +1,62 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_module_vars_struct {
+  thread float* p;
+  threadgroup float* w;
+  const device float2* uniforms;
+  device tint_array<float, 1>* storages;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+struct tint_symbol_1 {
+  float tint_symbol;
+};
+
+void no_uses() {
+}
+
+void zoo(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.p) = ((*tint_module_vars.p) * 2.0f);
+}
+
+void bar(float a, float b, tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.p) = a;
+  (*tint_module_vars.w) = b;
+  uint const v = (((*tint_module_vars.tint_storage_buffer_sizes)[0u].x / 4u) - 1u);
+  device float* const v_1 = (&(*tint_module_vars.storages)[min(uint(0), v)]);
+  (*v_1) = (*tint_module_vars.uniforms).x;
+  zoo(tint_module_vars);
+}
+
+void foo(float a, tint_module_vars_struct tint_module_vars) {
+  float const b = 2.0f;
+  bar(a, b, tint_module_vars);
+  no_uses();
+}
+
+void main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    (*tint_module_vars.w) = 0.0f;
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  foo(1.0f, tint_module_vars);
+}
+
+kernel void v_2(uint tint_local_index [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_3 [[threadgroup(0)]], const device float2* uniforms [[buffer(1)]], device tint_array<float, 1>* storages [[buffer(0)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  thread float p = 0.0f;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.p=(&p), .w=(&(*v_3).tint_symbol), .uniforms=uniforms, .storages=storages, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  main_inner(tint_local_index, tint_module_vars);
+}

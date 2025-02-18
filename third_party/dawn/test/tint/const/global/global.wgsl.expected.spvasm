@@ -1,0 +1,80 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 46
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Output
+               OpExecutionMode %main OriginUpperLeft
+               OpName %main_loc0_Output "main_loc0_Output"
+               OpName %main_inner "main_inner"
+               OpName %v1 "v1"
+               OpName %v2 "v2"
+               OpName %v3 "v3"
+               OpName %v4 "v4"
+               OpName %v5 "v5"
+               OpName %v6 "v6"
+               OpName %v7 "v7"
+               OpName %v9 "v9"
+               OpName %main "main"
+               OpDecorate %main_loc0_Output Location 0
+               OpDecorate %_arr_float_uint_10 ArrayStride 4
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_loc0_Output = OpVariable %_ptr_Output_v4float Output
+          %6 = OpTypeFunction %v4float
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_float = OpTypePointer Function %float
+    %float_1 = OpConstant %float 1
+      %v3int = OpTypeVector %int 3
+%_ptr_Function_v3int = OpTypePointer Function %v3int
+         %22 = OpConstantComposite %v3int %int_1 %int_1 %int_1
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+         %26 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+    %v3float = OpTypeVector %float 3
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+         %30 = OpConstantComposite %v3float %float_1 %float_1 %float_1
+%mat3v3float = OpTypeMatrix %v3float 3
+%_ptr_Function_mat3v3float = OpTypePointer Function %mat3v3float
+         %34 = OpConstantComposite %mat3v3float %30 %30 %30
+    %uint_10 = OpConstant %uint 10
+%_arr_float_uint_10 = OpTypeArray %float %uint_10
+%_ptr_Function__arr_float_uint_10 = OpTypePointer Function %_arr_float_uint_10
+         %39 = OpConstantNull %_arr_float_uint_10
+         %40 = OpConstantNull %v4float
+       %void = OpTypeVoid
+         %43 = OpTypeFunction %void
+ %main_inner = OpFunction %v4float None %6
+          %7 = OpLabel
+         %v1 = OpVariable %_ptr_Function_int Function
+         %v2 = OpVariable %_ptr_Function_uint Function
+         %v3 = OpVariable %_ptr_Function_float Function
+         %v4 = OpVariable %_ptr_Function_v3int Function
+         %v5 = OpVariable %_ptr_Function_v3uint Function
+         %v6 = OpVariable %_ptr_Function_v3float Function
+         %v7 = OpVariable %_ptr_Function_mat3v3float Function
+         %v9 = OpVariable %_ptr_Function__arr_float_uint_10 Function
+               OpStore %v1 %int_1
+               OpStore %v2 %uint_1
+               OpStore %v3 %float_1
+               OpStore %v4 %22
+               OpStore %v5 %26
+               OpStore %v6 %30
+               OpStore %v7 %34
+               OpStore %v9 %39
+               OpReturnValue %40
+               OpFunctionEnd
+       %main = OpFunction %void None %43
+         %44 = OpLabel
+         %45 = OpFunctionCall %v4float %main_inner
+               OpStore %main_loc0_Output %45 None
+               OpReturn
+               OpFunctionEnd

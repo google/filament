@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void a() {
+  int a_1 = 0;
+  switch(a_1) {
+    case 0:
+    {
+      break;
+    }
+    case 1:
+    {
+      return;
+    }
+    default:
+    {
+      a_1 = as_type<int>((as_type<uint>(a_1) + as_type<uint>(2)));
+      break;
+    }
+  }
+}

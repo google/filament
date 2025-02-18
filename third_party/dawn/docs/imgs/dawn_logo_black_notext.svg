@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="768"
+   height="768"
+   viewBox="0 0 768 768"
+   fill="none"
+   version="1.1"
+   id="svg47"
+   sodipodi:docname="dawn_logo_black_notext.svg"
+   inkscape:version="1.1 (c4e8f9e, 2021-05-24)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs51" />
+  <sodipodi:namedview
+     id="namedview49"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="true"
+     showgrid="false"
+     inkscape:zoom="0.96102398"
+     inkscape:cx="255.45668"
+     inkscape:cy="371.99904"
+     inkscape:window-width="1296"
+     inkscape:window-height="997"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg47"
+     showguides="false" />
+  <path
+     id="circle33"
+     style="fill:#808080"
+     d="m 306.7315,89 a 121,121 0 0 0 -121,121 121,121 0 0 0 120.8418,120.98438 L 411.40142,149.41797 A 121,121 0 0 0 306.7315,89 Z" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="M429.5 543L550 335L309 335L429.5 543Z"
+     fill="#0066B0"
+     id="path37"
+     style="fill:#000000" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="M 429.5,124 550.29135,332.50291 H 308.70865 Z"
+     fill="#0066b0"
+     id="path37-7"
+     style="fill:#000000;fill-opacity:1;stroke-width:1.00242" />
+  <path
+     id="path37-7-5"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.489674"
+     d="m 306.64855,336.55438 -44.67773,77.12109 14.32812,24.73242 h 89.35547 z" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="M 552,337 672.79135,545.50291 H 431.20865 Z"
+     fill="#0066b0"
+     id="path37-7-9"
+     style="fill:#000000;fill-opacity:1;stroke-width:1.00242" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="m 321.32659,515.63497 43.72296,-75.16014 h -87.44593 z"
+     fill="#0093ff"
+     id="path41"
+     style="stroke-width:0.722694;fill:#000000" />
+  <path
+     fill-rule="evenodd"
+     clip-rule="evenodd"
+     d="m 214.90584,337 120.5,208 H 94.405844 Z"
+     fill="#0076cc"
+     id="path43"
+     style="fill:#000000" />
+  <path
+     id="path22856"
+     style="fill:#000000;fill-opacity:1"
+     d="M 367.29708,441 322.58028,517.86914 338.29708,545 h 89.5 z" />
+</svg>

@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S {
+  float a;
+};
+
+kernel void v() {
+  bool bool_var = false;
+  bool const bool_let = false;
+  int i32_var = 0;
+  int const i32_let = 0;
+  uint u32_var = 0u;
+  uint const u32_let = 0u;
+  float f32_var = 0.0f;
+  float const f32_let = 0.0f;
+  int2 v2i32_var = int2(0);
+  int2 const v2i32_let = int2(0);
+  uint3 v3u32_var = uint3(0u);
+  uint3 const v3u32_let = uint3(0u);
+  float4 v4f32_var = float4(0.0f);
+  float4 const v4f32_let = float4(0.0f);
+  float2x3 m2x3_var = float2x3(float3(0.0f), float3(0.0f));
+  float3x4 const m3x4_let = float3x4(float4(0.0f), float4(0.0f), float4(0.0f));
+  tint_array<float, 4> arr_var = tint_array<float, 4>{};
+  tint_array<float, 4> const arr_let = tint_array<float, 4>{};
+  S struct_var = S{};
+  S const struct_let = S{};
+  thread float* const ptr_f32 = (&f32_var);
+  thread float4* const ptr_vec = (&v4f32_var);
+  thread tint_array<float, 4>* const ptr_arr = (&arr_var);
+}

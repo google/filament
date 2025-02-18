@@ -1,0 +1,39 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S {
+  /* 0x0000 */ float4 a;
+  /* 0x0010 */ int b;
+  /* 0x0014 */ tint_array<int8_t, 12> tint_pad;
+};
+
+struct sb_block {
+  /* 0x0000 */ tint_array<S, 1> inner;
+};
+
+struct tint_module_vars_struct {
+  const device sb_block* sb;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+void main_1(tint_module_vars_struct tint_module_vars) {
+  uint const v = ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 32u) - 1u);
+  S const x_18 = (*tint_module_vars.sb).inner[min(uint(1), v)];
+}
+
+kernel void v_1(const device sb_block* sb [[buffer(0)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb=sb, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  main_1(tint_module_vars);
+}

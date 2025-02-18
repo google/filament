@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Buffer {
+  uint data;
+};
+
+struct tint_module_vars_struct {
+  device Buffer* tint_member;
+};
+
+void v(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.tint_member).data = ((*tint_module_vars.tint_member).data + 1u);
+}

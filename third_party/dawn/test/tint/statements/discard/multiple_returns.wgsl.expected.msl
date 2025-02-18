@@ -1,0 +1,58 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* non_uniform_global;
+  device float* output;
+  thread bool* continue_execution;
+};
+
+fragment void v(device int* non_uniform_global [[buffer(0)]], device float* output [[buffer(1)]]) {
+  thread bool continue_execution = true;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.non_uniform_global=non_uniform_global, .output=output, .continue_execution=(&continue_execution)};
+  if (((*tint_module_vars.non_uniform_global) < 0)) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  float const v_1 = dfdx(1.0f);
+  if ((*tint_module_vars.continue_execution)) {
+    (*tint_module_vars.output) = v_1;
+  }
+  if (((*tint_module_vars.output) < 0.0f)) {
+    int i = 0;
+    {
+      uint2 tint_loop_idx = 0u;
+      while(true) {
+        if (all((tint_loop_idx == uint2(4294967295u)))) {
+          break;
+        }
+        float const v_2 = (*tint_module_vars.output);
+        if ((v_2 > float(i))) {
+          float const v_3 = float(i);
+          if ((*tint_module_vars.continue_execution)) {
+            (*tint_module_vars.output) = v_3;
+          }
+          if (!((*tint_module_vars.continue_execution))) {
+            discard_fragment();
+          }
+          return;
+        }
+        {
+          uint const tint_low_inc = (tint_loop_idx.x + 1u);
+          tint_loop_idx.x = tint_low_inc;
+          uint const tint_carry = uint((tint_low_inc == 0u));
+          tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+          i = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+          if ((i == 5)) { break; }
+        }
+        continue;
+      }
+    }
+    if (!((*tint_module_vars.continue_execution))) {
+      discard_fragment();
+    }
+    return;
+  }
+  if (!((*tint_module_vars.continue_execution))) {
+    discard_fragment();
+  }
+}

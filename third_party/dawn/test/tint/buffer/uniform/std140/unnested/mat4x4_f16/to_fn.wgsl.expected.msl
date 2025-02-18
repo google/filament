@@ -1,0 +1,24 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant half4x4* u;
+};
+
+void a(half4x4 m) {
+}
+
+void b(half4 v) {
+}
+
+void c(half f_1) {
+}
+
+kernel void f(const constant half4x4* u [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u};
+  a((*tint_module_vars.u));
+  b((*tint_module_vars.u)[1u]);
+  b((*tint_module_vars.u)[1u].ywxz);
+  c((*tint_module_vars.u)[1u].x);
+  c((*tint_module_vars.u)[1u].ywxz.x);
+}

@@ -1,0 +1,27 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Out {
+  float4 pos;
+};
+
+#if __METAL_VERSION__ >= 210
+#define TINT_INVARIANT [[invariant]]
+#else
+#define TINT_INVARIANT
+#endif
+
+
+struct main_outputs {
+  float4 Out_pos [[position]] TINT_INVARIANT;
+};
+
+Out main_inner() {
+  return Out{};
+}
+
+vertex main_outputs v() {
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.Out_pos = main_inner().pos;
+  return tint_wrapper_result;
+}

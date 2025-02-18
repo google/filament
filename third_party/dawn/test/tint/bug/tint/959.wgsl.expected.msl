@@ -1,0 +1,61 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  /* 0x0000 */ float a;
+};
+
+struct tint_module_vars_struct {
+  const device S* b0;
+  const device S* b1;
+  const device S* b2;
+  const device S* b3;
+  const device S* b4;
+  const device S* b5;
+  const device S* b6;
+  const device S* b7;
+  const constant S* b8;
+  const constant S* b9;
+  const constant S* b10;
+  const constant S* b11;
+  const constant S* b12;
+  const constant S* b13;
+  const constant S* b14;
+  const constant S* b15;
+  texture2d<float, access::sample> t0;
+  texture2d<float, access::sample> t1;
+  texture2d<float, access::sample> t2;
+  texture2d<float, access::sample> t3;
+  texture2d<float, access::sample> t4;
+  texture2d<float, access::sample> t5;
+  texture2d<float, access::sample> t6;
+  texture2d<float, access::sample> t7;
+  depth2d<float, access::sample> t8;
+  depth2d<float, access::sample> t9;
+  depth2d<float, access::sample> t10;
+  depth2d<float, access::sample> t11;
+  depth2d<float, access::sample> t12;
+  depth2d<float, access::sample> t13;
+  depth2d<float, access::sample> t14;
+  depth2d<float, access::sample> t15;
+  sampler s0;
+  sampler s1;
+  sampler s2;
+  sampler s3;
+  sampler s4;
+  sampler s5;
+  sampler s6;
+  sampler s7;
+  sampler s8;
+  sampler s9;
+  sampler s10;
+  sampler s11;
+  sampler s12;
+  sampler s13;
+  sampler s14;
+  sampler s15;
+};
+
+fragment void v(const device S* b0 [[buffer(8)]], const device S* b1 [[buffer(9)]], const device S* b2 [[buffer(10)]], const device S* b3 [[buffer(11)]], const device S* b4 [[buffer(12)]], const device S* b5 [[buffer(13)]], const device S* b6 [[buffer(14)]], const device S* b7 [[buffer(15)]], const constant S* b8 [[buffer(0)]], const constant S* b9 [[buffer(1)]], const constant S* b10 [[buffer(2)]], const constant S* b11 [[buffer(3)]], const constant S* b12 [[buffer(4)]], const constant S* b13 [[buffer(5)]], const constant S* b14 [[buffer(6)]], const constant S* b15 [[buffer(7)]], texture2d<float, access::sample> t0 [[texture(0)]], texture2d<float, access::sample> t1 [[texture(1)]], texture2d<float, access::sample> t2 [[texture(2)]], texture2d<float, access::sample> t3 [[texture(3)]], texture2d<float, access::sample> t4 [[texture(4)]], texture2d<float, access::sample> t5 [[texture(5)]], texture2d<float, access::sample> t6 [[texture(6)]], texture2d<float, access::sample> t7 [[texture(7)]], depth2d<float, access::sample> t8 [[texture(8)]], depth2d<float, access::sample> t9 [[texture(9)]], depth2d<float, access::sample> t10 [[texture(10)]], depth2d<float, access::sample> t11 [[texture(11)]], depth2d<float, access::sample> t12 [[texture(12)]], depth2d<float, access::sample> t13 [[texture(13)]], depth2d<float, access::sample> t14 [[texture(14)]], depth2d<float, access::sample> t15 [[texture(15)]], sampler s0 [[sampler(0)]], sampler s1 [[sampler(1)]], sampler s2 [[sampler(2)]], sampler s3 [[sampler(3)]], sampler s4 [[sampler(4)]], sampler s5 [[sampler(5)]], sampler s6 [[sampler(6)]], sampler s7 [[sampler(7)]], sampler s8 [[sampler(8)]], sampler s9 [[sampler(9)]], sampler s10 [[sampler(10)]], sampler s11 [[sampler(11)]], sampler s12 [[sampler(12)]], sampler s13 [[sampler(13)]], sampler s14 [[sampler(14)]], sampler s15 [[sampler(15)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.b0=b0, .b1=b1, .b2=b2, .b3=b3, .b4=b4, .b5=b5, .b6=b6, .b7=b7, .b8=b8, .b9=b9, .b10=b10, .b11=b11, .b12=b12, .b13=b13, .b14=b14, .b15=b15, .t0=t0, .t1=t1, .t2=t2, .t3=t3, .t4=t4, .t5=t5, .t6=t6, .t7=t7, .t8=t8, .t9=t9, .t10=t10, .t11=t11, .t12=t12, .t13=t13, .t14=t14, .t15=t15, .s0=s0, .s1=s1, .s2=s2, .s3=s3, .s4=s4, .s5=s5, .s6=s6, .s7=s7, .s8=s8, .s9=s9, .s10=s10, .s11=s11, .s12=s12, .s13=s13, .s14=s14, .s15=s15};
+}

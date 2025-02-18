@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<uint, access::sample> t;
+  sampler s;
+};
+
+fragment void v(texture2d<uint, access::sample> t [[texture(0)]], sampler s [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t=t, .s=s};
+  uint4 res = tint_module_vars.t.gather(tint_module_vars.s, float2(0.0f), int2(0), component::x);
+}

@@ -1,0 +1,78 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 40
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %tint_pointsize %tint_symbol_1
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %tint_pointsize "tint_pointsize"
+               OpName %arg_0 "arg_0"
+               OpName %tint_symbol_1 "tint_symbol_1"
+               OpName %textureLoad_6273b1 "textureLoad_6273b1"
+               OpName %res "res"
+               OpName %tint_symbol_2 "tint_symbol_2"
+               OpName %tint_symbol "tint_symbol"
+               OpName %vertex_main "vertex_main"
+               OpName %fragment_main "fragment_main"
+               OpName %compute_main "compute_main"
+               OpDecorate %tint_pointsize BuiltIn PointSize
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %tint_symbol_1 BuiltIn Position
+      %float = OpTypeFloat 32
+%_ptr_Output_float = OpTypePointer Output %float
+          %4 = OpConstantNull %float
+%tint_pointsize = OpVariable %_ptr_Output_float Output %4
+          %7 = OpTypeImage %float 2D 1 0 1 1 Unknown
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+      %arg_0 = OpVariable %_ptr_UniformConstant_7 UniformConstant
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+         %11 = OpConstantNull %v4float
+%tint_symbol_1 = OpVariable %_ptr_Output_v4float Output %11
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+         %21 = OpConstantNull %v2int
+      %int_1 = OpConstant %int 1
+%_ptr_Function_float = OpTypePointer Function %float
+         %25 = OpTypeFunction %void %v4float
+    %float_1 = OpConstant %float 1
+%textureLoad_6273b1 = OpFunction %void None %12
+         %15 = OpLabel
+        %res = OpVariable %_ptr_Function_float Function %4
+         %18 = OpLoad %7 %arg_0
+         %17 = OpImageFetch %v4float %18 %21 Sample %int_1
+         %16 = OpCompositeExtract %float %17 0
+               OpStore %res %16
+               OpReturn
+               OpFunctionEnd
+%tint_symbol_2 = OpFunction %void None %25
+%tint_symbol = OpFunctionParameter %v4float
+         %28 = OpLabel
+               OpStore %tint_symbol_1 %tint_symbol
+               OpReturn
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %12
+         %30 = OpLabel
+               OpStore %tint_pointsize %float_1
+         %32 = OpFunctionCall %void %textureLoad_6273b1
+         %33 = OpFunctionCall %void %tint_symbol_2 %11
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %12
+         %35 = OpLabel
+         %36 = OpFunctionCall %void %textureLoad_6273b1
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %12
+         %38 = OpLabel
+         %39 = OpFunctionCall %void %textureLoad_6273b1
+               OpReturn
+               OpFunctionEnd

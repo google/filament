@@ -1,0 +1,222 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 29
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %dot_cd5a04 "dot_cd5a04"
+               OpName %arg_0 "arg_0"
+               OpName %arg_1 "arg_1"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %half = OpTypeFloat 16
+%prevent_dce_block = OpTypeStruct %half
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %half
+     %v2half = OpTypeVector %half 2
+%_ptr_Function_v2half = OpTypePointer Function %v2half
+%half_0x1p_0 = OpConstant %half 0x1p+0
+         %11 = OpConstantComposite %v2half %half_0x1p_0 %half_0x1p_0
+%_ptr_Function_half = OpTypePointer Function %half
+       %void = OpTypeVoid
+         %22 = OpTypeFunction %void
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+ %dot_cd5a04 = OpFunction %half None %6
+          %7 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v2half Function
+      %arg_1 = OpVariable %_ptr_Function_v2half Function
+        %res = OpVariable %_ptr_Function_half Function
+               OpStore %arg_0 %11
+               OpStore %arg_1 %11
+         %14 = OpLoad %v2half %arg_0 None
+         %15 = OpLoad %v2half %arg_1 None
+         %16 = OpDot %half %14 %15
+               OpStore %res %16
+         %19 = OpLoad %half %res None
+               OpReturnValue %19
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %22
+         %23 = OpLabel
+         %24 = OpFunctionCall %half %dot_cd5a04
+         %25 = OpAccessChain %_ptr_StorageBuffer_half %1 %uint_0
+               OpStore %25 %24 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 29
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %dot_cd5a04 "dot_cd5a04"
+               OpName %arg_0 "arg_0"
+               OpName %arg_1 "arg_1"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %half = OpTypeFloat 16
+%prevent_dce_block = OpTypeStruct %half
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %half
+     %v2half = OpTypeVector %half 2
+%_ptr_Function_v2half = OpTypePointer Function %v2half
+%half_0x1p_0 = OpConstant %half 0x1p+0
+         %11 = OpConstantComposite %v2half %half_0x1p_0 %half_0x1p_0
+%_ptr_Function_half = OpTypePointer Function %half
+       %void = OpTypeVoid
+         %22 = OpTypeFunction %void
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+ %dot_cd5a04 = OpFunction %half None %6
+          %7 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v2half Function
+      %arg_1 = OpVariable %_ptr_Function_v2half Function
+        %res = OpVariable %_ptr_Function_half Function
+               OpStore %arg_0 %11
+               OpStore %arg_1 %11
+         %14 = OpLoad %v2half %arg_0 None
+         %15 = OpLoad %v2half %arg_1 None
+         %16 = OpDot %half %14 %15
+               OpStore %res %16
+         %19 = OpLoad %half %res None
+               OpReturnValue %19
+               OpFunctionEnd
+%compute_main = OpFunction %void None %22
+         %23 = OpLabel
+         %24 = OpFunctionCall %half %dot_cd5a04
+         %25 = OpAccessChain %_ptr_StorageBuffer_half %1 %uint_0
+               OpStore %25 %24 None
+               OpReturn
+               OpFunctionEnd
+;
+; vertex_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 49
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability StorageInputOutput16
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %vertex_main_position_Output %vertex_main_loc0_Output %vertex_main___point_size_Output
+               OpName %vertex_main_position_Output "vertex_main_position_Output"
+               OpName %vertex_main_loc0_Output "vertex_main_loc0_Output"
+               OpName %vertex_main___point_size_Output "vertex_main___point_size_Output"
+               OpName %dot_cd5a04 "dot_cd5a04"
+               OpName %arg_0 "arg_0"
+               OpName %arg_1 "arg_1"
+               OpName %res "res"
+               OpName %vertex_main_inner "vertex_main_inner"
+               OpMemberName %VertexOutput 0 "pos"
+               OpMemberName %VertexOutput 1 "prevent_dce"
+               OpName %VertexOutput "VertexOutput"
+               OpName %out "out"
+               OpName %vertex_main "vertex_main"
+               OpDecorate %vertex_main_position_Output BuiltIn Position
+               OpDecorate %vertex_main_loc0_Output Location 0
+               OpDecorate %vertex_main_loc0_Output Flat
+               OpDecorate %vertex_main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %VertexOutput 0 Offset 0
+               OpMemberDecorate %VertexOutput 1 Offset 16
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vertex_main_position_Output = OpVariable %_ptr_Output_v4float Output
+       %half = OpTypeFloat 16
+%_ptr_Output_half = OpTypePointer Output %half
+%vertex_main_loc0_Output = OpVariable %_ptr_Output_half Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vertex_main___point_size_Output = OpVariable %_ptr_Output_float Output
+         %11 = OpTypeFunction %half
+     %v2half = OpTypeVector %half 2
+%_ptr_Function_v2half = OpTypePointer Function %v2half
+%half_0x1p_0 = OpConstant %half 0x1p+0
+         %16 = OpConstantComposite %v2half %half_0x1p_0 %half_0x1p_0
+%_ptr_Function_half = OpTypePointer Function %half
+%VertexOutput = OpTypeStruct %v4float %half
+         %27 = OpTypeFunction %VertexOutput
+%_ptr_Function_VertexOutput = OpTypePointer Function %VertexOutput
+         %31 = OpConstantNull %VertexOutput
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+         %36 = OpConstantNull %v4float
+     %uint_1 = OpConstant %uint 1
+       %void = OpTypeVoid
+         %43 = OpTypeFunction %void
+    %float_1 = OpConstant %float 1
+ %dot_cd5a04 = OpFunction %half None %11
+         %12 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v2half Function
+      %arg_1 = OpVariable %_ptr_Function_v2half Function
+        %res = OpVariable %_ptr_Function_half Function
+               OpStore %arg_0 %16
+               OpStore %arg_1 %16
+         %19 = OpLoad %v2half %arg_0 None
+         %20 = OpLoad %v2half %arg_1 None
+         %21 = OpDot %half %19 %20
+               OpStore %res %21
+         %24 = OpLoad %half %res None
+               OpReturnValue %24
+               OpFunctionEnd
+%vertex_main_inner = OpFunction %VertexOutput None %27
+         %28 = OpLabel
+        %out = OpVariable %_ptr_Function_VertexOutput Function %31
+         %32 = OpAccessChain %_ptr_Function_v4float %out %uint_0
+               OpStore %32 %36 None
+         %37 = OpAccessChain %_ptr_Function_half %out %uint_1
+         %39 = OpFunctionCall %half %dot_cd5a04
+               OpStore %37 %39 None
+         %40 = OpLoad %VertexOutput %out None
+               OpReturnValue %40
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %43
+         %44 = OpLabel
+         %45 = OpFunctionCall %VertexOutput %vertex_main_inner
+         %46 = OpCompositeExtract %v4float %45 0
+               OpStore %vertex_main_position_Output %46 None
+         %47 = OpCompositeExtract %half %45 1
+               OpStore %vertex_main_loc0_Output %47 None
+               OpStore %vertex_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

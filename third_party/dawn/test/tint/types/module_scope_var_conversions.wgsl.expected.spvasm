@@ -1,0 +1,104 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 53
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %bool_var1 "bool_var1"
+               OpName %bool_var2 "bool_var2"
+               OpName %bool_var3 "bool_var3"
+               OpName %i32_var1 "i32_var1"
+               OpName %i32_var2 "i32_var2"
+               OpName %i32_var3 "i32_var3"
+               OpName %u32_var1 "u32_var1"
+               OpName %u32_var2 "u32_var2"
+               OpName %u32_var3 "u32_var3"
+               OpName %v3bool_var1 "v3bool_var1"
+               OpName %v3bool_var2 "v3bool_var2"
+               OpName %v3bool_var3 "v3bool_var3"
+               OpName %v3i32_var1 "v3i32_var1"
+               OpName %v3i32_var2 "v3i32_var2"
+               OpName %v3i32_var3 "v3i32_var3"
+               OpName %v3u32_var1 "v3u32_var1"
+               OpName %v3u32_var2 "v3u32_var2"
+               OpName %v3u32_var3 "v3u32_var3"
+               OpName %v3bool_var4 "v3bool_var4"
+               OpName %v4bool_var5 "v4bool_var5"
+               OpName %main "main"
+       %bool = OpTypeBool
+%_ptr_Private_bool = OpTypePointer Private %bool
+       %true = OpConstantTrue %bool
+  %bool_var1 = OpVariable %_ptr_Private_bool Private %true
+  %bool_var2 = OpVariable %_ptr_Private_bool Private %true
+  %bool_var3 = OpVariable %_ptr_Private_bool Private %true
+        %int = OpTypeInt 32 1
+%_ptr_Private_int = OpTypePointer Private %int
+      %int_1 = OpConstant %int 1
+   %i32_var1 = OpVariable %_ptr_Private_int Private %int_1
+   %i32_var2 = OpVariable %_ptr_Private_int Private %int_1
+   %i32_var3 = OpVariable %_ptr_Private_int Private %int_1
+       %uint = OpTypeInt 32 0
+%_ptr_Private_uint = OpTypePointer Private %uint
+     %uint_1 = OpConstant %uint 1
+   %u32_var1 = OpVariable %_ptr_Private_uint Private %uint_1
+   %u32_var2 = OpVariable %_ptr_Private_uint Private %uint_1
+   %u32_var3 = OpVariable %_ptr_Private_uint Private %uint_1
+     %v3bool = OpTypeVector %bool 3
+%_ptr_Private_v3bool = OpTypePointer Private %v3bool
+         %22 = OpConstantComposite %v3bool %true %true %true
+%v3bool_var1 = OpVariable %_ptr_Private_v3bool Private %22
+%v3bool_var2 = OpVariable %_ptr_Private_v3bool Private %22
+%v3bool_var3 = OpVariable %_ptr_Private_v3bool Private %22
+      %v3int = OpTypeVector %int 3
+%_ptr_Private_v3int = OpTypePointer Private %v3int
+         %28 = OpConstantComposite %v3int %int_1 %int_1 %int_1
+ %v3i32_var1 = OpVariable %_ptr_Private_v3int Private %28
+ %v3i32_var2 = OpVariable %_ptr_Private_v3int Private %28
+ %v3i32_var3 = OpVariable %_ptr_Private_v3int Private %28
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Private_v3uint = OpTypePointer Private %v3uint
+         %34 = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+ %v3u32_var1 = OpVariable %_ptr_Private_v3uint Private %34
+ %v3u32_var2 = OpVariable %_ptr_Private_v3uint Private %34
+ %v3u32_var3 = OpVariable %_ptr_Private_v3uint Private %34
+%v3bool_var4 = OpVariable %_ptr_Private_v3bool Private %22
+     %v4bool = OpTypeVector %bool 4
+%_ptr_Private_v4bool = OpTypePointer Private %v4bool
+      %false = OpConstantFalse %bool
+         %41 = OpConstantComposite %v4bool %true %false %true %false
+%v4bool_var5 = OpVariable %_ptr_Private_v4bool Private %41
+       %void = OpTypeVoid
+         %45 = OpTypeFunction %void
+      %int_0 = OpConstant %int 0
+     %uint_0 = OpConstant %uint 0
+         %49 = OpConstantNull %v3bool
+         %50 = OpConstantNull %v4bool
+         %51 = OpConstantNull %v3int
+         %52 = OpConstantNull %v3uint
+       %main = OpFunction %void None %45
+         %46 = OpLabel
+               OpStore %bool_var1 %false None
+               OpStore %bool_var2 %false None
+               OpStore %bool_var3 %false None
+               OpStore %i32_var1 %int_0 None
+               OpStore %i32_var2 %int_0 None
+               OpStore %i32_var3 %int_0 None
+               OpStore %u32_var1 %uint_0 None
+               OpStore %u32_var2 %uint_0 None
+               OpStore %u32_var3 %uint_0 None
+               OpStore %v3bool_var1 %49 None
+               OpStore %v3bool_var2 %49 None
+               OpStore %v3bool_var3 %49 None
+               OpStore %v3bool_var4 %49 None
+               OpStore %v4bool_var5 %50 None
+               OpStore %v3i32_var1 %51 None
+               OpStore %v3i32_var2 %51 None
+               OpStore %v3i32_var3 %51 None
+               OpStore %v3u32_var1 %52 None
+               OpStore %v3u32_var2 %52 None
+               OpStore %v3u32_var3 %52 None
+               OpReturn
+               OpFunctionEnd

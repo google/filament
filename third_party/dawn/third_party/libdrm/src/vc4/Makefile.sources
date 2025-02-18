@@ -1,0 +1,3 @@
+LIBDRM_VC4_H_FILES := \
+	vc4_packet.h \
+	vc4_qpu_defines.h

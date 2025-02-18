@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  half4 a = half4(0.0h);
+  half const b = 1.0h;
+  a.x = (a.x + b);
+}

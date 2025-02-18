@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+half get_f16() {
+  return 1.0h;
+}
+
+void f() {
+  half2 v2 = half2(get_f16());
+  half3 v3 = half3(get_f16());
+  half4 v4 = half4(get_f16());
+}

@@ -1,0 +1,131 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct SB_RO {
+  /* 0x0000 */ tint_array<int, 1> arg_0;
+};
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+  const device SB_RO* sb_ro;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+uint arrayLength_bf7d97(tint_module_vars_struct tint_module_vars) {
+  uint res = (((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 4u);
+  return res;
+}
+
+fragment void fragment_main(device uint* prevent_dce [[buffer(0)]], const device SB_RO* sb_ro [[buffer(1)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .sb_ro=sb_ro, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  (*tint_module_vars.prevent_dce) = arrayLength_bf7d97(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct SB_RO {
+  /* 0x0000 */ tint_array<int, 1> arg_0;
+};
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+  const device SB_RO* sb_ro;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+uint arrayLength_bf7d97(tint_module_vars_struct tint_module_vars) {
+  uint res = (((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 4u);
+  return res;
+}
+
+kernel void compute_main(device uint* prevent_dce [[buffer(0)]], const device SB_RO* sb_ro [[buffer(1)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .sb_ro=sb_ro, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  (*tint_module_vars.prevent_dce) = arrayLength_bf7d97(tint_module_vars);
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct SB_RO {
+  /* 0x0000 */ tint_array<int, 1> arg_0;
+};
+
+struct tint_module_vars_struct {
+  const device SB_RO* sb_ro;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+struct VertexOutput {
+  float4 pos;
+  uint prevent_dce;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+  uint VertexOutput_prevent_dce [[user(locn0)]] [[flat]];
+};
+
+uint arrayLength_bf7d97(tint_module_vars_struct tint_module_vars) {
+  uint res = (((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 4u);
+  return res;
+}
+
+VertexOutput vertex_main_inner(tint_module_vars_struct tint_module_vars) {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  out.prevent_dce = arrayLength_bf7d97(tint_module_vars);
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main(const device SB_RO* sb_ro [[buffer(0)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.sb_ro=sb_ro, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  VertexOutput const v = vertex_main_inner(tint_module_vars);
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v.pos;
+  tint_wrapper_result.VertexOutput_prevent_dce = v.prevent_dce;
+  return tint_wrapper_result;
+}

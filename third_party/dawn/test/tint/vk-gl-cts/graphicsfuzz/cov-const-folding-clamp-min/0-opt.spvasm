@@ -1,0 +1,58 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "zero"
+               OpName %_ ""
+               OpName %_GLF_color "_GLF_color"
+               OpMemberDecorate %buf0 0 Offset 0
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %float_2 = OpConstant %float 2
+       %buf0 = OpTypeStruct %float
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+    %float_1 = OpConstant %float 1
+   %float_n1 = OpConstant %float -1
+    %float_0 = OpConstant %float 0
+    %v4float = OpTypeVector %float 4
+         %18 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+       %bool = OpTypeBool
+     %v4bool = OpTypeVector %bool 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+         %22 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+       %main = OpFunction %void None %7
+         %23 = OpLabel
+         %24 = OpAccessChain %_ptr_Uniform_float %_ %int_0
+         %25 = OpLoad %float %24
+         %26 = OpExtInst %float %1 FClamp %float_2 %25 %float_1
+         %27 = OpAccessChain %_ptr_Uniform_float %_ %int_0
+         %28 = OpLoad %float %27
+         %29 = OpExtInst %float %1 FClamp %float_n1 %float_0 %28
+         %30 = OpCompositeConstruct %v4float %26 %29 %float_0 %float_1
+         %31 = OpFOrdNotEqual %v4bool %30 %18
+         %32 = OpAny %bool %31
+               OpSelectionMerge %33 None
+               OpBranchConditional %32 %34 %35
+         %34 = OpLabel
+               OpStore %_GLF_color %22
+               OpBranch %33
+         %35 = OpLabel
+               OpStore %_GLF_color %18
+               OpBranch %33
+         %33 = OpLabel
+               OpReturn
+               OpFunctionEnd

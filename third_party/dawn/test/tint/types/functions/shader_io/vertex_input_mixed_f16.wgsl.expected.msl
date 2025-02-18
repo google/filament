@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexInputs0 {
+  uint vertex_index;
+  int loc0;
+};
+
+struct VertexInputs1 {
+  float loc2;
+  float4 loc3;
+  half3 loc5;
+};
+
+struct main_outputs {
+  float4 tint_symbol [[position]];
+};
+
+struct main_inputs {
+  int VertexInputs0_loc0 [[attribute(0)]];
+  uint loc1 [[attribute(1)]];
+  float VertexInputs1_loc2 [[attribute(2)]];
+  float4 VertexInputs1_loc3 [[attribute(3)]];
+  half3 VertexInputs1_loc5 [[attribute(5)]];
+  half loc4 [[attribute(4)]];
+};
+
+float4 main_inner(VertexInputs0 inputs0, uint loc1, uint instance_index, VertexInputs1 inputs1, half loc4) {
+  uint const foo = (inputs0.vertex_index + instance_index);
+  int const i = inputs0.loc0;
+  uint const u = loc1;
+  float const f = inputs1.loc2;
+  float4 const v = inputs1.loc3;
+  half const x = loc4;
+  half3 const y = inputs1.loc5;
+  return float4(0.0f);
+}
+
+vertex main_outputs v_1(uint VertexInputs0_vertex_index [[vertex_id]], main_inputs inputs [[stage_in]], uint instance_index [[instance_id]]) {
+  VertexInputs0 const v_2 = VertexInputs0{.vertex_index=VertexInputs0_vertex_index, .loc0=inputs.VertexInputs0_loc0};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(v_2, inputs.loc1, instance_index, VertexInputs1{.loc2=inputs.VertexInputs1_loc2, .loc3=inputs.VertexInputs1_loc3, .loc5=inputs.VertexInputs1_loc5}, inputs.loc4);
+  return tint_wrapper_result;
+}

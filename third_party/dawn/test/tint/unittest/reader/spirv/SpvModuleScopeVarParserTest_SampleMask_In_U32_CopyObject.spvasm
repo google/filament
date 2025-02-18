@@ -1,0 +1,39 @@
+; Test: SpvModuleScopeVarParserTest_SampleMask_In_U32_CopyObject.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 26
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %5 "main" %gl_SampleMask
+OpExecutionMode %5 OriginUpperLeft
+OpDecorate %gl_SampleMask BuiltIn SampleMask
+%void = OpTypeVoid
+%7 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%int_12 = OpConstant %int 12
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+%_arr_int_uint_1 = OpTypeArray %int %uint_1
+%_arr_int_uint_2 = OpTypeArray %int %uint_2
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Input_uint = OpTypePointer Input %uint
+%_ptr_Output_int = OpTypePointer Output %int
+%_ptr_Output_uint = OpTypePointer Output %uint
+%_ptr_Input__arr_uint_uint_1 = OpTypePointer Input %_arr_uint_uint_1
+%_ptr_Output__arr_uint_uint_1 = OpTypePointer Output %_arr_uint_uint_1
+%gl_SampleMask = OpVariable %_ptr_Input__arr_uint_uint_1 Input
+%5 = OpFunction %void None %7
+%25 = OpLabel
+%2 = OpAccessChain %_ptr_Input_uint %gl_SampleMask %uint_0
+%3 = OpCopyObject %_ptr_Input_uint %2
+%4 = OpLoad %uint %3
+OpReturn
+OpFunctionEnd
+

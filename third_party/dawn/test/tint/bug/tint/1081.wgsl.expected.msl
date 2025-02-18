@@ -1,0 +1,56 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread bool* continue_execution;
+};
+
+struct main_outputs {
+  int tint_symbol [[color(2)]];
+};
+
+struct main_inputs {
+  int3 x [[user(locn1)]] [[flat]];
+};
+
+int f(int x, tint_module_vars_struct tint_module_vars) {
+  if ((x == 10)) {
+    (*tint_module_vars.continue_execution) = false;
+  }
+  return x;
+}
+
+int main_inner(int3 x, tint_module_vars_struct tint_module_vars) {
+  int y = x.x;
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      int const r = f(y, tint_module_vars);
+      if ((r == 0)) {
+        break;
+      }
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+      }
+      continue;
+    }
+  }
+  if (!((*tint_module_vars.continue_execution))) {
+    discard_fragment();
+  }
+  return y;
+}
+
+fragment main_outputs v(main_inputs inputs [[stage_in]]) {
+  thread bool continue_execution = true;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.continue_execution=(&continue_execution)};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main_inner(inputs.x, tint_module_vars);
+  return tint_wrapper_result;
+}

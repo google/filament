@@ -1,0 +1,51 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_module_vars_struct {
+  const constant tint_array<half4x4, 4>* u;
+  threadgroup tint_array<half4x4, 4>* w;
+};
+
+struct tint_symbol_1 {
+  tint_array<half4x4, 4> tint_symbol;
+};
+
+void f_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  {
+    uint v = 0u;
+    v = tint_local_index;
+    while(true) {
+      uint const v_1 = v;
+      if ((v_1 >= 4u)) {
+        break;
+      }
+      (*tint_module_vars.w)[v_1] = half4x4(half4(0.0h), half4(0.0h), half4(0.0h), half4(0.0h));
+      {
+        v = (v_1 + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  (*tint_module_vars.w) = (*tint_module_vars.u);
+  (*tint_module_vars.w)[1u] = (*tint_module_vars.u)[2u];
+  (*tint_module_vars.w)[1u][0u] = (*tint_module_vars.u)[0u][1u].ywxz;
+  (*tint_module_vars.w)[1u][0u].x = (*tint_module_vars.u)[0u][1u].x;
+}
+
+kernel void f(uint tint_local_index [[thread_index_in_threadgroup]], const constant tint_array<half4x4, 4>* u [[buffer(0)]], threadgroup tint_symbol_1* v_2 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u, .w=(&(*v_2).tint_symbol)};
+  f_inner(tint_local_index, tint_module_vars);
+}

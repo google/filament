@@ -1,0 +1,24 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentOutputs {
+  float frag_depth;
+  uint sample_mask;
+};
+
+struct main_outputs {
+  float FragmentOutputs_frag_depth [[depth(any)]];
+  uint FragmentOutputs_sample_mask [[sample_mask]];
+};
+
+FragmentOutputs main_inner() {
+  return FragmentOutputs{.frag_depth=1.0f, .sample_mask=1u};
+}
+
+fragment main_outputs v() {
+  FragmentOutputs const v_1 = main_inner();
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.FragmentOutputs_frag_depth = v_1.frag_depth;
+  tint_wrapper_result.FragmentOutputs_sample_mask = v_1.sample_mask;
+  return tint_wrapper_result;
+}

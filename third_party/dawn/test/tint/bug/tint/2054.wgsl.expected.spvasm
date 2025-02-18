@@ -1,0 +1,66 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 34
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %foo "foo"
+               OpExecutionMode %foo LocalSize 1 1 1
+               OpMemberName %out_block 0 "inner"
+               OpName %out_block "out_block"
+               OpName %bar "bar"
+               OpName %p_root "p_root"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %cond "cond"
+               OpName %foo "foo"
+               OpName %param "param"
+               OpMemberDecorate %out_block 0 Offset 0
+               OpDecorate %out_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+  %out_block = OpTypeStruct %float
+%_ptr_StorageBuffer_out_block = OpTypePointer StorageBuffer %out_block
+          %1 = OpVariable %_ptr_StorageBuffer_out_block StorageBuffer
+       %void = OpTypeVoid
+%_ptr_Function_float = OpTypePointer Function %float
+          %9 = OpTypeFunction %void %_ptr_Function_float
+          %a = OpConstant %float 1
+          %b = OpConstant %float 2
+    %float_0 = OpConstant %float 0
+       %bool = OpTypeBool
+      %false = OpConstantFalse %bool
+         %24 = OpTypeFunction %void
+         %27 = OpConstantNull %float
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+        %bar = OpFunction %void None %9
+     %p_root = OpFunctionParameter %_ptr_Function_float
+         %10 = OpLabel
+         %13 = OpFOrdGreaterThanEqual %bool %a %float_0
+               OpSelectionMerge %16 None
+               OpBranchConditional %13 %17 %18
+         %17 = OpLabel
+         %19 = OpFOrdGreaterThanEqual %bool %b %float_0
+               OpBranch %16
+         %18 = OpLabel
+               OpBranch %16
+         %16 = OpLabel
+       %cond = OpPhi %bool %19 %17 %false %18
+         %22 = OpSelect %float %cond %b %a
+               OpStore %p_root %22 None
+               OpReturn
+               OpFunctionEnd
+        %foo = OpFunction %void None %24
+         %25 = OpLabel
+      %param = OpVariable %_ptr_Function_float Function %27
+         %28 = OpFunctionCall %void %bar %param
+         %29 = OpLoad %float %param None
+         %30 = OpAccessChain %_ptr_StorageBuffer_float %1 %uint_0
+               OpStore %30 %29 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,24 @@
+; Test: SpvParserMemoryTest_EmitStatement_StoreFloatConst.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%float_42 = OpConstant %float 42
+%6 = OpConstantNull %float
+%_ptr_Function_float = OpTypePointer Function %float
+%100 = OpFunction %void None %3
+%8 = OpLabel
+%1 = OpVariable %_ptr_Function_float Function
+OpStore %1 %float_42
+OpStore %1 %6
+OpReturn
+OpFunctionEnd
+

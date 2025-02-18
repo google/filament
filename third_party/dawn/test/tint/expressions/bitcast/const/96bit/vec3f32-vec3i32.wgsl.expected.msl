@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  int3 const b = int3(1073757184, -1006616064, -998242304);
+}

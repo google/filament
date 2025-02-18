@@ -1,0 +1,145 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 69
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %compute_main_local_invocation_index_Input
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %local_invocation_index_1 "local_invocation_index_1"
+               OpMemberName %S2_atomic 0 "x"
+               OpMemberName %S2_atomic 1 "y"
+               OpMemberName %S2_atomic 2 "z"
+               OpMemberName %S1_atomic 0 "x"
+               OpMemberName %S0_atomic 0 "x"
+               OpMemberName %S0_atomic 1 "a"
+               OpMemberName %S0_atomic 2 "y"
+               OpMemberName %S0_atomic 3 "z"
+               OpName %S0_atomic "S0_atomic"
+               OpMemberName %S1_atomic 1 "a"
+               OpMemberName %S1_atomic 2 "y"
+               OpMemberName %S1_atomic 3 "z"
+               OpName %S1_atomic "S1_atomic"
+               OpMemberName %S2_atomic 3 "a"
+               OpName %S2_atomic "S2_atomic"
+               OpName %wg "wg"
+               OpName %compute_main_local_invocation_index_Input "compute_main_local_invocation_index_Input"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %local_invocation_index_2 "local_invocation_index_2"
+               OpName %compute_main_1 "compute_main_1"
+               OpName %x_44 "x_44"
+               OpName %compute_main_inner_0 "compute_main_inner"
+               OpName %local_invocation_index_1_param "local_invocation_index_1_param"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %S2_atomic 0 Offset 0
+               OpMemberDecorate %S2_atomic 1 Offset 4
+               OpMemberDecorate %S2_atomic 2 Offset 8
+               OpMemberDecorate %S1_atomic 0 Offset 0
+               OpMemberDecorate %S0_atomic 0 Offset 0
+               OpMemberDecorate %S0_atomic 1 Offset 4
+               OpMemberDecorate %S0_atomic 2 Offset 8
+               OpMemberDecorate %S0_atomic 3 Offset 12
+               OpMemberDecorate %S1_atomic 1 Offset 4
+               OpMemberDecorate %S1_atomic 2 Offset 20
+               OpMemberDecorate %S1_atomic 3 Offset 24
+               OpMemberDecorate %S2_atomic 3 Offset 12
+               OpDecorate %compute_main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+       %uint = OpTypeInt 32 0
+%_ptr_Private_uint = OpTypePointer Private %uint
+          %4 = OpConstantNull %uint
+%local_invocation_index_1 = OpVariable %_ptr_Private_uint Private %4
+        %int = OpTypeInt 32 1
+  %S0_atomic = OpTypeStruct %int %uint %int %int
+  %S1_atomic = OpTypeStruct %int %S0_atomic %int %int
+  %S2_atomic = OpTypeStruct %int %int %int %S1_atomic
+%_ptr_Workgroup_S2_atomic = OpTypePointer Workgroup %S2_atomic
+         %wg = OpVariable %_ptr_Workgroup_S2_atomic Workgroup
+%_ptr_Input_uint = OpTypePointer Input %uint
+%compute_main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void %uint
+%_ptr_Workgroup_int = OpTypePointer Workgroup %int
+     %uint_0 = OpConstant %uint 0
+      %int_0 = OpConstant %int 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+   %uint_264 = OpConstant %uint 264
+         %41 = OpTypeFunction %void
+       %bool = OpTypeBool
+%compute_main_inner = OpFunction %void None %16
+%local_invocation_index_2 = OpFunctionParameter %uint
+         %17 = OpLabel
+         %18 = OpAccessChain %_ptr_Workgroup_int %wg %uint_0
+               OpStore %18 %int_0 None
+         %22 = OpAccessChain %_ptr_Workgroup_int %wg %uint_1
+               OpStore %22 %int_0 None
+         %24 = OpAccessChain %_ptr_Workgroup_int %wg %uint_2
+               OpStore %24 %int_0 None
+         %26 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_0
+               OpStore %26 %int_0 None
+         %28 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_1 %uint_0
+               OpStore %28 %int_0 None
+         %29 = OpAccessChain %_ptr_Workgroup_uint %wg %uint_3 %uint_1 %uint_1
+               OpAtomicStore %29 %uint_2 %uint_0 %uint_0
+         %32 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_1 %uint_2
+               OpStore %32 %int_0 None
+         %33 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_1 %uint_3
+               OpStore %33 %int_0 None
+         %34 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_2
+               OpStore %34 %int_0 None
+         %35 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_3
+               OpStore %35 %int_0 None
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %38 = OpAccessChain %_ptr_Workgroup_uint %wg %uint_3 %uint_1 %uint_1
+               OpAtomicStore %38 %uint_2 %uint_0 %uint_1
+               OpReturn
+               OpFunctionEnd
+%compute_main_1 = OpFunction %void None %41
+         %42 = OpLabel
+       %x_44 = OpLoad %uint %local_invocation_index_1 None
+         %44 = OpFunctionCall %void %compute_main_inner %x_44
+               OpReturn
+               OpFunctionEnd
+%compute_main_inner_0 = OpFunction %void None %16
+%local_invocation_index_1_param = OpFunctionParameter %uint
+         %47 = OpLabel
+         %48 = OpULessThan %bool %local_invocation_index_1_param %uint_1
+               OpSelectionMerge %50 None
+               OpBranchConditional %48 %51 %50
+         %51 = OpLabel
+         %52 = OpAccessChain %_ptr_Workgroup_int %wg %uint_0
+               OpStore %52 %int_0 None
+         %53 = OpAccessChain %_ptr_Workgroup_int %wg %uint_1
+               OpStore %53 %int_0 None
+         %54 = OpAccessChain %_ptr_Workgroup_int %wg %uint_2
+               OpStore %54 %int_0 None
+         %55 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_0
+               OpStore %55 %int_0 None
+         %56 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_1 %uint_0
+               OpStore %56 %int_0 None
+         %57 = OpAccessChain %_ptr_Workgroup_uint %wg %uint_3 %uint_1 %uint_1
+               OpAtomicStore %57 %uint_2 %uint_0 %uint_0
+         %59 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_1 %uint_2
+               OpStore %59 %int_0 None
+         %60 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_1 %uint_3
+               OpStore %60 %int_0 None
+         %61 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_2
+               OpStore %61 %int_0 None
+         %62 = OpAccessChain %_ptr_Workgroup_int %wg %uint_3 %uint_3
+               OpStore %62 %int_0 None
+               OpBranch %50
+         %50 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpStore %local_invocation_index_1 %local_invocation_index_1_param None
+         %64 = OpFunctionCall %void %compute_main_1
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %41
+         %66 = OpLabel
+         %67 = OpLoad %uint %compute_main_local_invocation_index_Input None
+         %68 = OpFunctionCall %void %compute_main_inner_0 %67
+               OpReturn
+               OpFunctionEnd

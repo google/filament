@@ -1,0 +1,43 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  float2 v2f = 0.0f;
+  float3 v3f = 0.0f;
+  float4 v4f = 0.0f;
+  int2 v2i = 0;
+  int3 v3i = 0;
+  int4 v4i = 0;
+  uint2 v2u = 0u;
+  uint3 v3u = 0u;
+  uint4 v4u = 0u;
+  bool2 v2b = false;
+  bool3 v3b = false;
+  bool4 v4b = false;
+  {
+    int i = 0;
+    while(true) {
+      if ((i < 2)) {
+      } else {
+        break;
+      }
+      v2f[min(uint(i), 1u)] = 1.0f;
+      v2i[min(uint(i), 1u)] = 1;
+      v2u[min(uint(i), 1u)] = 1u;
+      v2b[min(uint(i), 1u)] = true;
+      {
+        i = as_type<int>((as_type<uint>(i) + as_type<uint>(1)));
+      }
+      continue;
+    }
+  }
+  int i = 0;
+  v3f[min(uint(i), 2u)] = 1.0f;
+  v4f[min(uint(i), 3u)] = 1.0f;
+  v3i[min(uint(i), 2u)] = 1;
+  v4i[min(uint(i), 3u)] = 1;
+  v3u[min(uint(i), 2u)] = 1u;
+  v4u[min(uint(i), 3u)] = 1u;
+  v3b[min(uint(i), 2u)] = true;
+  v4b[min(uint(i), 3u)] = true;
+}

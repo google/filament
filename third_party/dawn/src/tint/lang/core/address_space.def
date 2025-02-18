@@ -1,0 +1,13 @@
+// https://www.w3.org/TR/WGSL/#address-space
+enum address_space {
+  function
+  private
+  workgroup
+  uniform
+  storage
+  push_constant
+  pixel_local
+  @internal __in
+  @internal __out
+  @internal handle
+}

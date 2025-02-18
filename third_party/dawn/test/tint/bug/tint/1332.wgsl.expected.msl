@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void compute_main() {
+  float const a = 1.24000000953674316406f;
+  float b = max(a, 1.17549435e-38f);
+}

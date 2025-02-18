@@ -1,0 +1,128 @@
+What are these headers ?
+------------------------
+This is the canonical source of drm headers that user space should use for
+communicating with the kernel DRM subsystem.
+
+They flow from the kernel, thus any changes must be merged there first.
+Do _not_ attempt to "fix" these by deviating from the kernel ones !
+
+
+Non-linux platforms - changes/patches
+-------------------------------------
+If your platform has local changes, please send them upstream for inclusion.
+Even if your patches don't get accepted in their current form, devs will
+give you feedback on how to address things properly.
+
+git send-email --subject-prefix="PATCH libdrm" your patches to dri-devel
+mailing list.
+
+Before doing so, please consider the following:
+ - Have the [libdrm vs kernel] headers on your platform deviated ?
+Consider unifying them first.
+
+ - Have you introduced additional ABI that's not available in Linux ?
+Propose it for [Linux kernel] upstream inclusion.
+If that doesn't work out (hopefully it never does), move it to another header
+and/or keep the change(s) local ?
+
+ - Are your changes DRI1/UMS specific ?
+There is virtually no interest/power in keeping those legacy interfaces. They
+are around due to the kernel "thou shalt not break existing user space" rule.
+
+Consider porting the driver to DRI2/KMS - all (almost?) sensible hardware is
+capable of supporting those.
+
+
+Which headers go where ?
+------------------------
+A snipped from the, now removed, Makefile.am used to state:
+
+  XXX airlied says, nothing besides *_drm.h and drm*.h should be necessary.
+  however, r300 and via need their reg headers installed in order to build.
+  better solutions are welcome.
+
+Obviously the r300 and via headers are no longer around ;-)
+
+Reason behind is that the drm headers can be used as a basic communications
+channel with the respective kernel modules. If more advanced functionality is
+required one can pull the specific libdrm_$driver which is free to pull
+additional files from the kernel.
+
+For example: nouveau has nouveau/nvif/*.h while vc4 has vc4/*.h
+
+If your driver is still in prototyping/staging state, consider moving the
+$driver_drm.h into $driver and _not_ installing it. An header providing opaque
+definitions and access [via $driver_drmif.h or similar] would be better fit.
+
+
+When and which headers to update
+--------------------------------
+Ideally all files will be synced (updated) with the latest released kernel on
+each libdrm release. Sadly that's not yet possible since quite a few headers
+differ significantly - see Outdated or Broken Headers section below.
+
+That said, it's up-to the individual developers to sync with newer version
+(from drm-next) as they see fit.
+
+
+When and how to update these files
+----------------------------------
+Note: One should not do _any_ changes to the files apart from the steps below.
+
+In order to update the files do the following:
+ - Switch to a Linux kernel tree/branch which is not rebased.
+   For example: drm-next (https://cgit.freedesktop.org/drm/drm)
+ - Install the headers via `make headers_install' to a separate location.
+ - Copy the drm header[s] + git add + git commit.
+ - Note: Your commit message must include:
+   a) Brief summary on the delta. If there's any change that looks like an
+API/ABI break one _must_ explicitly state why it's safe to do so.
+   b) "Generated using make headers_install."
+   c) "Generated from $tree/branch commit $sha"
+
+
+Outdated or Broken Headers
+--------------------------
+This section contains a list of headers and the respective "issues" they might
+have relative to their kernel equivalent.
+
+Most UMS headers:
+ - Not using fixed size integers - compat ioctls are broken.
+Status: ?
+Promote to fixed size ints, which match the current (32bit) ones.
+
+nouveau_drm.h
+ - Missing macros NOUVEAU_GETPARAM*, NOUVEAU_DRM_HEADER_PATCHLEVEL, structs,
+enums
+Status: Deliberate UABI choice; nouveau hides the exact kernel ABI behind libdrm
+
+r128_drm.h
+ - Broken compat ioctls.
+
+radeon_drm.h
+ - Missing RADEON_TILING_R600_NO_SCANOUT, CIK_TILE_MODE_*, broken UMS ioctls
+ - Both kernel and libdrm: missing padding -
+drm_radeon_gem_{create,{g,s}et_tiling,set_domain} others ?
+Status: ?
+
+savage_drm.h
+ - Renamed ioctls - DRM_IOCTL_SAVAGE_{,BCI}_EVENT_EMIT, compat ioctls are broken.
+Status: ?
+
+sis_drm.h
+ - Borken ioctls + libdrm uses int vs kernel long
+Status: ?
+
+via_drm.h
+ - Borken ioctls - libdrm int vs kernel long
+Status: ?
+
+
+omap_drm.h (living in $TOP/omap)
+ - License mismatch, missing DRM_IOCTL_OMAP_GEM_NEW and related struct
+Status: ?
+
+exynos_drm.h (living in $TOP/exynos)
+ - License mismatch, now using fixed size ints (but not everywhere). Lots of
+new stuff.
+Status: ?

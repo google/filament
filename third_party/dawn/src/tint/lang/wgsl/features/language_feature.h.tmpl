@@ -1,0 +1,36 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate language_feature.h
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $enum := ($I.Sem.Enum "language_feature") -}}
+
+#ifndef SRC_TINT_LANG_WGSL_FEATURES_LANGUAGE_FEATURE_H_
+#define SRC_TINT_LANG_WGSL_FEATURES_LANGUAGE_FEATURE_H_
+
+#include <cstdint>
+#include <string>
+
+namespace tint::wgsl {
+
+/// An enumerator of WGSL language features
+/// @see src/tint/lang/wgsl/intrinsics.def for language feature descriptions
+{{ Eval "DeclareEnum" "Enum" $enum "EmitOStream" false}}
+
+/// All features
+static constexpr LanguageFeature kAllLanguageFeatures[] = {
+{{-   range $entry := $enum.Entries }}
+    LanguageFeature::k{{PascalCase $entry.Name}},
+{{-   end }}
+};
+
+}  // namespace tint::wgsl
+
+#endif  // SRC_TINT_LANG_WGSL_FEATURES_LANGUAGE_FEATURE_H_

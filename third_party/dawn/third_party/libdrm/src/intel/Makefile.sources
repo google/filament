@@ -1,0 +1,15 @@
+LIBDRM_INTEL_FILES := \
+	intel_bufmgr.c \
+	intel_bufmgr_priv.h \
+	intel_bufmgr_fake.c \
+	intel_bufmgr_gem.c \
+	intel_decode.c \
+	intel_chipset.h \
+	mm.c \
+	mm.h \
+	uthash.h
+
+LIBDRM_INTEL_H_FILES := \
+	intel_bufmgr.h \
+	intel_aub.h \
+	intel_debug.h

@@ -1,0 +1,651 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 331
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %tint_symbol "tint_symbol" %tint_symbol_local_invocation_index_Input
+               OpExecutionMode %tint_symbol LocalSize 1 1 1
+               OpName %m00 "m00"
+               OpName %m01 "m01"
+               OpName %m02 "m02"
+               OpName %m03 "m03"
+               OpName %m04 "m04"
+               OpName %m05 "m05"
+               OpName %m06 "m06"
+               OpName %m07 "m07"
+               OpName %m08 "m08"
+               OpName %m09 "m09"
+               OpName %m10 "m10"
+               OpName %m11 "m11"
+               OpName %m12 "m12"
+               OpName %m13 "m13"
+               OpName %m14 "m14"
+               OpName %m15 "m15"
+               OpName %m16 "m16"
+               OpName %m17 "m17"
+               OpName %m18 "m18"
+               OpName %m19 "m19"
+               OpName %m20 "m20"
+               OpName %m21 "m21"
+               OpName %m22 "m22"
+               OpName %m23 "m23"
+               OpName %m24 "m24"
+               OpName %m25 "m25"
+               OpName %m26 "m26"
+               OpName %m27 "m27"
+               OpName %m28 "m28"
+               OpName %m29 "m29"
+               OpName %m30 "m30"
+               OpName %m31 "m31"
+               OpName %m32 "m32"
+               OpName %m33 "m33"
+               OpName %m34 "m34"
+               OpName %m35 "m35"
+               OpName %m36 "m36"
+               OpName %m37 "m37"
+               OpName %m38 "m38"
+               OpName %m39 "m39"
+               OpName %m40 "m40"
+               OpName %m41 "m41"
+               OpName %m42 "m42"
+               OpName %m43 "m43"
+               OpName %m44 "m44"
+               OpName %m45 "m45"
+               OpName %m46 "m46"
+               OpName %m47 "m47"
+               OpName %m48 "m48"
+               OpName %m49 "m49"
+               OpName %m50 "m50"
+               OpName %m51 "m51"
+               OpName %m52 "m52"
+               OpName %m53 "m53"
+               OpName %m54 "m54"
+               OpName %m55 "m55"
+               OpName %m56 "m56"
+               OpName %m57 "m57"
+               OpName %m58 "m58"
+               OpName %m59 "m59"
+               OpName %m60 "m60"
+               OpName %m61 "m61"
+               OpName %m62 "m62"
+               OpName %m63 "m63"
+               OpName %m64 "m64"
+               OpName %m65 "m65"
+               OpName %m66 "m66"
+               OpName %m67 "m67"
+               OpName %m68 "m68"
+               OpName %m69 "m69"
+               OpName %m70 "m70"
+               OpName %m71 "m71"
+               OpName %m72 "m72"
+               OpName %m73 "m73"
+               OpName %m74 "m74"
+               OpName %m75 "m75"
+               OpName %m76 "m76"
+               OpName %m77 "m77"
+               OpName %m78 "m78"
+               OpName %m79 "m79"
+               OpName %m80 "m80"
+               OpName %m81 "m81"
+               OpName %m82 "m82"
+               OpName %m83 "m83"
+               OpName %m84 "m84"
+               OpName %m85 "m85"
+               OpName %m86 "m86"
+               OpName %m87 "m87"
+               OpName %m88 "m88"
+               OpName %m89 "m89"
+               OpName %m90 "m90"
+               OpName %m91 "m91"
+               OpName %m92 "m92"
+               OpName %m93 "m93"
+               OpName %m94 "m94"
+               OpName %m95 "m95"
+               OpName %m96 "m96"
+               OpName %m97 "m97"
+               OpName %m98 "m98"
+               OpName %m99 "m99"
+               OpName %tint_symbol_local_invocation_index_Input "tint_symbol_local_invocation_index_Input"
+               OpName %tint_symbol_inner "tint_symbol_inner"
+               OpName %idx "idx"
+               OpName %tint_symbol "tint_symbol"
+               OpDecorate %tint_symbol_local_invocation_index_Input BuiltIn LocalInvocationIndex
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+%_ptr_Workgroup_mat2v2float = OpTypePointer Workgroup %mat2v2float
+        %m00 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m01 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m02 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m03 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m04 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m05 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m06 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m07 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m08 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m09 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m10 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m11 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m12 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m13 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m14 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m15 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m16 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m17 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m18 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m19 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m20 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m21 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m22 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m23 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m24 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m25 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m26 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m27 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m28 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m29 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m30 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m31 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m32 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m33 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m34 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m35 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m36 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m37 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m38 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m39 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m40 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m41 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m42 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m43 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m44 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m45 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m46 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m47 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m48 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m49 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m50 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m51 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m52 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m53 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m54 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m55 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m56 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m57 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m58 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m59 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m60 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m61 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m62 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m63 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m64 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m65 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m66 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m67 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m68 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m69 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m70 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m71 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m72 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m73 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m74 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m75 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m76 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m77 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m78 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m79 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m80 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m81 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m82 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m83 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m84 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m85 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m86 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m87 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m88 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m89 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m90 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m91 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m92 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m93 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m94 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m95 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m96 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m97 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m98 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+        %m99 = OpVariable %_ptr_Workgroup_mat2v2float Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%tint_symbol_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+        %111 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+        %118 = OpConstantNull %mat2v2float
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+%_ptr_Workgroup_v2float = OpTypePointer Workgroup %v2float
+     %uint_0 = OpConstant %uint 0
+%_ptr_Workgroup_float = OpTypePointer Workgroup %float
+    %float_1 = OpConstant %float 1
+        %327 = OpTypeFunction %void
+%tint_symbol_inner = OpFunction %void None %111
+        %idx = OpFunctionParameter %uint
+        %112 = OpLabel
+        %113 = OpULessThan %bool %idx %uint_1
+               OpSelectionMerge %116 None
+               OpBranchConditional %113 %117 %116
+        %117 = OpLabel
+               OpStore %m00 %118 None
+               OpStore %m01 %118 None
+               OpStore %m02 %118 None
+               OpStore %m03 %118 None
+               OpStore %m04 %118 None
+               OpStore %m05 %118 None
+               OpStore %m06 %118 None
+               OpStore %m07 %118 None
+               OpStore %m08 %118 None
+               OpStore %m09 %118 None
+               OpStore %m10 %118 None
+               OpStore %m11 %118 None
+               OpStore %m12 %118 None
+               OpStore %m13 %118 None
+               OpStore %m14 %118 None
+               OpStore %m15 %118 None
+               OpStore %m16 %118 None
+               OpStore %m17 %118 None
+               OpStore %m18 %118 None
+               OpStore %m19 %118 None
+               OpStore %m20 %118 None
+               OpStore %m21 %118 None
+               OpStore %m22 %118 None
+               OpStore %m23 %118 None
+               OpStore %m24 %118 None
+               OpStore %m25 %118 None
+               OpStore %m26 %118 None
+               OpStore %m27 %118 None
+               OpStore %m28 %118 None
+               OpStore %m29 %118 None
+               OpStore %m30 %118 None
+               OpStore %m31 %118 None
+               OpStore %m32 %118 None
+               OpStore %m33 %118 None
+               OpStore %m34 %118 None
+               OpStore %m35 %118 None
+               OpStore %m36 %118 None
+               OpStore %m37 %118 None
+               OpStore %m38 %118 None
+               OpStore %m39 %118 None
+               OpStore %m40 %118 None
+               OpStore %m41 %118 None
+               OpStore %m42 %118 None
+               OpStore %m43 %118 None
+               OpStore %m44 %118 None
+               OpStore %m45 %118 None
+               OpStore %m46 %118 None
+               OpStore %m47 %118 None
+               OpStore %m48 %118 None
+               OpStore %m49 %118 None
+               OpStore %m50 %118 None
+               OpStore %m51 %118 None
+               OpStore %m52 %118 None
+               OpStore %m53 %118 None
+               OpStore %m54 %118 None
+               OpStore %m55 %118 None
+               OpStore %m56 %118 None
+               OpStore %m57 %118 None
+               OpStore %m58 %118 None
+               OpStore %m59 %118 None
+               OpStore %m60 %118 None
+               OpStore %m61 %118 None
+               OpStore %m62 %118 None
+               OpStore %m63 %118 None
+               OpStore %m64 %118 None
+               OpStore %m65 %118 None
+               OpStore %m66 %118 None
+               OpStore %m67 %118 None
+               OpStore %m68 %118 None
+               OpStore %m69 %118 None
+               OpStore %m70 %118 None
+               OpStore %m71 %118 None
+               OpStore %m72 %118 None
+               OpStore %m73 %118 None
+               OpStore %m74 %118 None
+               OpStore %m75 %118 None
+               OpStore %m76 %118 None
+               OpStore %m77 %118 None
+               OpStore %m78 %118 None
+               OpStore %m79 %118 None
+               OpStore %m80 %118 None
+               OpStore %m81 %118 None
+               OpStore %m82 %118 None
+               OpStore %m83 %118 None
+               OpStore %m84 %118 None
+               OpStore %m85 %118 None
+               OpStore %m86 %118 None
+               OpStore %m87 %118 None
+               OpStore %m88 %118 None
+               OpStore %m89 %118 None
+               OpStore %m90 %118 None
+               OpStore %m91 %118 None
+               OpStore %m92 %118 None
+               OpStore %m93 %118 None
+               OpStore %m94 %118 None
+               OpStore %m95 %118 None
+               OpStore %m96 %118 None
+               OpStore %m97 %118 None
+               OpStore %m98 %118 None
+               OpStore %m99 %118 None
+               OpBranch %116
+        %116 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+        %122 = OpAccessChain %_ptr_Workgroup_v2float %m00 %uint_0
+        %125 = OpAccessChain %_ptr_Workgroup_float %122 %uint_0
+               OpStore %125 %float_1 None
+        %128 = OpAccessChain %_ptr_Workgroup_v2float %m01 %uint_0
+        %129 = OpAccessChain %_ptr_Workgroup_float %128 %uint_0
+               OpStore %129 %float_1 None
+        %130 = OpAccessChain %_ptr_Workgroup_v2float %m02 %uint_0
+        %131 = OpAccessChain %_ptr_Workgroup_float %130 %uint_0
+               OpStore %131 %float_1 None
+        %132 = OpAccessChain %_ptr_Workgroup_v2float %m03 %uint_0
+        %133 = OpAccessChain %_ptr_Workgroup_float %132 %uint_0
+               OpStore %133 %float_1 None
+        %134 = OpAccessChain %_ptr_Workgroup_v2float %m04 %uint_0
+        %135 = OpAccessChain %_ptr_Workgroup_float %134 %uint_0
+               OpStore %135 %float_1 None
+        %136 = OpAccessChain %_ptr_Workgroup_v2float %m05 %uint_0
+        %137 = OpAccessChain %_ptr_Workgroup_float %136 %uint_0
+               OpStore %137 %float_1 None
+        %138 = OpAccessChain %_ptr_Workgroup_v2float %m06 %uint_0
+        %139 = OpAccessChain %_ptr_Workgroup_float %138 %uint_0
+               OpStore %139 %float_1 None
+        %140 = OpAccessChain %_ptr_Workgroup_v2float %m07 %uint_0
+        %141 = OpAccessChain %_ptr_Workgroup_float %140 %uint_0
+               OpStore %141 %float_1 None
+        %142 = OpAccessChain %_ptr_Workgroup_v2float %m08 %uint_0
+        %143 = OpAccessChain %_ptr_Workgroup_float %142 %uint_0
+               OpStore %143 %float_1 None
+        %144 = OpAccessChain %_ptr_Workgroup_v2float %m09 %uint_0
+        %145 = OpAccessChain %_ptr_Workgroup_float %144 %uint_0
+               OpStore %145 %float_1 None
+        %146 = OpAccessChain %_ptr_Workgroup_v2float %m10 %uint_0
+        %147 = OpAccessChain %_ptr_Workgroup_float %146 %uint_0
+               OpStore %147 %float_1 None
+        %148 = OpAccessChain %_ptr_Workgroup_v2float %m11 %uint_0
+        %149 = OpAccessChain %_ptr_Workgroup_float %148 %uint_0
+               OpStore %149 %float_1 None
+        %150 = OpAccessChain %_ptr_Workgroup_v2float %m12 %uint_0
+        %151 = OpAccessChain %_ptr_Workgroup_float %150 %uint_0
+               OpStore %151 %float_1 None
+        %152 = OpAccessChain %_ptr_Workgroup_v2float %m13 %uint_0
+        %153 = OpAccessChain %_ptr_Workgroup_float %152 %uint_0
+               OpStore %153 %float_1 None
+        %154 = OpAccessChain %_ptr_Workgroup_v2float %m14 %uint_0
+        %155 = OpAccessChain %_ptr_Workgroup_float %154 %uint_0
+               OpStore %155 %float_1 None
+        %156 = OpAccessChain %_ptr_Workgroup_v2float %m15 %uint_0
+        %157 = OpAccessChain %_ptr_Workgroup_float %156 %uint_0
+               OpStore %157 %float_1 None
+        %158 = OpAccessChain %_ptr_Workgroup_v2float %m16 %uint_0
+        %159 = OpAccessChain %_ptr_Workgroup_float %158 %uint_0
+               OpStore %159 %float_1 None
+        %160 = OpAccessChain %_ptr_Workgroup_v2float %m17 %uint_0
+        %161 = OpAccessChain %_ptr_Workgroup_float %160 %uint_0
+               OpStore %161 %float_1 None
+        %162 = OpAccessChain %_ptr_Workgroup_v2float %m18 %uint_0
+        %163 = OpAccessChain %_ptr_Workgroup_float %162 %uint_0
+               OpStore %163 %float_1 None
+        %164 = OpAccessChain %_ptr_Workgroup_v2float %m19 %uint_0
+        %165 = OpAccessChain %_ptr_Workgroup_float %164 %uint_0
+               OpStore %165 %float_1 None
+        %166 = OpAccessChain %_ptr_Workgroup_v2float %m20 %uint_0
+        %167 = OpAccessChain %_ptr_Workgroup_float %166 %uint_0
+               OpStore %167 %float_1 None
+        %168 = OpAccessChain %_ptr_Workgroup_v2float %m21 %uint_0
+        %169 = OpAccessChain %_ptr_Workgroup_float %168 %uint_0
+               OpStore %169 %float_1 None
+        %170 = OpAccessChain %_ptr_Workgroup_v2float %m22 %uint_0
+        %171 = OpAccessChain %_ptr_Workgroup_float %170 %uint_0
+               OpStore %171 %float_1 None
+        %172 = OpAccessChain %_ptr_Workgroup_v2float %m23 %uint_0
+        %173 = OpAccessChain %_ptr_Workgroup_float %172 %uint_0
+               OpStore %173 %float_1 None
+        %174 = OpAccessChain %_ptr_Workgroup_v2float %m24 %uint_0
+        %175 = OpAccessChain %_ptr_Workgroup_float %174 %uint_0
+               OpStore %175 %float_1 None
+        %176 = OpAccessChain %_ptr_Workgroup_v2float %m25 %uint_0
+        %177 = OpAccessChain %_ptr_Workgroup_float %176 %uint_0
+               OpStore %177 %float_1 None
+        %178 = OpAccessChain %_ptr_Workgroup_v2float %m26 %uint_0
+        %179 = OpAccessChain %_ptr_Workgroup_float %178 %uint_0
+               OpStore %179 %float_1 None
+        %180 = OpAccessChain %_ptr_Workgroup_v2float %m27 %uint_0
+        %181 = OpAccessChain %_ptr_Workgroup_float %180 %uint_0
+               OpStore %181 %float_1 None
+        %182 = OpAccessChain %_ptr_Workgroup_v2float %m28 %uint_0
+        %183 = OpAccessChain %_ptr_Workgroup_float %182 %uint_0
+               OpStore %183 %float_1 None
+        %184 = OpAccessChain %_ptr_Workgroup_v2float %m29 %uint_0
+        %185 = OpAccessChain %_ptr_Workgroup_float %184 %uint_0
+               OpStore %185 %float_1 None
+        %186 = OpAccessChain %_ptr_Workgroup_v2float %m30 %uint_0
+        %187 = OpAccessChain %_ptr_Workgroup_float %186 %uint_0
+               OpStore %187 %float_1 None
+        %188 = OpAccessChain %_ptr_Workgroup_v2float %m31 %uint_0
+        %189 = OpAccessChain %_ptr_Workgroup_float %188 %uint_0
+               OpStore %189 %float_1 None
+        %190 = OpAccessChain %_ptr_Workgroup_v2float %m32 %uint_0
+        %191 = OpAccessChain %_ptr_Workgroup_float %190 %uint_0
+               OpStore %191 %float_1 None
+        %192 = OpAccessChain %_ptr_Workgroup_v2float %m33 %uint_0
+        %193 = OpAccessChain %_ptr_Workgroup_float %192 %uint_0
+               OpStore %193 %float_1 None
+        %194 = OpAccessChain %_ptr_Workgroup_v2float %m34 %uint_0
+        %195 = OpAccessChain %_ptr_Workgroup_float %194 %uint_0
+               OpStore %195 %float_1 None
+        %196 = OpAccessChain %_ptr_Workgroup_v2float %m35 %uint_0
+        %197 = OpAccessChain %_ptr_Workgroup_float %196 %uint_0
+               OpStore %197 %float_1 None
+        %198 = OpAccessChain %_ptr_Workgroup_v2float %m36 %uint_0
+        %199 = OpAccessChain %_ptr_Workgroup_float %198 %uint_0
+               OpStore %199 %float_1 None
+        %200 = OpAccessChain %_ptr_Workgroup_v2float %m37 %uint_0
+        %201 = OpAccessChain %_ptr_Workgroup_float %200 %uint_0
+               OpStore %201 %float_1 None
+        %202 = OpAccessChain %_ptr_Workgroup_v2float %m38 %uint_0
+        %203 = OpAccessChain %_ptr_Workgroup_float %202 %uint_0
+               OpStore %203 %float_1 None
+        %204 = OpAccessChain %_ptr_Workgroup_v2float %m39 %uint_0
+        %205 = OpAccessChain %_ptr_Workgroup_float %204 %uint_0
+               OpStore %205 %float_1 None
+        %206 = OpAccessChain %_ptr_Workgroup_v2float %m40 %uint_0
+        %207 = OpAccessChain %_ptr_Workgroup_float %206 %uint_0
+               OpStore %207 %float_1 None
+        %208 = OpAccessChain %_ptr_Workgroup_v2float %m41 %uint_0
+        %209 = OpAccessChain %_ptr_Workgroup_float %208 %uint_0
+               OpStore %209 %float_1 None
+        %210 = OpAccessChain %_ptr_Workgroup_v2float %m42 %uint_0
+        %211 = OpAccessChain %_ptr_Workgroup_float %210 %uint_0
+               OpStore %211 %float_1 None
+        %212 = OpAccessChain %_ptr_Workgroup_v2float %m43 %uint_0
+        %213 = OpAccessChain %_ptr_Workgroup_float %212 %uint_0
+               OpStore %213 %float_1 None
+        %214 = OpAccessChain %_ptr_Workgroup_v2float %m44 %uint_0
+        %215 = OpAccessChain %_ptr_Workgroup_float %214 %uint_0
+               OpStore %215 %float_1 None
+        %216 = OpAccessChain %_ptr_Workgroup_v2float %m45 %uint_0
+        %217 = OpAccessChain %_ptr_Workgroup_float %216 %uint_0
+               OpStore %217 %float_1 None
+        %218 = OpAccessChain %_ptr_Workgroup_v2float %m46 %uint_0
+        %219 = OpAccessChain %_ptr_Workgroup_float %218 %uint_0
+               OpStore %219 %float_1 None
+        %220 = OpAccessChain %_ptr_Workgroup_v2float %m47 %uint_0
+        %221 = OpAccessChain %_ptr_Workgroup_float %220 %uint_0
+               OpStore %221 %float_1 None
+        %222 = OpAccessChain %_ptr_Workgroup_v2float %m48 %uint_0
+        %223 = OpAccessChain %_ptr_Workgroup_float %222 %uint_0
+               OpStore %223 %float_1 None
+        %224 = OpAccessChain %_ptr_Workgroup_v2float %m49 %uint_0
+        %225 = OpAccessChain %_ptr_Workgroup_float %224 %uint_0
+               OpStore %225 %float_1 None
+        %226 = OpAccessChain %_ptr_Workgroup_v2float %m50 %uint_0
+        %227 = OpAccessChain %_ptr_Workgroup_float %226 %uint_0
+               OpStore %227 %float_1 None
+        %228 = OpAccessChain %_ptr_Workgroup_v2float %m51 %uint_0
+        %229 = OpAccessChain %_ptr_Workgroup_float %228 %uint_0
+               OpStore %229 %float_1 None
+        %230 = OpAccessChain %_ptr_Workgroup_v2float %m52 %uint_0
+        %231 = OpAccessChain %_ptr_Workgroup_float %230 %uint_0
+               OpStore %231 %float_1 None
+        %232 = OpAccessChain %_ptr_Workgroup_v2float %m53 %uint_0
+        %233 = OpAccessChain %_ptr_Workgroup_float %232 %uint_0
+               OpStore %233 %float_1 None
+        %234 = OpAccessChain %_ptr_Workgroup_v2float %m54 %uint_0
+        %235 = OpAccessChain %_ptr_Workgroup_float %234 %uint_0
+               OpStore %235 %float_1 None
+        %236 = OpAccessChain %_ptr_Workgroup_v2float %m55 %uint_0
+        %237 = OpAccessChain %_ptr_Workgroup_float %236 %uint_0
+               OpStore %237 %float_1 None
+        %238 = OpAccessChain %_ptr_Workgroup_v2float %m56 %uint_0
+        %239 = OpAccessChain %_ptr_Workgroup_float %238 %uint_0
+               OpStore %239 %float_1 None
+        %240 = OpAccessChain %_ptr_Workgroup_v2float %m57 %uint_0
+        %241 = OpAccessChain %_ptr_Workgroup_float %240 %uint_0
+               OpStore %241 %float_1 None
+        %242 = OpAccessChain %_ptr_Workgroup_v2float %m58 %uint_0
+        %243 = OpAccessChain %_ptr_Workgroup_float %242 %uint_0
+               OpStore %243 %float_1 None
+        %244 = OpAccessChain %_ptr_Workgroup_v2float %m59 %uint_0
+        %245 = OpAccessChain %_ptr_Workgroup_float %244 %uint_0
+               OpStore %245 %float_1 None
+        %246 = OpAccessChain %_ptr_Workgroup_v2float %m60 %uint_0
+        %247 = OpAccessChain %_ptr_Workgroup_float %246 %uint_0
+               OpStore %247 %float_1 None
+        %248 = OpAccessChain %_ptr_Workgroup_v2float %m61 %uint_0
+        %249 = OpAccessChain %_ptr_Workgroup_float %248 %uint_0
+               OpStore %249 %float_1 None
+        %250 = OpAccessChain %_ptr_Workgroup_v2float %m62 %uint_0
+        %251 = OpAccessChain %_ptr_Workgroup_float %250 %uint_0
+               OpStore %251 %float_1 None
+        %252 = OpAccessChain %_ptr_Workgroup_v2float %m63 %uint_0
+        %253 = OpAccessChain %_ptr_Workgroup_float %252 %uint_0
+               OpStore %253 %float_1 None
+        %254 = OpAccessChain %_ptr_Workgroup_v2float %m64 %uint_0
+        %255 = OpAccessChain %_ptr_Workgroup_float %254 %uint_0
+               OpStore %255 %float_1 None
+        %256 = OpAccessChain %_ptr_Workgroup_v2float %m65 %uint_0
+        %257 = OpAccessChain %_ptr_Workgroup_float %256 %uint_0
+               OpStore %257 %float_1 None
+        %258 = OpAccessChain %_ptr_Workgroup_v2float %m66 %uint_0
+        %259 = OpAccessChain %_ptr_Workgroup_float %258 %uint_0
+               OpStore %259 %float_1 None
+        %260 = OpAccessChain %_ptr_Workgroup_v2float %m67 %uint_0
+        %261 = OpAccessChain %_ptr_Workgroup_float %260 %uint_0
+               OpStore %261 %float_1 None
+        %262 = OpAccessChain %_ptr_Workgroup_v2float %m68 %uint_0
+        %263 = OpAccessChain %_ptr_Workgroup_float %262 %uint_0
+               OpStore %263 %float_1 None
+        %264 = OpAccessChain %_ptr_Workgroup_v2float %m69 %uint_0
+        %265 = OpAccessChain %_ptr_Workgroup_float %264 %uint_0
+               OpStore %265 %float_1 None
+        %266 = OpAccessChain %_ptr_Workgroup_v2float %m70 %uint_0
+        %267 = OpAccessChain %_ptr_Workgroup_float %266 %uint_0
+               OpStore %267 %float_1 None
+        %268 = OpAccessChain %_ptr_Workgroup_v2float %m71 %uint_0
+        %269 = OpAccessChain %_ptr_Workgroup_float %268 %uint_0
+               OpStore %269 %float_1 None
+        %270 = OpAccessChain %_ptr_Workgroup_v2float %m72 %uint_0
+        %271 = OpAccessChain %_ptr_Workgroup_float %270 %uint_0
+               OpStore %271 %float_1 None
+        %272 = OpAccessChain %_ptr_Workgroup_v2float %m73 %uint_0
+        %273 = OpAccessChain %_ptr_Workgroup_float %272 %uint_0
+               OpStore %273 %float_1 None
+        %274 = OpAccessChain %_ptr_Workgroup_v2float %m74 %uint_0
+        %275 = OpAccessChain %_ptr_Workgroup_float %274 %uint_0
+               OpStore %275 %float_1 None
+        %276 = OpAccessChain %_ptr_Workgroup_v2float %m75 %uint_0
+        %277 = OpAccessChain %_ptr_Workgroup_float %276 %uint_0
+               OpStore %277 %float_1 None
+        %278 = OpAccessChain %_ptr_Workgroup_v2float %m76 %uint_0
+        %279 = OpAccessChain %_ptr_Workgroup_float %278 %uint_0
+               OpStore %279 %float_1 None
+        %280 = OpAccessChain %_ptr_Workgroup_v2float %m77 %uint_0
+        %281 = OpAccessChain %_ptr_Workgroup_float %280 %uint_0
+               OpStore %281 %float_1 None
+        %282 = OpAccessChain %_ptr_Workgroup_v2float %m78 %uint_0
+        %283 = OpAccessChain %_ptr_Workgroup_float %282 %uint_0
+               OpStore %283 %float_1 None
+        %284 = OpAccessChain %_ptr_Workgroup_v2float %m79 %uint_0
+        %285 = OpAccessChain %_ptr_Workgroup_float %284 %uint_0
+               OpStore %285 %float_1 None
+        %286 = OpAccessChain %_ptr_Workgroup_v2float %m80 %uint_0
+        %287 = OpAccessChain %_ptr_Workgroup_float %286 %uint_0
+               OpStore %287 %float_1 None
+        %288 = OpAccessChain %_ptr_Workgroup_v2float %m81 %uint_0
+        %289 = OpAccessChain %_ptr_Workgroup_float %288 %uint_0
+               OpStore %289 %float_1 None
+        %290 = OpAccessChain %_ptr_Workgroup_v2float %m82 %uint_0
+        %291 = OpAccessChain %_ptr_Workgroup_float %290 %uint_0
+               OpStore %291 %float_1 None
+        %292 = OpAccessChain %_ptr_Workgroup_v2float %m83 %uint_0
+        %293 = OpAccessChain %_ptr_Workgroup_float %292 %uint_0
+               OpStore %293 %float_1 None
+        %294 = OpAccessChain %_ptr_Workgroup_v2float %m84 %uint_0
+        %295 = OpAccessChain %_ptr_Workgroup_float %294 %uint_0
+               OpStore %295 %float_1 None
+        %296 = OpAccessChain %_ptr_Workgroup_v2float %m85 %uint_0
+        %297 = OpAccessChain %_ptr_Workgroup_float %296 %uint_0
+               OpStore %297 %float_1 None
+        %298 = OpAccessChain %_ptr_Workgroup_v2float %m86 %uint_0
+        %299 = OpAccessChain %_ptr_Workgroup_float %298 %uint_0
+               OpStore %299 %float_1 None
+        %300 = OpAccessChain %_ptr_Workgroup_v2float %m87 %uint_0
+        %301 = OpAccessChain %_ptr_Workgroup_float %300 %uint_0
+               OpStore %301 %float_1 None
+        %302 = OpAccessChain %_ptr_Workgroup_v2float %m88 %uint_0
+        %303 = OpAccessChain %_ptr_Workgroup_float %302 %uint_0
+               OpStore %303 %float_1 None
+        %304 = OpAccessChain %_ptr_Workgroup_v2float %m89 %uint_0
+        %305 = OpAccessChain %_ptr_Workgroup_float %304 %uint_0
+               OpStore %305 %float_1 None
+        %306 = OpAccessChain %_ptr_Workgroup_v2float %m90 %uint_0
+        %307 = OpAccessChain %_ptr_Workgroup_float %306 %uint_0
+               OpStore %307 %float_1 None
+        %308 = OpAccessChain %_ptr_Workgroup_v2float %m91 %uint_0
+        %309 = OpAccessChain %_ptr_Workgroup_float %308 %uint_0
+               OpStore %309 %float_1 None
+        %310 = OpAccessChain %_ptr_Workgroup_v2float %m92 %uint_0
+        %311 = OpAccessChain %_ptr_Workgroup_float %310 %uint_0
+               OpStore %311 %float_1 None
+        %312 = OpAccessChain %_ptr_Workgroup_v2float %m93 %uint_0
+        %313 = OpAccessChain %_ptr_Workgroup_float %312 %uint_0
+               OpStore %313 %float_1 None
+        %314 = OpAccessChain %_ptr_Workgroup_v2float %m94 %uint_0
+        %315 = OpAccessChain %_ptr_Workgroup_float %314 %uint_0
+               OpStore %315 %float_1 None
+        %316 = OpAccessChain %_ptr_Workgroup_v2float %m95 %uint_0
+        %317 = OpAccessChain %_ptr_Workgroup_float %316 %uint_0
+               OpStore %317 %float_1 None
+        %318 = OpAccessChain %_ptr_Workgroup_v2float %m96 %uint_0
+        %319 = OpAccessChain %_ptr_Workgroup_float %318 %uint_0
+               OpStore %319 %float_1 None
+        %320 = OpAccessChain %_ptr_Workgroup_v2float %m97 %uint_0
+        %321 = OpAccessChain %_ptr_Workgroup_float %320 %uint_0
+               OpStore %321 %float_1 None
+        %322 = OpAccessChain %_ptr_Workgroup_v2float %m98 %uint_0
+        %323 = OpAccessChain %_ptr_Workgroup_float %322 %uint_0
+               OpStore %323 %float_1 None
+        %324 = OpAccessChain %_ptr_Workgroup_v2float %m99 %uint_0
+        %325 = OpAccessChain %_ptr_Workgroup_float %324 %uint_0
+               OpStore %325 %float_1 None
+               OpReturn
+               OpFunctionEnd
+%tint_symbol = OpFunction %void None %327
+        %328 = OpLabel
+        %329 = OpLoad %uint %tint_symbol_local_invocation_index_Input None
+        %330 = OpFunctionCall %void %tint_symbol_inner %329
+               OpReturn
+               OpFunctionEnd

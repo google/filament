@@ -1,0 +1,46 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "lsprotocol"
+description = 'Python types for Language Server Protocol.'
+version = "2024.0.0a1"
+authors = [
+  { name = "Microsoft Corporation", email = "lsprotocol-help@microsoft.com" },
+]
+license = { file = "LICENSE" }
+readme = { "file" = "README.md", "content-type" = "text/markdown" }
+requires-python = ">=3.8"
+maintainers = [
+  { name = "Brett Cannon", email = "brett@python.org" },
+  { name = "Karthik Nadig", email = "kanadig@microsoft.com" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["attrs>=21.3.0", "cattrs!=23.2.1"]
+
+[project.urls]
+Issues = "https://github.com/microsoft/lsprotocol/issues"
+Source = "https://github.com/microsoft/lsprotocol"
+
+[tool.flit.sdist]
+include = ["lsprotocol/", "README.md", "LICENSE"]
+exclude = ["lsprotocol/__pycache__/", "requirements.in", "requirements.txt"]
+
+[tool.mypy]
+files = "lsprotocol"
+show_error_codes = true
+strict = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+enable_recursive_aliases = true

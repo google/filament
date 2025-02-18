@@ -1,0 +1,23 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_u32 {
+  uint old_value;
+  bool exchanged;
+};
+
+struct tint_module_vars_struct {
+  device atomic_uint* a;
+};
+
+atomic_compare_exchange_result_u32 v(device atomic_uint* const atomic_ptr, uint cmp, uint val) {
+  uint old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_u32{.old_value=old_value, .exchanged=v_1};
+}
+
+kernel void v_2(device atomic_uint* a [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.a=a};
+  uint value = 42u;
+  atomic_compare_exchange_result_u32 const result = v(tint_module_vars.a, 0u, value);
+}

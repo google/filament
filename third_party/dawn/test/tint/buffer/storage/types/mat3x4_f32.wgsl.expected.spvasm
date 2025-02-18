@@ -1,0 +1,51 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 21
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %in_block 0 "inner"
+               OpName %in_block "in_block"
+               OpMemberName %out_block 0 "inner"
+               OpName %out_block "out_block"
+               OpName %main "main"
+               OpMemberDecorate %in_block 0 Offset 0
+               OpMemberDecorate %in_block 0 ColMajor
+               OpMemberDecorate %in_block 0 MatrixStride 16
+               OpDecorate %in_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %out_block 0 Offset 0
+               OpMemberDecorate %out_block 0 ColMajor
+               OpMemberDecorate %out_block 0 MatrixStride 16
+               OpDecorate %out_block Block
+               OpDecorate %7 DescriptorSet 0
+               OpDecorate %7 Binding 1
+               OpDecorate %7 Coherent
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat3v4float = OpTypeMatrix %v4float 3
+   %in_block = OpTypeStruct %mat3v4float
+%_ptr_StorageBuffer_in_block = OpTypePointer StorageBuffer %in_block
+          %1 = OpVariable %_ptr_StorageBuffer_in_block StorageBuffer
+  %out_block = OpTypeStruct %mat3v4float
+%_ptr_StorageBuffer_out_block = OpTypePointer StorageBuffer %out_block
+          %7 = OpVariable %_ptr_StorageBuffer_out_block StorageBuffer
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+%_ptr_StorageBuffer_mat3v4float = OpTypePointer StorageBuffer %mat3v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_mat3v4float_0 = OpTypePointer StorageBuffer %mat3v4float
+       %main = OpFunction %void None %12
+         %13 = OpLabel
+         %14 = OpAccessChain %_ptr_StorageBuffer_mat3v4float %1 %uint_0
+         %18 = OpLoad %mat3v4float %14 None
+         %19 = OpAccessChain %_ptr_StorageBuffer_mat3v4float_0 %7 %uint_0
+               OpStore %19 %18 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,56 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 0
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %local_invocation_index_1
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %local_invocation_index_1 "local_invocation_index_1"
+               OpName %arg_0 "arg_0"
+               OpName %atomicAnd_34edd3 "atomicAnd_34edd3"
+               OpName %arg_1 "arg_1"
+               OpName %res "res"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %local_invocation_index "local_invocation_index"
+               OpName %compute_main "compute_main"
+               OpDecorate %local_invocation_index_1 BuiltIn LocalInvocationIndex
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%local_invocation_index_1 = OpVariable %_ptr_Input_uint Input
+%_ptr_Workgroup_uint = OpTypePointer Workgroup %uint
+      %arg_0 = OpVariable %_ptr_Workgroup_uint Workgroup
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+     %uint_1 = OpConstant %uint 1
+%_ptr_Function_uint = OpTypePointer Function %uint
+         %13 = OpConstantNull %uint
+     %uint_2 = OpConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+         %20 = OpTypeFunction %void %uint
+   %uint_264 = OpConstant %uint 264
+%atomicAnd_34edd3 = OpFunction %void None %6
+          %9 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_uint Function %13
+        %res = OpVariable %_ptr_Function_uint Function %13
+               OpStore %arg_1 %uint_1
+         %18 = OpLoad %uint %arg_1
+         %14 = OpAtomicAnd %uint %arg_0 %uint_2 %uint_0 %18
+               OpStore %res %14
+               OpReturn
+               OpFunctionEnd
+%compute_main_inner = OpFunction %void None %20
+%local_invocation_index = OpFunctionParameter %uint
+         %23 = OpLabel
+               OpAtomicStore %arg_0 %uint_2 %uint_0 %13
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %28 = OpFunctionCall %void %atomicAnd_34edd3
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %6
+         %30 = OpLabel
+         %32 = OpLoad %uint %local_invocation_index_1
+         %31 = OpFunctionCall %void %compute_main_inner %32
+               OpReturn
+               OpFunctionEnd

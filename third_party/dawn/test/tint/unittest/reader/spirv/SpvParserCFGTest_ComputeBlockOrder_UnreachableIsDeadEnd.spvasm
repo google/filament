@@ -1,0 +1,50 @@
+; Test: SpvParserCFGTest_ComputeBlockOrder_UnreachableIsDeadEnd.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 1000
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+OpName %var "var"
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%bool = OpTypeBool
+%5 = OpConstantNull %bool
+%true = OpConstantTrue %bool
+%false = OpConstantFalse %bool
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%uint_42 = OpConstant %uint 42
+%int_42 = OpConstant %int 42
+%13 = OpTypeFunction %uint
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_5 = OpConstant %uint 5
+%uint_6 = OpConstant %uint 6
+%uint_7 = OpConstant %uint 7
+%uint_8 = OpConstant %uint 8
+%uint_10 = OpConstant %uint 10
+%uint_20 = OpConstant %uint 20
+%uint_30 = OpConstant %uint 30
+%uint_40 = OpConstant %uint 40
+%uint_50 = OpConstant %uint 50
+%uint_90 = OpConstant %uint 90
+%uint_99 = OpConstant %uint 99
+%_ptr_Private_uint = OpTypePointer Private %uint
+%var = OpVariable %_ptr_Private_uint Private
+%uint_999 = OpConstant %uint 999
+%100 = OpFunction %void None %3
+%10 = OpLabel
+OpBranch %20
+%15 = OpLabel
+OpReturn
+%20 = OpLabel
+OpUnreachable
+OpFunctionEnd
+

@@ -1,0 +1,31 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread float4* gl_Position;
+};
+
+struct main_out {
+  float4 gl_Position;
+};
+
+struct main_outputs {
+  float4 main_out_gl_Position [[position]];
+};
+
+void main_1(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.gl_Position) = float4(0.0f);
+}
+
+main_out main_inner(tint_module_vars_struct tint_module_vars) {
+  main_1(tint_module_vars);
+  return main_out{.gl_Position=(*tint_module_vars.gl_Position)};
+}
+
+vertex main_outputs v() {
+  thread float4 gl_Position = 0.0f;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.gl_Position=(&gl_Position)};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.main_out_gl_Position = main_inner(tint_module_vars).gl_Position;
+  return tint_wrapper_result;
+}

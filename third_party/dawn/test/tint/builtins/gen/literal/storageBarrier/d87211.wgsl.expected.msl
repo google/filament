@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void storageBarrier_d87211() {
+  threadgroup_barrier(mem_flags::mem_device);
+}
+
+kernel void compute_main() {
+  storageBarrier_d87211();
+}

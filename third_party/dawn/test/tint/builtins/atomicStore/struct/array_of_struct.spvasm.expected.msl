@@ -1,0 +1,93 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct S_atomic {
+  int x;
+  atomic_uint a;
+  uint y;
+};
+
+struct tint_module_vars_struct {
+  thread uint* local_invocation_index_1;
+  threadgroup tint_array<S_atomic, 10>* wg;
+};
+
+struct tint_symbol_1 {
+  tint_array<S_atomic, 10> tint_symbol;
+};
+
+void compute_main_inner(uint local_invocation_index_2, tint_module_vars_struct tint_module_vars) {
+  uint idx = 0u;
+  idx = local_invocation_index_2;
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      if (!((idx < 10u))) {
+        break;
+      }
+      uint const x_28 = idx;
+      (*tint_module_vars.wg)[min(x_28, 9u)].x = 0;
+      atomic_store_explicit((&(*tint_module_vars.wg)[min(x_28, 9u)].a), 0u, memory_order_relaxed);
+      (*tint_module_vars.wg)[min(x_28, 9u)].y = 0u;
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        idx = (idx + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  atomic_store_explicit((&(*tint_module_vars.wg)[4u].a), 1u, memory_order_relaxed);
+}
+
+void compute_main_1(tint_module_vars_struct tint_module_vars) {
+  uint const x_53 = (*tint_module_vars.local_invocation_index_1);
+  compute_main_inner(x_53, tint_module_vars);
+}
+
+void compute_main_inner_1(uint local_invocation_index_1_param, tint_module_vars_struct tint_module_vars) {
+  {
+    uint v = 0u;
+    v = local_invocation_index_1_param;
+    while(true) {
+      uint const v_1 = v;
+      if ((v_1 >= 10u)) {
+        break;
+      }
+      (*tint_module_vars.wg)[v_1].x = 0;
+      atomic_store_explicit((&(*tint_module_vars.wg)[v_1].a), 0u, memory_order_relaxed);
+      (*tint_module_vars.wg)[v_1].y = 0u;
+      {
+        v = (v_1 + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  (*tint_module_vars.local_invocation_index_1) = local_invocation_index_1_param;
+  compute_main_1(tint_module_vars);
+}
+
+kernel void compute_main(uint local_invocation_index_1_param [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_2 [[threadgroup(0)]]) {
+  thread uint local_invocation_index_1 = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.local_invocation_index_1=(&local_invocation_index_1), .wg=(&(*v_2).tint_symbol)};
+  compute_main_inner_1(local_invocation_index_1_param, tint_module_vars);
+}

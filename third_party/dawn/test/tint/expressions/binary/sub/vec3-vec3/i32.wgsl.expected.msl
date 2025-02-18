@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  int3 const a = int3(1, 2, 3);
+  int3 const b = int3(4, 5, 6);
+  int3 const r = as_type<int3>((as_type<uint3>(a) - as_type<uint3>(b)));
+}

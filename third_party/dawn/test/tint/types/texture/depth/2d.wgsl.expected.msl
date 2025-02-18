@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  depth2d<float, access::sample> t_f;
+};
+
+kernel void v(depth2d<float, access::sample> t_f [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t_f=t_f};
+  uint const v_1 = min(uint(0), (tint_module_vars.t_f.get_num_mip_levels() - 1u));
+  uint2 dims = uint2(tint_module_vars.t_f.get_width(v_1), tint_module_vars.t_f.get_height(v_1));
+}

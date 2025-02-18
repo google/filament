@@ -1,0 +1,45 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct Out {
+  float4 pos;
+  float none;
+  float flat;
+  float perspective_center;
+  float perspective_centroid;
+  float perspective_sample;
+  float linear_center;
+  float linear_centroid;
+  float linear_sample;
+};
+
+struct main_outputs {
+  float4 Out_pos [[position]];
+  float Out_none [[user(locn0)]];
+  float Out_flat [[user(locn1)]] [[flat]];
+  float Out_perspective_center [[user(locn2)]] [[center_perspective]];
+  float Out_perspective_centroid [[user(locn3)]] [[centroid_perspective]];
+  float Out_perspective_sample [[user(locn4)]] [[sample_perspective]];
+  float Out_linear_center [[user(locn5)]] [[center_no_perspective]];
+  float Out_linear_centroid [[user(locn6)]] [[centroid_no_perspective]];
+  float Out_linear_sample [[user(locn7)]] [[sample_no_perspective]];
+};
+
+Out main_inner() {
+  return Out{};
+}
+
+vertex main_outputs v() {
+  Out const v_1 = main_inner();
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.Out_pos = v_1.pos;
+  tint_wrapper_result.Out_none = v_1.none;
+  tint_wrapper_result.Out_flat = v_1.flat;
+  tint_wrapper_result.Out_perspective_center = v_1.perspective_center;
+  tint_wrapper_result.Out_perspective_centroid = v_1.perspective_centroid;
+  tint_wrapper_result.Out_perspective_sample = v_1.perspective_sample;
+  tint_wrapper_result.Out_linear_center = v_1.linear_center;
+  tint_wrapper_result.Out_linear_centroid = v_1.linear_centroid;
+  tint_wrapper_result.Out_linear_sample = v_1.linear_sample;
+  return tint_wrapper_result;
+}

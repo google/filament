@@ -1,0 +1,13 @@
+# To use this config with your editor, follow the instructions at:
+# http://editorconfig.org
+
+[*]
+charset = utf-8
+indent_style = tab
+indent_size = 8
+tab_width = 8
+insert_final_newline = true
+
+[meson.build]
+indent_style = space
+indent_size = 2

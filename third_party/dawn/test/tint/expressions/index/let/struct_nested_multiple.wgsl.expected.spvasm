@@ -1,0 +1,43 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 18
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %f "f"
+               OpMemberName %S 0 "m"
+               OpMemberName %T 0 "k"
+               OpName %T "T"
+               OpMemberName %S 1 "n"
+               OpName %S "S"
+               OpName %a "a"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %S 0 Offset 0
+               OpDecorate %_arr_uint_uint_2 ArrayStride 4
+               OpMemberDecorate %T 0 Offset 0
+               OpDecorate %_arr_T_uint_4 ArrayStride 8
+               OpMemberDecorate %S 1 Offset 4
+       %uint = OpTypeInt 32 0
+          %3 = OpTypeFunction %uint
+        %int = OpTypeInt 32 1
+     %uint_2 = OpConstant %uint 2
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+          %T = OpTypeStruct %_arr_uint_uint_2
+     %uint_4 = OpConstant %uint 4
+%_arr_T_uint_4 = OpTypeArray %T %uint_4
+          %S = OpTypeStruct %int %_arr_T_uint_4
+          %a = OpConstantNull %S
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+          %f = OpFunction %uint None %3
+          %4 = OpLabel
+         %13 = OpCompositeExtract %uint %a 1 2 0 1
+               OpReturnValue %13
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %16
+         %17 = OpLabel
+               OpReturn
+               OpFunctionEnd

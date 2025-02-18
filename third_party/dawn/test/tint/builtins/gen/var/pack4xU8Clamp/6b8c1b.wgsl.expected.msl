@@ -1,0 +1,100 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+};
+
+uint tint_dot(uint4 lhs, uint4 rhs) {
+  return ((((lhs * rhs).x + (lhs * rhs).y) + (lhs * rhs).z) + (lhs * rhs).w);
+}
+
+uint pack4xU8Clamp_6b8c1b() {
+  uint4 arg_0 = uint4(1u);
+  uint4 const v = arg_0;
+  uint4 const v_1 = uint4(0u, 8u, 16u, 24u);
+  uint4 const v_2 = uint4(0u);
+  uint4 const v_3 = (clamp(v, v_2, uint4(255u)) << v_1);
+  uint res = tint_dot(v_3, uint4(1u));
+  return res;
+}
+
+fragment void fragment_main(device uint* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = pack4xU8Clamp_6b8c1b();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint* prevent_dce;
+};
+
+uint tint_dot(uint4 lhs, uint4 rhs) {
+  return ((((lhs * rhs).x + (lhs * rhs).y) + (lhs * rhs).z) + (lhs * rhs).w);
+}
+
+uint pack4xU8Clamp_6b8c1b() {
+  uint4 arg_0 = uint4(1u);
+  uint4 const v = arg_0;
+  uint4 const v_1 = uint4(0u, 8u, 16u, 24u);
+  uint4 const v_2 = uint4(0u);
+  uint4 const v_3 = (clamp(v, v_2, uint4(255u)) << v_1);
+  uint res = tint_dot(v_3, uint4(1u));
+  return res;
+}
+
+kernel void compute_main(device uint* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = pack4xU8Clamp_6b8c1b();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutput {
+  float4 pos;
+  uint prevent_dce;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+  uint VertexOutput_prevent_dce [[user(locn0)]] [[flat]];
+};
+
+uint tint_dot(uint4 lhs, uint4 rhs) {
+  return ((((lhs * rhs).x + (lhs * rhs).y) + (lhs * rhs).z) + (lhs * rhs).w);
+}
+
+uint pack4xU8Clamp_6b8c1b() {
+  uint4 arg_0 = uint4(1u);
+  uint4 const v = arg_0;
+  uint4 const v_1 = uint4(0u, 8u, 16u, 24u);
+  uint4 const v_2 = uint4(0u);
+  uint4 const v_3 = (clamp(v, v_2, uint4(255u)) << v_1);
+  uint res = tint_dot(v_3, uint4(1u));
+  return res;
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  out.prevent_dce = pack4xU8Clamp_6b8c1b();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  VertexOutput const v_4 = vertex_main_inner();
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = v_4.pos;
+  tint_wrapper_result.VertexOutput_prevent_dce = v_4.prevent_dce;
+  return tint_wrapper_result;
+}

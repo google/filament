@@ -1,0 +1,52 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+         %21 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %Constants 0 "zero"
+               OpName %Constants "Constants"
+               OpMemberName %constants_block 0 "inner"
+               OpName %constants_block "constants_block"
+               OpMemberName %S 0 "data"
+               OpName %S "S"
+               OpName %s "s"
+               OpName %main "main"
+               OpMemberDecorate %Constants 0 Offset 0
+               OpMemberDecorate %constants_block 0 Offset 0
+               OpDecorate %constants_block Block
+               OpDecorate %1 DescriptorSet 1
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpDecorate %_arr_uint_uint_3 ArrayStride 4
+               OpMemberDecorate %S 0 Offset 0
+       %uint = OpTypeInt 32 0
+  %Constants = OpTypeStruct %uint
+%constants_block = OpTypeStruct %Constants
+%_ptr_Uniform_constants_block = OpTypePointer Uniform %constants_block
+          %1 = OpVariable %_ptr_Uniform_constants_block Uniform
+     %uint_3 = OpConstant %uint 3
+%_arr_uint_uint_3 = OpTypeArray %uint %uint_3
+          %S = OpTypeStruct %_arr_uint_uint_3
+%_ptr_Private_S = OpTypePointer Private %S
+         %11 = OpConstantNull %S
+          %s = OpVariable %_ptr_Private_S Private %11
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+%_ptr_Private_uint = OpTypePointer Private %uint
+       %main = OpFunction %void None %14
+         %15 = OpLabel
+         %16 = OpAccessChain %_ptr_Uniform_uint %1 %uint_0 %uint_0
+         %19 = OpLoad %uint %16 None
+         %20 = OpExtInst %uint %21 UMin %19 %uint_2
+         %23 = OpAccessChain %_ptr_Private_uint %s %uint_0 %20
+               OpStore %23 %uint_0 None
+               OpReturn
+               OpFunctionEnd

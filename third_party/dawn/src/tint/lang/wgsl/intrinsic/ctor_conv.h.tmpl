@@ -1,0 +1,89 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate ctor_conv_intrinsic.h
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/wgsl/wgsl.def" -}}
+
+#ifndef SRC_TINT_LANG_WGSL_INTRINSIC_CTOR_CONV_H_
+#define SRC_TINT_LANG_WGSL_INTRINSIC_CTOR_CONV_H_
+
+#include <cstdint>
+
+#include "src/tint/utils/rtti/traits.h"
+
+namespace tint::wgsl::intrinsic {
+
+/// CtorConv is an enumerator of types that have a constructor or converter overload
+/// declared in the intrinsic table.
+enum class CtorConv : uint8_t {
+{{- range $I.Sem.ConstructorsAndConverters }}
+    k{{Title .Name}},
+{{- end }}
+    kNone,
+};
+
+/// @returns the name of the type.
+const char* str(CtorConv i);
+
+/// Prints the CtorConv @p c to @p o
+/// @param o the stream to write to
+/// @param c the CtorConv
+/// @return the stream so calls can be chained
+template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+auto& operator<<(STREAM& o, CtorConv c) {
+  return o << str(c);
+}
+
+/// @param n the width of the vector
+/// @return the CtorConv for a vector of width `n`
+inline CtorConv VectorCtorConv(uint32_t n) {
+    switch (n) {
+        case 2:
+            return CtorConv::kVec2;
+        case 3:
+            return CtorConv::kVec3;
+        case 4:
+            return CtorConv::kVec4;
+    }
+    return CtorConv::kNone;
+}
+
+/// @param c the number of columns in the matrix
+/// @param r the number of rows in the matrix
+/// @return the CtorConv for a matrix with `c` columns and `r` rows
+inline CtorConv MatrixCtorConv(uint32_t c, uint32_t r) {
+    switch ((c - 2) * 3 + (r - 2)) {
+        case 0:
+            return CtorConv::kMat2x2;
+        case 1:
+            return CtorConv::kMat2x3;
+        case 2:
+            return CtorConv::kMat2x4;
+        case 3:
+            return CtorConv::kMat3x2;
+        case 4:
+            return CtorConv::kMat3x3;
+        case 5:
+            return CtorConv::kMat3x4;
+        case 6:
+            return CtorConv::kMat4x2;
+        case 7:
+            return CtorConv::kMat4x3;
+        case 8:
+            return CtorConv::kMat4x4;
+    }
+    return CtorConv::kNone;
+}
+
+}  // namespace tint::wgsl::intrinsic
+
+#endif  // SRC_TINT_LANG_WGSL_INTRINSIC_CTOR_CONV_H_

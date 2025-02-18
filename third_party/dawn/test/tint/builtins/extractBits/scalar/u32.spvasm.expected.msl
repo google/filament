@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f_1() {
+  uint v = 0u;
+  uint offset_1 = 0u;
+  uint count = 0u;
+  uint const v_1 = min(offset_1, 32u);
+  uint const x_11 = extract_bits(v, v_1, min(count, (32u - v_1)));
+}
+
+kernel void f() {
+  f_1();
+}

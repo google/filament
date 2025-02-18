@@ -1,0 +1,13 @@
+Name: Google Benchmark
+Short Name: benchmark
+URL: https://github.com/google/benchmark
+Version: efc89f0b524780b1994d5dddd83a92718e5be492
+License: Apache 2.0
+Security Critical: no
+Shipped: no
+
+Description:
+A microbenchmark support library.
+
+Local Additions:
+* gn file for building in chromium

@@ -1,0 +1,9 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  float const low = 1.0f;
+  float const high = 0.0f;
+  float const x_val = 0.5f;
+  float const res = (clamp(((x_val - low) / (high - low)), 0.0f, 1.0f) * (clamp(((x_val - low) / (high - low)), 0.0f, 1.0f) * (3.0f - (2.0f * clamp(((x_val - low) / (high - low)), 0.0f, 1.0f)))));
+}

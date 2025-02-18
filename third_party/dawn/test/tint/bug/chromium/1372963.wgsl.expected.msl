@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int4 g() {
+  return int4(0);
+}
+
+fragment void v() {
+  g();
+}

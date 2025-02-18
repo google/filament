@@ -1,0 +1,276 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 47
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+         %28 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %arg_0 "arg_0"
+               OpName %textureLoad_ac64f7 "textureLoad_ac64f7"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 NonWritable
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%prevent_dce_block = OpTypeStruct %v4float
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %8 = OpTypeImage %float 2D 0 1 0 2 Rgba8
+%_ptr_UniformConstant_8 = OpTypePointer UniformConstant %8
+      %arg_0 = OpVariable %_ptr_UniformConstant_8 UniformConstant
+         %10 = OpTypeFunction %v4float
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+     %uint_1 = OpConstant %uint 1
+         %16 = OpConstantComposite %v2uint %uint_1 %uint_1
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %void = OpTypeVoid
+         %41 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+     %uint_0 = OpConstant %uint 0
+%textureLoad_ac64f7 = OpFunction %v4float None %10
+         %11 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v2uint Function
+      %arg_2 = OpVariable %_ptr_Function_uint Function
+        %res = OpVariable %_ptr_Function_v4float Function
+               OpStore %arg_1 %16
+               OpStore %arg_2 %uint_1
+         %20 = OpLoad %8 %arg_0 None
+         %21 = OpLoad %v2uint %arg_1 None
+         %22 = OpLoad %uint %arg_2 None
+         %23 = OpImageQuerySize %v3uint %20
+         %25 = OpCompositeExtract %uint %23 2
+         %26 = OpISub %uint %25 %uint_1
+         %27 = OpExtInst %uint %28 UMin %22 %26
+         %29 = OpImageQuerySize %v3uint %20
+         %30 = OpVectorShuffle %v2uint %29 %29 0 1
+         %31 = OpISub %v2uint %30 %16
+         %32 = OpExtInst %v2uint %28 UMin %21 %31
+         %33 = OpCompositeConstruct %v3uint %32 %27
+         %34 = OpImageRead %v4float %20 %33 None
+         %35 = OpVectorShuffle %v4float %34 %34 2 1 0 3
+               OpStore %res %35
+         %38 = OpLoad %v4float %res None
+               OpReturnValue %38
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %41
+         %42 = OpLabel
+         %43 = OpFunctionCall %v4float %textureLoad_ac64f7
+         %44 = OpAccessChain %_ptr_StorageBuffer_v4float %1 %uint_0
+               OpStore %44 %43 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 47
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+         %28 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %arg_0 "arg_0"
+               OpName %textureLoad_ac64f7 "textureLoad_ac64f7"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 NonWritable
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%prevent_dce_block = OpTypeStruct %v4float
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %8 = OpTypeImage %float 2D 0 1 0 2 Rgba8
+%_ptr_UniformConstant_8 = OpTypePointer UniformConstant %8
+      %arg_0 = OpVariable %_ptr_UniformConstant_8 UniformConstant
+         %10 = OpTypeFunction %v4float
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+     %uint_1 = OpConstant %uint 1
+         %16 = OpConstantComposite %v2uint %uint_1 %uint_1
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %void = OpTypeVoid
+         %41 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+     %uint_0 = OpConstant %uint 0
+%textureLoad_ac64f7 = OpFunction %v4float None %10
+         %11 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v2uint Function
+      %arg_2 = OpVariable %_ptr_Function_uint Function
+        %res = OpVariable %_ptr_Function_v4float Function
+               OpStore %arg_1 %16
+               OpStore %arg_2 %uint_1
+         %20 = OpLoad %8 %arg_0 None
+         %21 = OpLoad %v2uint %arg_1 None
+         %22 = OpLoad %uint %arg_2 None
+         %23 = OpImageQuerySize %v3uint %20
+         %25 = OpCompositeExtract %uint %23 2
+         %26 = OpISub %uint %25 %uint_1
+         %27 = OpExtInst %uint %28 UMin %22 %26
+         %29 = OpImageQuerySize %v3uint %20
+         %30 = OpVectorShuffle %v2uint %29 %29 0 1
+         %31 = OpISub %v2uint %30 %16
+         %32 = OpExtInst %v2uint %28 UMin %21 %31
+         %33 = OpCompositeConstruct %v3uint %32 %27
+         %34 = OpImageRead %v4float %20 %33 None
+         %35 = OpVectorShuffle %v4float %34 %34 2 1 0 3
+               OpStore %res %35
+         %38 = OpLoad %v4float %res None
+               OpReturnValue %38
+               OpFunctionEnd
+%compute_main = OpFunction %void None %41
+         %42 = OpLabel
+         %43 = OpFunctionCall %v4float %textureLoad_ac64f7
+         %44 = OpAccessChain %_ptr_StorageBuffer_v4float %1 %uint_0
+               OpStore %44 %43 None
+               OpReturn
+               OpFunctionEnd
+;
+; vertex_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+               OpCapability ImageQuery
+         %30 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %vertex_main_position_Output %vertex_main_loc0_Output %vertex_main___point_size_Output
+               OpName %arg_0 "arg_0"
+               OpName %vertex_main_position_Output "vertex_main_position_Output"
+               OpName %vertex_main_loc0_Output "vertex_main_loc0_Output"
+               OpName %vertex_main___point_size_Output "vertex_main___point_size_Output"
+               OpName %textureLoad_ac64f7 "textureLoad_ac64f7"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %res "res"
+               OpName %vertex_main_inner "vertex_main_inner"
+               OpMemberName %VertexOutput 0 "pos"
+               OpMemberName %VertexOutput 1 "prevent_dce"
+               OpName %VertexOutput "VertexOutput"
+               OpName %out "out"
+               OpName %vertex_main "vertex_main"
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 NonWritable
+               OpDecorate %vertex_main_position_Output BuiltIn Position
+               OpDecorate %vertex_main_loc0_Output Location 0
+               OpDecorate %vertex_main_loc0_Output Flat
+               OpDecorate %vertex_main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %VertexOutput 0 Offset 0
+               OpMemberDecorate %VertexOutput 1 Offset 16
+      %float = OpTypeFloat 32
+          %3 = OpTypeImage %float 2D 0 1 0 2 Rgba8
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+      %arg_0 = OpVariable %_ptr_UniformConstant_3 UniformConstant
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vertex_main_position_Output = OpVariable %_ptr_Output_v4float Output
+%vertex_main_loc0_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vertex_main___point_size_Output = OpVariable %_ptr_Output_float Output
+         %12 = OpTypeFunction %v4float
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+     %uint_1 = OpConstant %uint 1
+         %18 = OpConstantComposite %v2uint %uint_1 %uint_1
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%VertexOutput = OpTypeStruct %v4float %v4float
+         %43 = OpTypeFunction %VertexOutput
+%_ptr_Function_VertexOutput = OpTypePointer Function %VertexOutput
+         %47 = OpConstantNull %VertexOutput
+     %uint_0 = OpConstant %uint 0
+         %50 = OpConstantNull %v4float
+       %void = OpTypeVoid
+         %56 = OpTypeFunction %void
+    %float_1 = OpConstant %float 1
+%textureLoad_ac64f7 = OpFunction %v4float None %12
+         %13 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v2uint Function
+      %arg_2 = OpVariable %_ptr_Function_uint Function
+        %res = OpVariable %_ptr_Function_v4float Function
+               OpStore %arg_1 %18
+               OpStore %arg_2 %uint_1
+         %22 = OpLoad %3 %arg_0 None
+         %23 = OpLoad %v2uint %arg_1 None
+         %24 = OpLoad %uint %arg_2 None
+         %25 = OpImageQuerySize %v3uint %22
+         %27 = OpCompositeExtract %uint %25 2
+         %28 = OpISub %uint %27 %uint_1
+         %29 = OpExtInst %uint %30 UMin %24 %28
+         %31 = OpImageQuerySize %v3uint %22
+         %32 = OpVectorShuffle %v2uint %31 %31 0 1
+         %33 = OpISub %v2uint %32 %18
+         %34 = OpExtInst %v2uint %30 UMin %23 %33
+         %35 = OpCompositeConstruct %v3uint %34 %29
+         %36 = OpImageRead %v4float %22 %35 None
+         %37 = OpVectorShuffle %v4float %36 %36 2 1 0 3
+               OpStore %res %37
+         %40 = OpLoad %v4float %res None
+               OpReturnValue %40
+               OpFunctionEnd
+%vertex_main_inner = OpFunction %VertexOutput None %43
+         %44 = OpLabel
+        %out = OpVariable %_ptr_Function_VertexOutput Function %47
+         %48 = OpAccessChain %_ptr_Function_v4float %out %uint_0
+               OpStore %48 %50 None
+         %51 = OpAccessChain %_ptr_Function_v4float %out %uint_1
+         %52 = OpFunctionCall %v4float %textureLoad_ac64f7
+               OpStore %51 %52 None
+         %53 = OpLoad %VertexOutput %out None
+               OpReturnValue %53
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %56
+         %57 = OpLabel
+         %58 = OpFunctionCall %VertexOutput %vertex_main_inner
+         %59 = OpCompositeExtract %v4float %58 0
+               OpStore %vertex_main_position_Output %59 None
+         %60 = OpCompositeExtract %v4float %58 1
+               OpStore %vertex_main_loc0_Output %60 None
+               OpStore %vertex_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

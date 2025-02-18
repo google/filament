@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int tint_div_i32(int lhs, int rhs) {
+  uint const v = uint((lhs == (-2147483647 - 1)));
+  bool const v_1 = bool((v & uint((rhs == -1))));
+  uint const v_2 = uint((rhs == 0));
+  return (lhs / select(rhs, 1, bool((v_2 | uint(v_1)))));
+}
+
+void foo() {
+  int a = 0;
+  float4 b = 0.0f;
+  float2x2 c = float2x2(0.0f);
+  a = tint_div_i32(a, 2);
+  b = (b * float4x4(float4(0.0f), float4(0.0f), float4(0.0f), float4(0.0f)));
+  c = (c * 2.0f);
+}

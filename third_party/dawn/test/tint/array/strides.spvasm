@@ -1,0 +1,71 @@
+; type ARR_A = @stride(8) array<f32, 2>;
+; type ARR_B = @stride(128) array<@stride(16) array<ARR_A, 4>, 3>;
+; struct S {
+;   a : ARR_B,
+; };
+; @group(0) @binding(0) var<storage, read_write> s : S;
+;
+; @compute @workgroup_size(1)
+; fn f() {
+;   let a : ARR_B = s.a;
+;   let b : array<@stride(8) array<f32, 2>, 3> = s.a[3];
+;   let c = s.a[3][2];
+;   let d = s.a[3][2][1];
+;   s.a = ARR_B();
+;   s.a[3][2][1] = 5.0;
+; }
+                                                                OpCapability Shader
+                                                                OpMemoryModel Logical GLSL450
+                                                                OpEntryPoint GLCompute %f "f"
+                                                                OpExecutionMode %f LocalSize 1 1 1
+                                                                OpName %S "S"
+                                                                OpMemberName %S 0 "a"
+                                                                OpName %s "s"
+                                                                OpName %f "f"
+                                                                OpDecorate %S Block
+                                                                OpMemberDecorate %S 0 Offset 0
+                                                                OpDecorate %_arr_float_uint_2 ArrayStride 8
+                                                                OpDecorate %_arr__arr_float_uint_2_uint_3 ArrayStride 16
+                                                                OpDecorate %_arr__arr__arr_float_uint_2_uint_3_uint_4 ArrayStride 128
+                                                                OpDecorate %s DescriptorSet 0
+                                                                OpDecorate %s Binding 0
+                                                       %float = OpTypeFloat 32
+                                                        %uint = OpTypeInt 32 0
+                                                      %uint_2 = OpConstant %uint 2
+                                           %_arr_float_uint_2 = OpTypeArray %float %uint_2
+                                                      %uint_3 = OpConstant %uint 3
+                               %_arr__arr_float_uint_2_uint_3 = OpTypeArray %_arr_float_uint_2 %uint_3
+                                                      %uint_4 = OpConstant %uint 4
+                   %_arr__arr__arr_float_uint_2_uint_3_uint_4 = OpTypeArray %_arr__arr_float_uint_2_uint_3 %uint_4
+                                                           %S = OpTypeStruct %_arr__arr__arr_float_uint_2_uint_3_uint_4
+                                        %_ptr_StorageBuffer_S = OpTypePointer StorageBuffer %S
+                                                           %s = OpVariable %_ptr_StorageBuffer_S StorageBuffer
+                                                        %void = OpTypeVoid
+                                                          %12 = OpTypeFunction %void
+                                                      %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer__arr__arr__arr_float_uint_2_uint_3_uint_4 = OpTypePointer StorageBuffer %_arr__arr__arr_float_uint_2_uint_3_uint_4
+                                                         %int = OpTypeInt 32 1
+                                                       %int_3 = OpConstant %int 3
+            %_ptr_StorageBuffer__arr__arr_float_uint_2_uint_3 = OpTypePointer StorageBuffer %_arr__arr_float_uint_2_uint_3
+                                                       %int_2 = OpConstant %int 2
+                        %_ptr_StorageBuffer__arr_float_uint_2 = OpTypePointer StorageBuffer %_arr_float_uint_2
+                                                       %int_1 = OpConstant %int 1
+                                    %_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+                                                          %34 = OpConstantNull %_arr__arr__arr_float_uint_2_uint_3_uint_4
+                                                     %float_5 = OpConstant %float 5
+                                                           %f = OpFunction %void None %12
+                                                          %15 = OpLabel
+                                                          %18 = OpAccessChain %_ptr_StorageBuffer__arr__arr__arr_float_uint_2_uint_3_uint_4 %s %uint_0
+                                                          %19 = OpLoad %_arr__arr__arr_float_uint_2_uint_3_uint_4 %18
+                                                          %23 = OpAccessChain %_ptr_StorageBuffer__arr__arr_float_uint_2_uint_3 %s %uint_0 %int_3
+                                                          %24 = OpLoad %_arr__arr_float_uint_2_uint_3 %23
+                                                          %27 = OpAccessChain %_ptr_StorageBuffer__arr_float_uint_2 %s %uint_0 %int_3 %int_2
+                                                          %28 = OpLoad %_arr_float_uint_2 %27
+                                                          %31 = OpAccessChain %_ptr_StorageBuffer_float %s %uint_0 %int_3 %int_2 %int_1
+                                                          %32 = OpLoad %float %31
+                                                          %33 = OpAccessChain %_ptr_StorageBuffer__arr__arr__arr_float_uint_2_uint_3_uint_4 %s %uint_0
+                                                                OpStore %33 %34
+                                                          %35 = OpAccessChain %_ptr_StorageBuffer_float %s %uint_0 %int_3 %int_2 %int_1
+                                                                OpStore %35 %float_5
+                                                                OpReturn
+                                                                OpFunctionEnd

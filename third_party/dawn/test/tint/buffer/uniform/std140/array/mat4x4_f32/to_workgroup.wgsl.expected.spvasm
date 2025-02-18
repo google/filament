@@ -1,0 +1,105 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 63
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f" %f_local_invocation_index_Input
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %u_block 0 "inner"
+               OpName %u_block "u_block"
+               OpName %w "w"
+               OpName %f_local_invocation_index_Input "f_local_invocation_index_Input"
+               OpName %f_inner "f_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %f "f"
+               OpDecorate %_arr_mat4v4float_uint_4 ArrayStride 64
+               OpMemberDecorate %u_block 0 Offset 0
+               OpMemberDecorate %u_block 0 ColMajor
+               OpMemberDecorate %u_block 0 MatrixStride 16
+               OpDecorate %u_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpDecorate %f_local_invocation_index_Input BuiltIn LocalInvocationIndex
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_mat4v4float_uint_4 = OpTypeArray %mat4v4float %uint_4
+    %u_block = OpTypeStruct %_arr_mat4v4float_uint_4
+%_ptr_Uniform_u_block = OpTypePointer Uniform %u_block
+          %1 = OpVariable %_ptr_Uniform_u_block Uniform
+%_ptr_Workgroup__arr_mat4v4float_uint_4 = OpTypePointer Workgroup %_arr_mat4v4float_uint_4
+          %w = OpVariable %_ptr_Workgroup__arr_mat4v4float_uint_4 Workgroup
+%_ptr_Input_uint = OpTypePointer Input %uint
+%f_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void %uint
+       %bool = OpTypeBool
+%_ptr_Workgroup_mat4v4float = OpTypePointer Workgroup %mat4v4float
+         %32 = OpConstantNull %mat4v4float
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+%_ptr_Uniform__arr_mat4v4float_uint_4 = OpTypePointer Uniform %_arr_mat4v4float_uint_4
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_mat4v4float = OpTypePointer Uniform %mat4v4float
+%_ptr_Workgroup_v4float = OpTypePointer Workgroup %v4float
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+%_ptr_Workgroup_float = OpTypePointer Workgroup %float
+         %59 = OpTypeFunction %void
+    %f_inner = OpFunction %void None %17
+%tint_local_index = OpFunctionParameter %uint
+         %18 = OpLabel
+               OpBranch %19
+         %19 = OpLabel
+               OpBranch %22
+         %22 = OpLabel
+         %24 = OpPhi %uint %tint_local_index %19 %25 %21
+               OpLoopMerge %23 %21 None
+               OpBranch %20
+         %20 = OpLabel
+         %26 = OpUGreaterThanEqual %bool %24 %uint_4
+               OpSelectionMerge %28 None
+               OpBranchConditional %26 %29 %28
+         %29 = OpLabel
+               OpBranch %23
+         %28 = OpLabel
+         %30 = OpAccessChain %_ptr_Workgroup_mat4v4float %w %24
+               OpStore %30 %32 None
+               OpBranch %21
+         %21 = OpLabel
+         %25 = OpIAdd %uint %24 %uint_1
+               OpBranch %22
+         %23 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %37 = OpAccessChain %_ptr_Uniform__arr_mat4v4float_uint_4 %1 %uint_0
+         %40 = OpLoad %_arr_mat4v4float_uint_4 %37 None
+               OpStore %w %40 None
+         %41 = OpAccessChain %_ptr_Workgroup_mat4v4float %w %uint_1
+         %42 = OpAccessChain %_ptr_Uniform_mat4v4float %1 %uint_0 %uint_2
+         %44 = OpLoad %mat4v4float %42 None
+               OpStore %41 %44 None
+         %45 = OpAccessChain %_ptr_Workgroup_v4float %w %uint_1 %uint_0
+         %47 = OpAccessChain %_ptr_Uniform_v4float %1 %uint_0 %uint_0 %uint_1
+         %49 = OpLoad %v4float %47 None
+         %50 = OpVectorShuffle %v4float %49 %49 1 3 0 2
+               OpStore %45 %50 None
+         %51 = OpAccessChain %_ptr_Workgroup_v4float %w %uint_1 %uint_0
+         %52 = OpAccessChain %_ptr_Uniform_v4float %1 %uint_0 %uint_0 %uint_1
+         %53 = OpAccessChain %_ptr_Uniform_float %52 %uint_0
+         %55 = OpLoad %float %53 None
+         %56 = OpAccessChain %_ptr_Workgroup_float %51 %uint_0
+               OpStore %56 %55 None
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %59
+         %60 = OpLabel
+         %61 = OpLoad %uint %f_local_invocation_index_Input None
+         %62 = OpFunctionCall %void %f_inner %61
+               OpReturn
+               OpFunctionEnd

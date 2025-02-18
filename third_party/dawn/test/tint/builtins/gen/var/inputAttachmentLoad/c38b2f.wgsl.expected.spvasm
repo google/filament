@@ -1,0 +1,58 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 29
+; Schema: 0
+               OpCapability Shader
+               OpCapability InputAttachment
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %arg_0 "arg_0"
+               OpName %inputAttachmentLoad_c38b2f "inputAttachmentLoad_c38b2f"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 InputAttachmentIndex 3
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%prevent_dce_block = OpTypeStruct %v4float
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %8 = OpTypeImage %float SubpassData 0 0 0 2 Unknown
+%_ptr_UniformConstant_8 = OpTypePointer UniformConstant %8
+      %arg_0 = OpVariable %_ptr_UniformConstant_8 UniformConstant
+         %10 = OpTypeFunction %v4float
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+         %14 = OpConstantNull %v2int
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %void = OpTypeVoid
+         %22 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%inputAttachmentLoad_c38b2f = OpFunction %v4float None %10
+         %11 = OpLabel
+        %res = OpVariable %_ptr_Function_v4float Function
+         %12 = OpLoad %8 %arg_0 None
+         %13 = OpImageRead %v4float %12 %14
+               OpStore %res %13
+         %19 = OpLoad %v4float %res None
+               OpReturnValue %19
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %22
+         %23 = OpLabel
+         %24 = OpFunctionCall %v4float %inputAttachmentLoad_c38b2f
+         %25 = OpAccessChain %_ptr_StorageBuffer_v4float %1 %uint_0
+               OpStore %25 %24 None
+               OpReturn
+               OpFunctionEnd

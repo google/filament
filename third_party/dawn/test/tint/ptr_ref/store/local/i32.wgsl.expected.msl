@@ -1,0 +1,9 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void v() {
+  int i = 123;
+  thread int* const p = (&i);
+  (*p) = 123;
+  (*p) = 123;
+}

@@ -1,0 +1,52 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 32
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %u "u"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%mat2v3float = OpTypeMatrix %v3float 2
+%_ptr_Private_mat2v3float = OpTypePointer Private %mat2v3float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+          %7 = OpConstantComposite %v3float %float_1 %float_2 %float_3
+    %float_4 = OpConstant %float 4
+    %float_5 = OpConstant %float 5
+    %float_6 = OpConstant %float 6
+         %11 = OpConstantComposite %v3float %float_4 %float_5 %float_6
+          %6 = OpConstantComposite %mat2v3float %7 %11
+          %u = OpVariable %_ptr_Private_mat2v3float Private %6
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+ %mat2v3half = OpTypeMatrix %v3half 2
+%_ptr_Function_mat2v3half = OpTypePointer Function %mat2v3half
+          %f = OpFunction %void None %17
+         %18 = OpLabel
+          %v = OpVariable %_ptr_Function_mat2v3half Function
+         %19 = OpLoad %mat2v3float %u None
+         %20 = OpCompositeExtract %v3float %19 0
+         %23 = OpFConvert %v3half %20
+         %24 = OpCompositeExtract %v3float %19 1
+         %25 = OpFConvert %v3half %24
+         %27 = OpCompositeConstruct %mat2v3half %23 %25
+               OpStore %v %27
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %17
+         %31 = OpLabel
+               OpReturn
+               OpFunctionEnd

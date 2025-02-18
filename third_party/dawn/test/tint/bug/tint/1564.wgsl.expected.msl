@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void foo() {
+  float const b = 9.9999461e-41f;
+}

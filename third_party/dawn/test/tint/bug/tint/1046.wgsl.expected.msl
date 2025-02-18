@@ -1,0 +1,74 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentOutput {
+  float4 color;
+};
+
+struct FragmentInput {
+  float4 position;
+  float4 view_position;
+  float4 normal;
+  float2 uv;
+  float4 color;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct Uniforms {
+  /* 0x0000 */ float4x4 worldView;
+  /* 0x0040 */ float4x4 proj;
+  /* 0x0080 */ uint numPointLights;
+  /* 0x0084 */ uint color_source;
+  /* 0x0088 */ tint_array<int8_t, 8> tint_pad;
+  /* 0x0090 */ float4 color;
+};
+
+struct PointLight {
+  float4 position;
+};
+
+struct PointLights {
+  tint_array<PointLight, 1> values;
+};
+
+struct tint_module_vars_struct {
+  const constant Uniforms* uniforms;
+  const device PointLights* pointLights;
+  sampler mySampler;
+  texture2d<float, access::sample> myTexture;
+};
+
+struct main_outputs {
+  float4 FragmentOutput_color [[color(0)]];
+};
+
+struct main_inputs {
+  float4 FragmentInput_view_position [[user(locn0)]];
+  float4 FragmentInput_normal [[user(locn1)]];
+  float2 FragmentInput_uv [[user(locn2)]];
+  float4 FragmentInput_color [[user(locn3)]];
+};
+
+FragmentOutput main_inner(FragmentInput v, tint_module_vars_struct tint_module_vars) {
+  FragmentOutput output = {};
+  output.color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+  return output;
+}
+
+fragment main_outputs v_1(float4 FragmentInput_position [[position]], main_inputs inputs [[stage_in]], const constant Uniforms* uniforms [[buffer(0)]], sampler mySampler [[sampler(0)]], texture2d<float, access::sample> myTexture [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.uniforms=uniforms, .mySampler=mySampler, .myTexture=myTexture};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.FragmentOutput_color = main_inner(FragmentInput{.position=FragmentInput_position, .view_position=inputs.FragmentInput_view_position, .normal=inputs.FragmentInput_normal, .uv=inputs.FragmentInput_uv, .color=inputs.FragmentInput_color}, tint_module_vars).color;
+  return tint_wrapper_result;
+}

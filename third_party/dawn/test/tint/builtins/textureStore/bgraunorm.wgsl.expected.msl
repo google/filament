@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::write> tex;
+};
+
+fragment void fragment_main(texture2d<float, access::write> tex [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.tex=tex};
+  float4 const value = float4(1.0f, 2.0f, 3.0f, 4.0f);
+  tint_module_vars.tex.write(value, uint2(int2(9, 8)));
+}

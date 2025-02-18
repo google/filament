@@ -1,0 +1,25 @@
+; Test: SpvParserTest_EmitFunctions_Function_EntryPoint_WorkgroupSizeBuiltin_Constant_Only.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 13
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint GLCompute %1 "comp_main"
+OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%v3uint = OpTypeVector %uint 3
+%uint_3 = OpConstant %uint 3
+%uint_5 = OpConstant %uint 5
+%uint_7 = OpConstant %uint 7
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_3 %uint_5 %uint_7
+%1 = OpFunction %void None %4
+%12 = OpLabel
+OpReturn
+OpFunctionEnd
+

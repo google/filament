@@ -1,0 +1,32 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragIn {
+  float a;
+  uint mask;
+};
+
+struct main_outputs {
+  float FragIn_a [[color(0)]];
+  uint FragIn_mask [[sample_mask]];
+};
+
+struct main_inputs {
+  float FragIn_a [[user(locn0)]];
+  float b [[user(locn1)]];
+};
+
+FragIn main_inner(FragIn in, float b) {
+  if ((in.mask == 0u)) {
+    return in;
+  }
+  return FragIn{.a=b, .mask=1u};
+}
+
+fragment main_outputs v(main_inputs inputs [[stage_in]], uint FragIn_mask [[sample_mask]]) {
+  FragIn const v_1 = main_inner(FragIn{.a=inputs.FragIn_a, .mask=FragIn_mask}, inputs.b);
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.FragIn_a = v_1.a;
+  tint_wrapper_result.FragIn_mask = v_1.mask;
+  return tint_wrapper_result;
+}

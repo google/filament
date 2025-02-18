@@ -1,0 +1,50 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct SB_RW {
+  /* 0x0000 */ atomic_int arg_0;
+};
+
+struct tint_module_vars_struct {
+  device int* prevent_dce;
+  device SB_RW* sb_rw;
+};
+
+int atomicSub_051100(tint_module_vars_struct tint_module_vars) {
+  int arg_1 = 1;
+  int res = atomic_fetch_sub_explicit((&(*tint_module_vars.sb_rw).arg_0), arg_1, memory_order_relaxed);
+  return res;
+}
+
+fragment void fragment_main(device int* prevent_dce [[buffer(0)]], device SB_RW* sb_rw [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .sb_rw=sb_rw};
+  (*tint_module_vars.prevent_dce) = atomicSub_051100(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct SB_RW {
+  /* 0x0000 */ atomic_int arg_0;
+};
+
+struct tint_module_vars_struct {
+  device int* prevent_dce;
+  device SB_RW* sb_rw;
+};
+
+int atomicSub_051100(tint_module_vars_struct tint_module_vars) {
+  int arg_1 = 1;
+  int res = atomic_fetch_sub_explicit((&(*tint_module_vars.sb_rw).arg_0), arg_1, memory_order_relaxed);
+  return res;
+}
+
+kernel void compute_main(device int* prevent_dce [[buffer(0)]], device SB_RW* sb_rw [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .sb_rw=sb_rw};
+  (*tint_module_vars.prevent_dce) = atomicSub_051100(tint_module_vars);
+}

@@ -1,0 +1,53 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %out_data
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %x_is_odd "x_is_odd"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpName %y_is_odd "y_is_odd"
+               OpName %out_data "out_data"
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %out_data Location 0
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+       %bool = OpTypeBool
+%_ptr_Function_bool = OpTypePointer Function %bool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+     %uint_1 = OpConstant %uint 1
+%_ptr_Output_int = OpTypePointer Output %int
+   %out_data = OpVariable %_ptr_Output_int Output
+      %int_0 = OpConstant %int 0
+       %main = OpFunction %void None %8
+         %22 = OpLabel
+   %x_is_odd = OpVariable %_ptr_Function_bool Function
+   %y_is_odd = OpVariable %_ptr_Function_bool Function
+         %23 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+         %24 = OpLoad %float %23
+         %25 = OpConvertFToS %int %24
+         %26 = OpBitwiseAnd %int %25 %int_1
+         %27 = OpIEqual %bool %26 %int_1
+               OpStore %x_is_odd %27
+         %28 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_1
+         %29 = OpLoad %float %28
+         %30 = OpConvertFToS %int %29
+         %31 = OpBitwiseAnd %int %30 %int_1
+         %32 = OpIEqual %bool %31 %int_1
+               OpStore %y_is_odd %32
+         %33 = OpLoad %bool %x_is_odd
+         %34 = OpLoad %bool %y_is_odd
+         %35 = OpLogicalOr %bool %33 %34
+         %36 = OpSelect %int %35 %int_1 %int_0
+               OpStore %out_data %36
+               OpReturn
+               OpFunctionEnd

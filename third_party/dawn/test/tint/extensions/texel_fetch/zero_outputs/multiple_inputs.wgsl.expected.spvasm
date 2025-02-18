@@ -1,0 +1,54 @@
+SKIP: FAILED
+
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %f "f" %f_Input %f_Input_0
+               OpExecutionMode %f OriginUpperLeft
+               OpName %f_Input "f_Input"
+               OpName %f_Input_0 "f_Input"
+               OpName %g "g"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %f_inner "f_inner"
+               OpName %fbf_1 "fbf_1"
+               OpName %fbf_3 "fbf_3"
+               OpName %f "f"
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+    %f_Input = OpVariable %_ptr_Input_v4float Input
+  %f_Input_0 = OpVariable %_ptr_Input_v4float Input
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void %float %float
+         %15 = OpTypeFunction %void %v4float %v4float
+         %21 = OpTypeFunction %void
+          %g = OpFunction %void None %10
+          %a = OpFunctionParameter %float
+          %b = OpFunctionParameter %float
+         %11 = OpLabel
+               OpReturn
+               OpFunctionEnd
+    %f_inner = OpFunction %void None %15
+      %fbf_1 = OpFunctionParameter %v4float
+      %fbf_3 = OpFunctionParameter %v4float
+         %16 = OpLabel
+         %17 = OpCompositeExtract %float %fbf_1 0
+         %18 = OpCompositeExtract %float %fbf_3 1
+         %19 = OpFunctionCall %void %g %17 %18
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %21
+         %22 = OpLabel
+         %23 = OpLoad %v4float %f_Input None
+         %24 = OpLoad %v4float %f_Input_0 None
+         %25 = OpFunctionCall %void %f_inner %23 %24
+               OpReturn
+               OpFunctionEnd
+1:1: [VUID-StandaloneSpirv-Location-04916] Variable must be decorated with a location
+  %f_Input = OpVariable %_ptr_Input_v4float Input
+

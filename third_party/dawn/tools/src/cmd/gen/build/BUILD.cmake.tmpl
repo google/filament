@@ -1,0 +1,149 @@
+{{- Eval "Includes"         $}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "lib")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "proto")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "cmd")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "test_cmd")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "bench_cmd")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "fuzz_cmd")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "test")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "bench")}}
+{{- Eval "TargetIfNotEmpty" ($.Project.Target $ "fuzz")}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a CMake target if it contains any files
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Includes"}}
+{{-   if $.Subdirectories}}
+{{-     range $subdir := $.Subdirectories }}
+include({{$subdir.Path}}/BUILD.cmake)
+{{-     end }}
+{{/*   newline */}}
+{{-   end }}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a CMake target if it contains any files
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "TargetIfNotEmpty"}}
+{{-   if $}}
+{{-     if len $.SourceFiles}}{{Eval "Target" $}}{{end}}
+{{-   end}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a CMake target
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Target"}}
+{{-   $Kind := $.Kind}}
+{{-   $Name := Eval "TargetName" $}}
+{{-   if $.Condition}}
+if({{Eval "Expression" $.Condition}})
+{{-   end}}
+################################################################################
+# Target:    {{$Name}}
+# Kind:      {{$Kind}}
+{{-   if $.Condition}}
+# Condition: {{Eval "Expression" $.Condition}}
+{{-   end}}
+################################################################################
+tint_add_target({{$Name}} {{$Kind}}
+{{- /* Emit unconditional files */}}
+{{-   $UnconditionalSourceFiles := $.UnconditionalSourceFiles}}
+{{-   if $UnconditionalSourceFiles }}
+{{-     range $File := $UnconditionalSourceFiles}}
+  {{$File.Path}}
+{{-     end}}
+{{-   end}}
+)
+
+{{- /* Emit unconditional internal dependencies */}}
+{{-   $UnconditionalDeps    := $.Dependencies.UnconditionalInternal }}
+{{-   if $UnconditionalDeps}}
+{{/*   newline */}}
+tint_target_add_dependencies({{$Name}} {{$Kind}}
+{{-     range $Dep := $UnconditionalDeps}}
+  {{Eval "TargetName" $Dep}}
+{{-     end}}
+)
+{{-   end}}
+
+{{- /* Emit unconditional external dependencies */}}
+{{-   $UnconditionalExtDeps := $.Dependencies.UnconditionalExternal }}
+{{-   if $UnconditionalExtDeps}}
+{{/*   newline */}}
+tint_target_add_external_dependencies({{$Name}} {{$Kind}}
+{{-     range $Dep := $UnconditionalExtDeps}}
+  "{{$Dep.Name}}"
+{{-     end}}
+)
+{{-   end}}
+
+{{- /* Emit conditional source files and dependencies */}}
+{{-   range $Cond := $.Conditionals}}
+{{/*   newline */}}
+if({{Eval "Expression" $Cond.Condition}})
+{{-     if $Cond.SourceFiles}}
+  tint_target_add_sources({{$Name}} {{$Kind}}
+{{-       range $File := $Cond.SourceFiles}}
+    "{{$File.Path}}"
+{{-       end}}
+  )
+{{-     end}}
+{{-     if $Cond.InternalDependencies}}
+  tint_target_add_dependencies({{$Name}} {{$Kind}}
+{{-       range $Dep := $Cond.InternalDependencies}}
+    {{Eval "TargetName" $Dep}}
+{{-       end}}
+  )
+{{-     end}}
+{{-     if $Cond.ExternalDependencies}}
+  tint_target_add_external_dependencies({{$Name}} {{$Kind}}
+{{-       range $Dep := $Cond.ExternalDependencies}}
+    "{{$Dep.Name}}"
+{{-       end}}
+  )
+{{-     end}}
+endif({{Eval "Expression" $Cond.Condition}})
+{{-   end}}
+
+{{-   if $.OutputName}}
+{{/*   newline */}}
+tint_target_set_output_name({{$Name}} {{$Kind}} "{{$.OutputName}}")
+{{-   end}}
+{{/*   newline */}}
+{{-   if $.Condition}}
+endif({{Eval "Expression" $.Condition}})
+{{-   end}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a CMake target name
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "TargetName"}}
+{{-   Replace (printf "tint_%v" $.Name) "/" "_"  ":" "_"}}
+{{- end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Emits a CMake conditional expression
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Expression"}}
+{{-   ToUpper ($.Format " AND " " OR " "NOT ")}}
+{{- end}}
+
+{{- /* eat newlines */ -}}
+

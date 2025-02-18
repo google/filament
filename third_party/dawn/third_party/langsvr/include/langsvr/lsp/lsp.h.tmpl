@@ -1,0 +1,254 @@
+{{/*
+   * Copyright 2024 The langsvr Authors
+   *
+   * Redistribution and use in source and binary forms, with or without
+   * modification, are permitted provided that the following conditions are met:
+   *
+   * 1. Redistributions of source code must retain the above copyright notice, this
+   *    list of conditions and the following disclaimer.
+   *
+   * 2. Redistributions in binary form must reproduce the above copyright notice,
+   *    this list of conditions and the following disclaimer in the documentation
+   *    and/or other materials provided with the distribution.
+   *
+   * 3. Neither the name of the copyright holder nor the names of its
+   *    contributors may be used to endorse or promote products derived from
+   *    this software without specific prior written permission.
+   *
+   * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+   * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+   * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+   * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/}}
+
+{{- Import "src/lsp.common.tmpl" -}}
+
+#ifndef LANGSVR_LSP_LSP_H_
+#define LANGSVR_LSP_LSP_H_
+
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "langsvr/lsp/decode.h"
+#include "langsvr/lsp/encode.h"
+#include "langsvr/lsp/message_kind.h"
+#include "langsvr/lsp/primitives.h"
+#include "langsvr/one_of.h"
+#include "langsvr/optional.h"
+
+////////////////////////////////////////////////////////////////////////////////
+// Forward declarations
+////////////////////////////////////////////////////////////////////////////////
+namespace langsvr::lsp {
+{{- range $.Enumerations}}
+enum class {{.Name}};
+{{- end}}
+{{- range $.Structures}}
+struct {{.Name}};
+{{- end}}
+struct LSPAny;
+}
+
+namespace langsvr::lsp {
+
+////////////////////////////////////////////////////////////////////////////////
+// Type aliases
+////////////////////////////////////////////////////////////////////////////////
+{{range $.TypeAliases}}
+{{- if not (eq .Name "LSPAny")}}
+{{-   template "TypeAlias" .}}
+{{- end}}
+{{end}}
+
+{{range $.TypeAliases}}
+{{- if eq .Name "LSPAny"}}
+{{-   template "Documentation" .Documentation -}}
+struct {{.Name}} : {{Eval "Type" .Type}} {};
+{{- end}}
+{{end}}
+
+////////////////////////////////////////////////////////////////////////////////
+// Enums
+////////////////////////////////////////////////////////////////////////////////
+{{range $.Enumerations}}
+{{  template "Enumeration" .}}
+{{end}}
+
+////////////////////////////////////////////////////////////////////////////////
+// Structures
+////////////////////////////////////////////////////////////////////////////////
+{{range $.Structures}}
+{{  template "Structure" .}}
+{{end}}
+
+////////////////////////////////////////////////////////////////////////////////
+// Structure methods
+////////////////////////////////////////////////////////////////////////////////
+{{range $.Structures}}
+{{  template "StructureMethods" .}}
+{{end}}
+
+////////////////////////////////////////////////////////////////////////////////
+// Requests
+////////////////////////////////////////////////////////////////////////////////
+{{range $.Requests}}
+{{  template "Request" .}}
+{{end}}
+
+////////////////////////////////////////////////////////////////////////////////
+// Notifications
+////////////////////////////////////////////////////////////////////////////////
+{{range $.Notifications}}
+{{  template "Notification" .}}
+{{end}}
+
+}  // namespace langsvr::lsp
+
+#endif  // LANGSVR_LSP_LSP_H_
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                          define "Enumeration"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" $.Documentation -}}
+enum class {{$.Name}} {
+{{-   range $i, $v := $.Values}}
+{{-   if $i }}
+
+{{    end }}
+{{-    template "EnumerationEntry" $v}}
+{{-   end}}
+};
+
+Result<SuccessType> Decode(const json::Value& v, {{$.Name}}& out);
+Result<const json::Value*> Encode({{$.Name}} in, json::Builder& b);
+
+{{end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                         define "EnumerationEntry"                        -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" $.Documentation -}}
+  k{{Title $.Name}} /* = {{$.Value}} */,
+{{- end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                            define "TypeAlias"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" $.Documentation -}}
+using {{.Name}} = {{Eval "Type" .Type}};
+{{- end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                            define "Structure"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" $.Documentation -}}
+struct {{$.Name}}
+{{-   if $.Extends}} : {{Eval "TypeList" $.Extends}}{{end}} {
+{{-   if $.Kind }}
+  /// The structure type identifier
+  static constexpr std::string_view kKind = "{{$.Kind}}";
+{{    end}}
+
+{{-   range $i, $n := $.NestedStructures}}
+{{      template "Structure" $n}}
+{{    end }}
+
+{{-   range $i, $p := $.Properties}}
+{{      template "Property" $p}}
+{{    end}}
+};
+
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                        define "StructureMethods"                         -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{$name := Join $.NestedNames "::"}}
+bool operator==(const {{$name}}& lhs, const {{$name}}& rhs);
+bool operator!=(const {{$name}}& lhs, const {{$name}}& rhs);
+Result<SuccessType> Decode(const json::Value& v, {{$name}}& out);
+Result<const json::Value*> Encode(const {{$name}}& in, json::Builder& b);
+{{-   range $i, $n := $.NestedStructures}}
+{{-     template "StructureMethods" $n}}
+{{-   end }}
+{{end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                             define "Property"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" .Documentation -}}
+{{-   if .Optional -}}
+  Optional<{{Eval "Type" .Type}}> {{.CppName}};
+{{-   else -}}
+  {{Eval "Type" .Type}} {{.CppName}}{};
+{{-   end }}
+{{- end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                            define "Request"                              -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" $.Documentation -}}
+struct {{.Name}}Request
+{{-   if $.Params}} : {{Eval "TypeList" $.Params}}{{end}} {
+  /// The LSP message type
+  static constexpr MessageKind kMessageKind = MessageKind::kRequest;
+
+  /// The LSP name for the request
+  static constexpr std::string_view kMethod = "{{$.Method}}";
+
+  /// Does the request take parameters?
+  static constexpr bool kHasParams = {{if $.Params}}true{{else}}false{{end}};
+
+  /// The result success type of the request
+  using SuccessType = {{Eval "Type" $.Result}};
+  /// The result error type of the request
+  using FailureType = {{if $.ErrorData}}{{Eval "Type" $.ErrorData}}{{else}}void{{end}};
+  /// The result type (success or failure) of the request
+  using ResultType = {{if $.ErrorData}}Result<SuccessType, FailureType>{{else}}SuccessType{{end}};
+};
+
+{{end}}
+
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                           define "Notification"                          -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   template "Documentation" $.Documentation -}}
+struct {{.Name}}Notification
+{{-   if $.Params}} : {{Eval "TypeList" $.Params}}{{end}} {
+  /// The LSP message type
+  static constexpr MessageKind kMessageKind = MessageKind::kNotification;
+
+  /// The LSP name for the notification
+  static constexpr std::string_view kMethod = "{{$.Method}}";
+
+  /// Does the Notification take parameters?
+  static constexpr bool kHasParams = {{if $.Params}}true{{else}}false{{end}};
+};
+
+{{end}}
+
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-                        define "Documentation"                            -}}
+{{- /* ------------------------------------------------------------------ */ -}}
+{{-   if . }}
+/// {{Join (Split . "\n") "\n/// " }}
+{{    else }}
+/// No documentation available
+{{    end }}
+{{- end}}

@@ -1,0 +1,70 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 32
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %main_position_Output %main___point_size_Output
+               OpMemberName %S_std140 0 "matrix_view"
+               OpMemberName %S_std140 1 "matrix_normal_col0"
+               OpMemberName %S_std140 2 "matrix_normal_col1"
+               OpMemberName %S_std140 3 "matrix_normal_col2"
+               OpName %S_std140 "S_std140"
+               OpMemberName %buffer_block_std140 0 "inner"
+               OpName %buffer_block_std140 "buffer_block_std140"
+               OpName %main_position_Output "main_position_Output"
+               OpName %main___point_size_Output "main___point_size_Output"
+               OpName %main_inner "main_inner"
+               OpName %x "x"
+               OpName %main "main"
+               OpMemberDecorate %S_std140 0 Offset 0
+               OpMemberDecorate %S_std140 0 ColMajor
+               OpMemberDecorate %S_std140 0 MatrixStride 16
+               OpMemberDecorate %S_std140 1 Offset 64
+               OpMemberDecorate %S_std140 2 Offset 80
+               OpMemberDecorate %S_std140 3 Offset 96
+               OpMemberDecorate %buffer_block_std140 0 Offset 0
+               OpDecorate %buffer_block_std140 Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpDecorate %main_position_Output BuiltIn Position
+               OpDecorate %main___point_size_Output BuiltIn PointSize
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+    %v3float = OpTypeVector %float 3
+   %S_std140 = OpTypeStruct %mat4v4float %v3float %v3float %v3float
+%buffer_block_std140 = OpTypeStruct %S_std140
+%_ptr_Uniform_buffer_block_std140 = OpTypePointer Uniform %buffer_block_std140
+          %1 = OpVariable %_ptr_Uniform_buffer_block_std140 Uniform
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%main___point_size_Output = OpVariable %_ptr_Output_float Output
+         %14 = OpTypeFunction %v4float
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+     %uint_2 = OpConstant %uint 2
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+       %void = OpTypeVoid
+         %29 = OpTypeFunction %void
+ %main_inner = OpFunction %v4float None %14
+         %15 = OpLabel
+         %16 = OpAccessChain %_ptr_Uniform_v4float %1 %uint_0 %uint_0 %uint_0
+         %20 = OpAccessChain %_ptr_Uniform_float %16 %uint_2
+          %x = OpLoad %float %20 None
+         %24 = OpCompositeConstruct %v4float %x %float_0 %float_0 %float_1
+               OpReturnValue %24
+               OpFunctionEnd
+       %main = OpFunction %void None %29
+         %30 = OpLabel
+         %31 = OpFunctionCall %v4float %main_inner
+               OpStore %main_position_Output %31 None
+               OpStore %main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,59 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+         %25 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vs_main "vs_main" %vs_main_vertex_index_Input %vs_main_position_Output %vs_main___point_size_Output
+               OpName %vs_main_vertex_index_Input "vs_main_vertex_index_Input"
+               OpName %vs_main_position_Output "vs_main_position_Output"
+               OpName %vs_main___point_size_Output "vs_main___point_size_Output"
+               OpName %vs_main_inner "vs_main_inner"
+               OpName %in_vertex_index "in_vertex_index"
+               OpName %vs_main "vs_main"
+               OpDecorate %vs_main_vertex_index_Input BuiltIn VertexIndex
+               OpDecorate %vs_main_position_Output BuiltIn Position
+               OpDecorate %vs_main___point_size_Output BuiltIn PointSize
+               OpDecorate %_arr_v4float_uint_3 ArrayStride 16
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%vs_main_vertex_index_Input = OpVariable %_ptr_Input_uint Input
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vs_main_position_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vs_main___point_size_Output = OpVariable %_ptr_Output_float Output
+     %uint_3 = OpConstant %uint 3
+%_arr_v4float_uint_3 = OpTypeArray %v4float %uint_3
+%_ptr_Private__arr_v4float_uint_3 = OpTypePointer Private %_arr_v4float_uint_3
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+         %15 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_1
+         %18 = OpConstantComposite %v4float %float_0 %float_1 %float_0 %float_1
+         %19 = OpConstantComposite %v4float %float_1 %float_1 %float_0 %float_1
+         %14 = OpConstantComposite %_arr_v4float_uint_3 %15 %18 %19
+         %10 = OpVariable %_ptr_Private__arr_v4float_uint_3 Private %14
+         %22 = OpTypeFunction %v4float %uint
+     %uint_2 = OpConstant %uint 2
+%_ptr_Private_v4float = OpTypePointer Private %v4float
+       %void = OpTypeVoid
+         %32 = OpTypeFunction %void
+%vs_main_inner = OpFunction %v4float None %22
+%in_vertex_index = OpFunctionParameter %uint
+         %23 = OpLabel
+         %24 = OpExtInst %uint %25 UMin %in_vertex_index %uint_2
+         %27 = OpAccessChain %_ptr_Private_v4float %10 %24
+         %29 = OpLoad %v4float %27 None
+               OpReturnValue %29
+               OpFunctionEnd
+    %vs_main = OpFunction %void None %32
+         %33 = OpLabel
+         %34 = OpLoad %uint %vs_main_vertex_index_Input None
+         %35 = OpFunctionCall %v4float %vs_main_inner %34
+               OpStore %vs_main_position_Output %35 None
+               OpStore %vs_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

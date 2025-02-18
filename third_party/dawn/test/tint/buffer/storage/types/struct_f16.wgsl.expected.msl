@@ -1,0 +1,65 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct Inner_packed_vec3 {
+  /* 0x0000 */ half scalar_f16;
+  /* 0x0002 */ tint_array<int8_t, 6> tint_pad;
+  /* 0x0008 */ packed_half3 vec3_f16;
+  /* 0x000e */ tint_array<int8_t, 2> tint_pad_1;
+  /* 0x0010 */ half2x4 mat2x4_f16;
+};
+
+struct Inner {
+  half scalar_f16;
+  half3 vec3_f16;
+  half2x4 mat2x4_f16;
+};
+
+struct S_packed_vec3 {
+  /* 0x0000 */ Inner_packed_vec3 inner;
+};
+
+struct S {
+  Inner inner;
+};
+
+struct tint_module_vars_struct {
+  const device S_packed_vec3* in;
+  device S_packed_vec3* out;
+};
+
+void tint_store_and_preserve_padding_1(device Inner_packed_vec3* const target, Inner value_param) {
+  (*target).scalar_f16 = value_param.scalar_f16;
+  (*target).vec3_f16 = packed_half3(value_param.vec3_f16);
+  (*target).mat2x4_f16 = value_param.mat2x4_f16;
+}
+
+void tint_store_and_preserve_padding(device S_packed_vec3* const target, S value_param) {
+  tint_store_and_preserve_padding_1((&(*target).inner), value_param.inner);
+}
+
+Inner tint_load_struct_packed_vec3_1(const device Inner_packed_vec3* const from) {
+  return Inner{.scalar_f16=(*from).scalar_f16, .vec3_f16=half3((*from).vec3_f16), .mat2x4_f16=(*from).mat2x4_f16};
+}
+
+S tint_load_struct_packed_vec3(const device S_packed_vec3* const from) {
+  return S{.inner=tint_load_struct_packed_vec3_1((&(*from).inner))};
+}
+
+kernel void v(const device S_packed_vec3* in [[buffer(1)]], device S_packed_vec3* out [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.in=in, .out=out};
+  S const t = tint_load_struct_packed_vec3(tint_module_vars.in);
+  tint_store_and_preserve_padding(tint_module_vars.out, t);
+}

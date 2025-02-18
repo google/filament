@@ -1,0 +1,4 @@
+fn f() {
+  discard;
+  return;
+}

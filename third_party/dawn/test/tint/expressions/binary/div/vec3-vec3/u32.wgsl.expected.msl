@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+uint3 tint_div_v3u32(uint3 lhs, uint3 rhs) {
+  return (lhs / select(rhs, uint3(1u), (rhs == uint3(0u))));
+}
+
+kernel void f() {
+  uint3 const a = uint3(1u, 2u, 3u);
+  uint3 const b = uint3(4u, 5u, 6u);
+  uint3 const r = tint_div_v3u32(a, b);
+}

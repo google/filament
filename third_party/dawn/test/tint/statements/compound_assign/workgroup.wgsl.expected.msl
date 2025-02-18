@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  threadgroup int* a;
+  threadgroup float4* b;
+  threadgroup float2x2* c;
+};
+
+int tint_div_i32(int lhs, int rhs) {
+  uint const v = uint((lhs == (-2147483647 - 1)));
+  bool const v_1 = bool((v & uint((rhs == -1))));
+  uint const v_2 = uint((rhs == 0));
+  return (lhs / select(rhs, 1, bool((v_2 | uint(v_1)))));
+}
+
+void foo(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.a) = tint_div_i32((*tint_module_vars.a), 2);
+  (*tint_module_vars.b) = ((*tint_module_vars.b) * float4x4(float4(0.0f), float4(0.0f), float4(0.0f), float4(0.0f)));
+  (*tint_module_vars.c) = ((*tint_module_vars.c) * 2.0f);
+}

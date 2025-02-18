@@ -1,0 +1,140 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 67
+; Schema: 0
+               OpCapability Shader
+               OpCapability SampleRateShading
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability StorageInputOutput16
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_position_Input %main_loc0_Input %main_front_facing_Input %main_loc1_Input %main_sample_index_Input %main_loc3_Input %main_loc5_Input %main_sample_mask_Input %main_loc2_Input %main_loc4_Input
+               OpExecutionMode %main OriginUpperLeft
+               OpName %main_position_Input "main_position_Input"
+               OpName %main_loc0_Input "main_loc0_Input"
+               OpName %main_front_facing_Input "main_front_facing_Input"
+               OpName %main_loc1_Input "main_loc1_Input"
+               OpName %main_sample_index_Input "main_sample_index_Input"
+               OpName %main_loc3_Input "main_loc3_Input"
+               OpName %main_loc5_Input "main_loc5_Input"
+               OpName %main_sample_mask_Input "main_sample_mask_Input"
+               OpName %main_loc2_Input "main_loc2_Input"
+               OpName %main_loc4_Input "main_loc4_Input"
+               OpName %main_inner "main_inner"
+               OpMemberName %FragmentInputs0 0 "position"
+               OpMemberName %FragmentInputs0 1 "loc0"
+               OpName %FragmentInputs0 "FragmentInputs0"
+               OpName %inputs0 "inputs0"
+               OpName %front_facing "front_facing"
+               OpName %loc1 "loc1"
+               OpName %sample_index "sample_index"
+               OpMemberName %FragmentInputs1 0 "loc3"
+               OpMemberName %FragmentInputs1 1 "loc5"
+               OpMemberName %FragmentInputs1 2 "sample_mask"
+               OpName %FragmentInputs1 "FragmentInputs1"
+               OpName %inputs1 "inputs1"
+               OpName %loc2 "loc2"
+               OpName %loc4 "loc4"
+               OpName %foo "foo"
+               OpName %bar "bar"
+               OpName %i "i"
+               OpName %loc1 "u"
+               OpName %loc2 "f"
+               OpName %v "v"
+               OpName %loc4 "x"
+               OpName %y "y"
+               OpName %main "main"
+               OpDecorate %main_position_Input BuiltIn FragCoord
+               OpDecorate %main_loc0_Input Location 0
+               OpDecorate %main_loc0_Input Flat
+               OpDecorate %main_front_facing_Input BuiltIn FrontFacing
+               OpDecorate %main_loc1_Input Location 1
+               OpDecorate %main_loc1_Input Flat
+               OpDecorate %main_sample_index_Input Flat
+               OpDecorate %main_sample_index_Input BuiltIn SampleId
+               OpDecorate %main_loc3_Input Location 3
+               OpDecorate %main_loc5_Input Location 5
+               OpDecorate %_arr_uint_uint_1 ArrayStride 4
+               OpDecorate %main_sample_mask_Input BuiltIn SampleMask
+               OpDecorate %main_loc2_Input Location 2
+               OpDecorate %main_loc4_Input Location 4
+               OpMemberDecorate %FragmentInputs0 0 Offset 0
+               OpMemberDecorate %FragmentInputs0 1 Offset 16
+               OpMemberDecorate %FragmentInputs1 0 Offset 0
+               OpMemberDecorate %FragmentInputs1 1 Offset 16
+               OpMemberDecorate %FragmentInputs1 2 Offset 24
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%main_position_Input = OpVariable %_ptr_Input_v4float Input
+        %int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%main_loc0_Input = OpVariable %_ptr_Input_int Input
+       %bool = OpTypeBool
+%_ptr_Input_bool = OpTypePointer Input %bool
+%main_front_facing_Input = OpVariable %_ptr_Input_bool Input
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_loc1_Input = OpVariable %_ptr_Input_uint Input
+%main_sample_index_Input = OpVariable %_ptr_Input_uint Input
+%main_loc3_Input = OpVariable %_ptr_Input_v4float Input
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+%_ptr_Input_v3half = OpTypePointer Input %v3half
+%main_loc5_Input = OpVariable %_ptr_Input_v3half Input
+     %uint_1 = OpConstant %uint 1
+%_arr_uint_uint_1 = OpTypeArray %uint %uint_1
+%_ptr_Input__arr_uint_uint_1 = OpTypePointer Input %_arr_uint_uint_1
+%main_sample_mask_Input = OpVariable %_ptr_Input__arr_uint_uint_1 Input
+%_ptr_Input_float = OpTypePointer Input %float
+%main_loc2_Input = OpVariable %_ptr_Input_float Input
+%_ptr_Input_half = OpTypePointer Input %half
+%main_loc4_Input = OpVariable %_ptr_Input_half Input
+       %void = OpTypeVoid
+%FragmentInputs0 = OpTypeStruct %v4float %int
+%FragmentInputs1 = OpTypeStruct %v4float %v3half %uint
+         %39 = OpTypeFunction %void %FragmentInputs0 %bool %uint %uint %FragmentInputs1 %float %half
+         %50 = OpTypeFunction %void
+     %uint_0 = OpConstant %uint 0
+ %main_inner = OpFunction %void None %39
+    %inputs0 = OpFunctionParameter %FragmentInputs0
+%front_facing = OpFunctionParameter %bool
+       %loc1 = OpFunctionParameter %uint
+%sample_index = OpFunctionParameter %uint
+    %inputs1 = OpFunctionParameter %FragmentInputs1
+       %loc2 = OpFunctionParameter %float
+       %loc4 = OpFunctionParameter %half
+         %40 = OpLabel
+               OpSelectionMerge %41 None
+               OpBranchConditional %front_facing %42 %41
+         %42 = OpLabel
+        %foo = OpCompositeExtract %v4float %inputs0 0
+         %44 = OpCompositeExtract %uint %inputs1 2
+        %bar = OpIAdd %uint %sample_index %44
+          %i = OpCompositeExtract %int %inputs0 1
+          %v = OpCompositeExtract %v4float %inputs1 0
+          %y = OpCompositeExtract %v3half %inputs1 1
+               OpBranch %41
+         %41 = OpLabel
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %50
+         %51 = OpLabel
+         %52 = OpLoad %v4float %main_position_Input None
+         %53 = OpLoad %int %main_loc0_Input None
+         %54 = OpCompositeConstruct %FragmentInputs0 %52 %53
+         %55 = OpLoad %bool %main_front_facing_Input None
+         %56 = OpLoad %uint %main_loc1_Input None
+         %57 = OpLoad %uint %main_sample_index_Input None
+         %58 = OpLoad %v4float %main_loc3_Input None
+         %59 = OpLoad %v3half %main_loc5_Input None
+         %60 = OpAccessChain %_ptr_Input_uint %main_sample_mask_Input %uint_0
+         %62 = OpLoad %uint %60 None
+         %63 = OpCompositeConstruct %FragmentInputs1 %58 %59 %62
+         %64 = OpLoad %float %main_loc2_Input None
+         %65 = OpLoad %half %main_loc4_Input None
+         %66 = OpFunctionCall %void %main_inner %54 %55 %56 %57 %63 %64 %65
+               OpReturn
+               OpFunctionEnd

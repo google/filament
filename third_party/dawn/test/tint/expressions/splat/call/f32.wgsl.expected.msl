@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+float get_f32() {
+  return 1.0f;
+}
+
+void f() {
+  float2 v2 = float2(get_f32());
+  float3 v3 = float3(get_f32());
+  float4 v4 = float4(get_f32());
+}

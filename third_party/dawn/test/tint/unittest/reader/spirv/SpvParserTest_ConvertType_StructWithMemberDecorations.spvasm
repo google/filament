@@ -1,0 +1,24 @@
+; Test: SpvParserTest_ConvertType_StructWithMemberDecorations.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 11
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %1 "x_100"
+OpExecutionMode %1 OriginUpperLeft
+OpMemberDecorate %_struct_10 0 Offset 0
+OpMemberDecorate %_struct_10 1 Offset 8
+OpMemberDecorate %_struct_10 2 Offset 16
+%float = OpTypeFloat 32
+%v2float = OpTypeVector %float 2
+%mat2v2float = OpTypeMatrix %v2float 2
+%_struct_10 = OpTypeStruct %float %v2float %mat2v2float
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%1 = OpFunction %void None %6
+%7 = OpLabel
+OpReturn
+OpFunctionEnd
+

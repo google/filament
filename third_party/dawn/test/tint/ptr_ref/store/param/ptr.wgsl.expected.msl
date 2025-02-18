@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void func(int value, thread int* const pointer) {
+  (*pointer) = value;
+}
+
+kernel void v() {
+  int i = 123;
+  func(123, (&i));
+}

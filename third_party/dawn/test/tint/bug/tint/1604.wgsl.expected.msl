@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  const constant int* x;
+};
+
+kernel void v(const constant int* x [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.x=x};
+  switch((*tint_module_vars.x)) {
+    case 0:
+    {
+      {
+        uint2 tint_loop_idx = 0u;
+        while(true) {
+          if (all((tint_loop_idx == uint2(4294967295u)))) {
+            break;
+          }
+          return;
+        }
+      }
+      break;
+    }
+    default:
+    {
+      break;
+    }
+  }
+}

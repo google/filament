@@ -1,0 +1,21 @@
+name: Version Check
+
+on:
+  pull_request:
+
+jobs:
+  version-check:
+    name: Ensure Version is as expected
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Version Check
+        run: python ./.github/workflows/version_check.py
+        shell: bash

@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  int i = 0;
+  int j = 0;
+  float2x2 const m = float2x2(float2(1.0f, 2.0f), float2(3.0f, 4.0f));
+  int const v = j;
+  uint const v_1 = min(uint(i), 1u);
+  float const f_1 = m[v_1][min(uint(v), 1u)];
+}

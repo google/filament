@@ -1,0 +1,122 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpCapability StorageImageExtendedFormats
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpName %arg_0 "arg_0"
+               OpName %textureStore_4d359d "textureStore_4d359d"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %arg_3 "arg_3"
+               OpName %fragment_main "fragment_main"
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 NonReadable
+       %uint = OpTypeInt 32 0
+          %3 = OpTypeImage %uint 2D 0 1 0 2 Rg32ui
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+      %arg_0 = OpVariable %_ptr_UniformConstant_3 UniformConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+     %uint_1 = OpConstant %uint 1
+         %12 = OpConstantComposite %v2uint %uint_1 %uint_1
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %21 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+     %v3uint = OpTypeVector %uint 3
+%textureStore_4d359d = OpFunction %void None %7
+          %8 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v2uint Function
+      %arg_2 = OpVariable %_ptr_Function_int Function
+      %arg_3 = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_1 %12
+               OpStore %arg_2 %int_1
+               OpStore %arg_3 %21
+         %22 = OpLoad %3 %arg_0 None
+         %23 = OpLoad %v2uint %arg_1 None
+         %24 = OpLoad %int %arg_2 None
+         %25 = OpLoad %v4uint %arg_3 None
+         %26 = OpBitcast %uint %24
+         %28 = OpCompositeConstruct %v3uint %23 %26
+               OpImageWrite %22 %28 %25 None
+               OpReturn
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %7
+         %31 = OpLabel
+         %32 = OpFunctionCall %void %textureStore_4d359d
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpCapability StorageImageExtendedFormats
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpName %arg_0 "arg_0"
+               OpName %textureStore_4d359d "textureStore_4d359d"
+               OpName %arg_1 "arg_1"
+               OpName %arg_2 "arg_2"
+               OpName %arg_3 "arg_3"
+               OpName %compute_main "compute_main"
+               OpDecorate %arg_0 DescriptorSet 1
+               OpDecorate %arg_0 Binding 0
+               OpDecorate %arg_0 NonReadable
+       %uint = OpTypeInt 32 0
+          %3 = OpTypeImage %uint 2D 0 1 0 2 Rg32ui
+%_ptr_UniformConstant_3 = OpTypePointer UniformConstant %3
+      %arg_0 = OpVariable %_ptr_UniformConstant_3 UniformConstant
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+     %uint_1 = OpConstant %uint 1
+         %12 = OpConstantComposite %v2uint %uint_1 %uint_1
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+         %21 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+     %v3uint = OpTypeVector %uint 3
+%textureStore_4d359d = OpFunction %void None %7
+          %8 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_v2uint Function
+      %arg_2 = OpVariable %_ptr_Function_int Function
+      %arg_3 = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_1 %12
+               OpStore %arg_2 %int_1
+               OpStore %arg_3 %21
+         %22 = OpLoad %3 %arg_0 None
+         %23 = OpLoad %v2uint %arg_1 None
+         %24 = OpLoad %int %arg_2 None
+         %25 = OpLoad %v4uint %arg_3 None
+         %26 = OpBitcast %uint %24
+         %28 = OpCompositeConstruct %v3uint %23 %26
+               OpImageWrite %22 %28 %25 None
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %7
+         %31 = OpLabel
+         %32 = OpFunctionCall %void %textureStore_4d359d
+               OpReturn
+               OpFunctionEnd

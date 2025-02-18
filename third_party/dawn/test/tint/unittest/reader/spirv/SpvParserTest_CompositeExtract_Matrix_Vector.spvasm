@@ -1,0 +1,49 @@
+; Test: SpvParserTest_CompositeExtract_Matrix_Vector.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint GLCompute %100 "main"
+OpExecutionMode %100 LocalSize 1 1 1
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%float = OpTypeFloat 32
+%uint_10 = OpConstant %uint 10
+%uint_20 = OpConstant %uint 20
+%uint_3 = OpConstant %uint 3
+%uint_4 = OpConstant %uint 4
+%uint_5 = OpConstant %uint 5
+%int_1 = OpConstant %int 1
+%int_30 = OpConstant %int 30
+%int_40 = OpConstant %int 40
+%float_50 = OpConstant %float 50
+%float_60 = OpConstant %float 60
+%float_70 = OpConstant %float 70
+%v2uint = OpTypeVector %uint 2
+%v3uint = OpTypeVector %uint 3
+%v4uint = OpTypeVector %uint 4
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%mat3v2float = OpTypeMatrix %v2float 3
+%25 = OpConstantNull %mat3v2float
+%_struct_26 = OpTypeStruct %v2float %uint %int
+%_arr_uint_uint_5 = OpTypeArray %uint %uint_5
+%28 = OpConstantComposite %v2uint %uint_3 %uint_4
+%29 = OpConstantComposite %v2uint %uint_4 %uint_3
+%30 = OpConstantComposite %v2float %float_50 %float_60
+%31 = OpConstantComposite %v2float %float_60 %float_50
+%32 = OpConstantComposite %v2float %float_70 %float_70
+%_ptr_Function_mat3v2float = OpTypePointer Function %mat3v2float
+%100 = OpFunction %void None %4
+%34 = OpLabel
+%35 = OpVariable %_ptr_Function_mat3v2float Function
+%1 = OpLoad %mat3v2float %35
+%2 = OpCompositeExtract %float %1 2 1
+OpReturn
+OpFunctionEnd
+

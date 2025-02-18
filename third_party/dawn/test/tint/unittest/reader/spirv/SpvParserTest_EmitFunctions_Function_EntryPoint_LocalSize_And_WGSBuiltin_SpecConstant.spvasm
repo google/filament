@@ -1,0 +1,29 @@
+; Test: SpvParserTest_EmitFunctions_Function_EntryPoint_LocalSize_And_WGSBuiltin_SpecConstant.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 13
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint GLCompute %1 "comp_main"
+OpExecutionMode %1 LocalSize 2 4 8
+OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+OpDecorate %3 SpecId 0
+OpDecorate %4 SpecId 1
+OpDecorate %5 SpecId 2
+%void = OpTypeVoid
+%7 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%v3uint = OpTypeVector %uint 3
+%3 = OpSpecConstant %uint 3
+%4 = OpSpecConstant %uint 5
+%5 = OpSpecConstant %uint 7
+%gl_WorkGroupSize = OpSpecConstantComposite %v3uint %3 %4 %5
+%1 = OpFunction %void None %7
+%12 = OpLabel
+OpReturn
+OpFunctionEnd
+

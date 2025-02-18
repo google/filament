@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread int4* u;
+};
+
+void f(tint_module_vars_struct tint_module_vars) {
+  uint4 const v = uint4((*tint_module_vars.u));
+}

@@ -1,0 +1,76 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int a;
+  int b;
+};
+
+struct tint_module_vars_struct {
+  device int* s;
+  threadgroup atomic_int* g1;
+};
+
+struct tint_symbol_1 {
+  atomic_int tint_symbol;
+};
+
+int accept_value(int val) {
+  return val;
+}
+
+int accept_ptr_deref_call_func(thread int* const val) {
+  int const v = (*val);
+  return as_type<int>((as_type<uint>(v) + as_type<uint>(accept_value((*val)))));
+}
+
+int accept_ptr_deref_pass_through(thread int* const val) {
+  int const v_1 = (*val);
+  return as_type<int>((as_type<uint>(v_1) + as_type<uint>(accept_ptr_deref_call_func(val))));
+}
+
+int accept_ptr_to_struct_and_access(thread S* const val) {
+  return as_type<int>((as_type<uint>((*val).a) + as_type<uint>((*val).b)));
+}
+
+int accept_ptr_to_struct_access_pass_ptr(thread S* const val) {
+  thread int* const b = (&(*val).a);
+  (*b) = 2;
+  return (*b);
+}
+
+int tint_f32_to_i32(float value) {
+  return select(2147483647, select((-2147483647 - 1), int(value), (value >= -2147483648.0f)), (value <= 2147483520.0f));
+}
+
+int accept_ptr_vec_access_elements(thread float3* const v1) {
+  (*v1).x = cross((*v1), (*v1)).x;
+  return tint_f32_to_i32((*v1).x);
+}
+
+int call_builtin_with_mod_scope_ptr(tint_module_vars_struct tint_module_vars) {
+  return atomic_load_explicit(tint_module_vars.g1, memory_order_relaxed);
+}
+
+void main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  if ((tint_local_index < 1u)) {
+    atomic_store_explicit(tint_module_vars.g1, 0, memory_order_relaxed);
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  int v1 = 0;
+  S v2 = S{};
+  thread S* const v3 = (&v2);
+  float3 v4 = float3(0.0f);
+  int const t1 = atomic_load_explicit(tint_module_vars.g1, memory_order_relaxed);
+  int const v_2 = accept_ptr_deref_pass_through((&v1));
+  int const v_3 = as_type<int>((as_type<uint>(v_2) + as_type<uint>(accept_ptr_to_struct_and_access((&v2)))));
+  int const v_4 = as_type<int>((as_type<uint>(v_3) + as_type<uint>(accept_ptr_to_struct_and_access(v3))));
+  int const v_5 = as_type<int>((as_type<uint>(v_4) + as_type<uint>(accept_ptr_vec_access_elements((&v4)))));
+  int const v_6 = as_type<int>((as_type<uint>(v_5) + as_type<uint>(accept_ptr_to_struct_access_pass_ptr((&v2)))));
+  (*tint_module_vars.s) = as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(v_6) + as_type<uint>(call_builtin_with_mod_scope_ptr(tint_module_vars))))) + as_type<uint>(t1)));
+}
+
+kernel void v_7(uint tint_local_index [[thread_index_in_threadgroup]], device int* s [[buffer(0)]], threadgroup tint_symbol_1* v_8 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.s=s, .g1=(&(*v_8).tint_symbol)};
+  main_inner(tint_local_index, tint_module_vars);
+}

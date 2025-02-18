@@ -1,0 +1,75 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 41
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %compute_main_local_invocation_index_Input
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %arg_0 "arg_0"
+               OpName %compute_main_local_invocation_index_Input "compute_main_local_invocation_index_Input"
+               OpName %atomicLoad_afcc03 "atomicLoad_afcc03"
+               OpName %res "res"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %compute_main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+        %int = OpTypeInt 32 1
+%prevent_dce_block = OpTypeStruct %int
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+%_ptr_Workgroup_int = OpTypePointer Workgroup %int
+      %arg_0 = OpVariable %_ptr_Workgroup_int Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%compute_main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+         %11 = OpTypeFunction %int
+     %uint_2 = OpConstant %uint 2
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_int = OpTypePointer Function %int
+       %void = OpTypeVoid
+         %22 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+      %int_0 = OpConstant %int 0
+   %uint_264 = OpConstant %uint 264
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+         %37 = OpTypeFunction %void
+%atomicLoad_afcc03 = OpFunction %int None %11
+         %12 = OpLabel
+        %res = OpVariable %_ptr_Function_int Function
+         %13 = OpAtomicLoad %int %arg_0 %uint_2 %uint_0
+               OpStore %res %13
+         %18 = OpLoad %int %res None
+               OpReturnValue %18
+               OpFunctionEnd
+%compute_main_inner = OpFunction %void None %22
+%tint_local_index = OpFunctionParameter %uint
+         %23 = OpLabel
+         %24 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %27 None
+               OpBranchConditional %24 %28 %27
+         %28 = OpLabel
+               OpAtomicStore %arg_0 %uint_2 %uint_0 %int_0
+               OpBranch %27
+         %27 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %33 = OpFunctionCall %int %atomicLoad_afcc03
+         %34 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+               OpStore %34 %33 None
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %37
+         %38 = OpLabel
+         %39 = OpLoad %uint %compute_main_local_invocation_index_Input None
+         %40 = OpFunctionCall %void %compute_main_inner %39
+               OpReturn
+               OpFunctionEnd

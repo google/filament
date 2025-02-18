@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct main_inputs {
+  float none [[user(locn2)]];
+};
+
+void main_inner(float none) {
+}
+
+fragment void v(main_inputs inputs [[stage_in]]) {
+  main_inner(inputs.none);
+}

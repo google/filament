@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int tint_mod_i32(int lhs, int rhs) {
+  uint const v = uint((lhs == (-2147483647 - 1)));
+  bool const v_1 = bool((v & uint((rhs == -1))));
+  uint const v_2 = uint((rhs == 0));
+  int const v_3 = select(rhs, 1, bool((v_2 | uint(v_1))));
+  return as_type<int>((as_type<uint>(lhs) - as_type<uint>(as_type<int>((as_type<uint>((lhs / v_3)) * as_type<uint>(v_3))))));
+}
+
+kernel void f() {
+  int const a = 1;
+  int const b = 2;
+  int const r = tint_mod_i32(a, b);
+}

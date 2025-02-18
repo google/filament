@@ -1,0 +1,26 @@
+; Test: SpvModuleScopeVarParserTest_ScalarSpecConstant_UsedInFunction.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpName %myconst "myconst"
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%myconst = OpSpecConstant %float 2.5
+%7 = OpTypeFunction %float
+%100 = OpFunction %float None %7
+%8 = OpLabel
+%1 = OpFAdd %float %myconst %myconst
+OpReturnValue %1
+OpFunctionEnd
+%2 = OpFunction %void None %5
+%9 = OpLabel
+OpReturn
+OpFunctionEnd
+

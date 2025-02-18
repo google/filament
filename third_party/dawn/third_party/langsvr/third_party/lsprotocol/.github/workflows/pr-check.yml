@@ -1,0 +1,269 @@
+name: PR Validation
+
+on:
+  pull_request:
+
+jobs:
+  build-package:
+    name: Create PyPI Packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+
+      - name: Pip cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-build-vsix-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-build-vsix-
+
+      - name: Install nox
+        run: python -m pip install nox
+        shell: bash
+
+      - name: Build pypi package
+        run: python -m nox --session build_python_package
+        shell: bash
+
+      - name: Upload Python Packages to Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pypi-packages
+          path: |
+            packages/python/dist/*.gz
+            packages/python/dist/*.whl
+          if-no-files-found: error
+          retention-days: 7
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Pip cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-lint-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-lint-
+
+      - name: Install nox
+        run: python -m pip install nox
+        shell: bash
+
+      - name: Check linting and formatting
+        run: python -m nox --session lint
+        shell: bash
+
+      - name: Rust Tool Chain setup
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+
+      - name: Rustfmt Check
+        uses: actions-rust-lang/rustfmt@v1
+        with:
+          manifest-path: packages/rust/lsprotocol/Cargo.toml
+
+      - name: Dotnet Tool Chain setup
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Dotnet Format Check
+        run: dotnet format packages/dotnet/lsprotocol/lsprotocol.csproj --verify-no-changes
+        shell: bash
+
+  python-tests:
+    name: Python Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Python ${{ matrix.python }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Update pip, install wheel and nox
+        run: python -m pip install -U pip wheel nox
+        shell: bash
+
+      - name: Run tests
+        run: python -m nox --session tests
+        shell: bash
+
+  rust-tests:
+    name: 'Rust Tests'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Rust Tool Chain setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Generator
+        run: python -m pip install -r ./requirements.txt
+
+      - name: Generate Test Data
+        run: python -m generator --plugin testdata
+
+      - name: Rust Run Tests
+        run: cargo test --manifest-path tests/rust/Cargo.toml
+        shell: bash
+        env:
+          LSP_TEST_DATA_PATH: ${{ github.workspace }}/packages/testdata
+
+  dotnet-tests:
+    name: Dotnet Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Dotnet Tool Chain setup
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Install Generator
+        run: python -m pip install -r ./requirements.txt
+
+      - name: Generate Test Data
+        run: python -m generator --plugin testdata
+
+      - name: Generate C# Code
+        run: python -m generator --plugin dotnet
+
+      - name: Dotnet Build Tests
+        run: dotnet build tests/dotnet/lsprotocol_tests/lsprotocol_tests.csproj
+        shell: bash
+
+      - name: Dotnet Run Tests
+        run: dotnet test tests/dotnet/lsprotocol_tests/lsprotocol_tests.csproj
+        shell: bash
+        env:
+          LSP_TEST_DATA_PATH: ${{ github.workspace }}/packages/testdata
+
+  dotnet-project:
+    name: Dotnet Project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Generator
+        run: python -m pip install -r ./requirements.txt
+
+      - name: Generate C# Code
+        run: python -m generator --plugin dotnet
+
+      - name: Format generated code
+        run: dotnet format packages/dotnet/lsprotocol/lsprotocol.csproj
+        shell: bash
+
+      - name: Upload Dotnet Project to Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dotnet-project
+          path: |
+            packages/dotnet/lsprotocol/*.csproj
+            packages/dotnet/lsprotocol/*.cs
+          if-no-files-found: error
+          retention-days: 7
+
+  # smoke-tests:
+  #   name: Smoke Tests (pygls)
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [ubuntu-latest, windows-latest]
+  #       python: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+
+  #     - name: Checkout Pygls
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: openlawlibrary/pygls
+  #         path: smoke_tests
+
+  #     - name: Use Python ${{ matrix.python }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.python }}
+
+  #     - name: Update pip, install wheel
+  #       run: python -m pip install -U pip wheel
+  #       shell: bash
+
+  #     - name: Install pip pygls dependencies
+  #       run: python -m pip install typeguard mock pytest pytest-asyncio
+  #       shell: bash
+
+  #     - name: Install pip lsprotocol dependencies
+  #       run: python -m pip install -r ./packages/python/requirements.txt
+  #       shell: bash
+
+  #     - name: Install pygls
+  #       run: python -m pip install --no-deps ./smoke_tests
+  #       shell: bash
+
+  #     - name: Pip List
+  #       run: python -m pip list
+  #       shell: bash
+
+  #     - name: Run Tests
+  #       run: python -m pytest smoke_tests/tests
+  #       env:
+  #         PYTHONPATH: ./packages/python
+  #       shell: bash

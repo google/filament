@@ -1,0 +1,17 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int* s;
+  thread int* A;
+  thread int* _A;
+};
+
+kernel void f(device int* s [[buffer(0)]]) {
+  thread int A = 1;
+  thread int _A = 2;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.s=s, .A=(&A), ._A=(&_A)};
+  int B = (*tint_module_vars.A);
+  int _B = (*tint_module_vars._A);
+  (*tint_module_vars.s) = as_type<int>((as_type<uint>(B) + as_type<uint>(_B)));
+}

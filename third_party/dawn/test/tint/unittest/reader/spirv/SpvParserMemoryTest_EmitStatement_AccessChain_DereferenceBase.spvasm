@@ -1,0 +1,30 @@
+; Test: SpvParserMemoryTest_EmitStatement_AccessChain_DereferenceBase.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 201
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%v2uint = OpTypeVector %uint 2
+%_ptr_Private_uint = OpTypePointer Private %uint
+%_ptr_Private_v2uint = OpTypePointer Private %v2uint
+%10 = OpTypeFunction %void %_ptr_Private_v2uint
+%uint_0 = OpConstant %uint 0
+%200 = OpFunction %void None %10
+%1 = OpFunctionParameter %_ptr_Private_v2uint
+%12 = OpLabel
+%2 = OpAccessChain %_ptr_Private_uint %1 %uint_0
+%3 = OpLoad %uint %2
+OpReturn
+OpFunctionEnd
+%100 = OpFunction %void None %5
+%13 = OpLabel
+OpReturn
+OpFunctionEnd
+

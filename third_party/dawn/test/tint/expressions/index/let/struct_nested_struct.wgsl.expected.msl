@@ -1,0 +1,17 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct T {
+  float o;
+  uint p;
+};
+
+struct S {
+  int m;
+  T n;
+};
+
+uint f() {
+  S const a = S{};
+  return a.n.p;
+}

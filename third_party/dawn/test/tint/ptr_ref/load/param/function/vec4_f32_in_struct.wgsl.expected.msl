@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct str {
+  float4 i;
+};
+
+float4 func(thread float4* const pointer) {
+  return (*pointer);
+}
+
+kernel void v() {
+  str F = {};
+  float4 const r = func((&F.i));
+}

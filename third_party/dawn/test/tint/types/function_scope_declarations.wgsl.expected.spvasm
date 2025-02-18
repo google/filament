@@ -1,0 +1,97 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 49
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %bool_var "bool_var"
+               OpName %bool_let "bool_let"
+               OpName %i32_var "i32_var"
+               OpName %i32_let "i32_let"
+               OpName %u32_var "u32_var"
+               OpName %u32_let "u32_let"
+               OpName %f32_var "f32_var"
+               OpName %f32_let "f32_let"
+               OpName %v2i32_var "v2i32_var"
+               OpName %v2i32_let "v2i32_let"
+               OpName %v3u32_var "v3u32_var"
+               OpName %v3u32_let "v3u32_let"
+               OpName %v4f32_var "v4f32_var"
+               OpName %v4f32_let "v4f32_let"
+               OpName %m2x3_var "m2x3_var"
+               OpName %m3x4_let "m3x4_let"
+               OpName %arr_var "arr_var"
+               OpName %arr_let "arr_let"
+               OpMemberName %S 0 "a"
+               OpName %S "S"
+               OpName %struct_var "struct_var"
+               OpName %struct_let "struct_let"
+               OpName %f32_var "ptr_f32"
+               OpName %v4f32_var "ptr_vec"
+               OpName %arr_var "ptr_arr"
+               OpDecorate %_arr_float_uint_4 ArrayStride 4
+               OpMemberDecorate %S 0 Offset 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %bool = OpTypeBool
+%_ptr_Function_bool = OpTypePointer Function %bool
+   %bool_let = OpConstantFalse %bool
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+    %i32_let = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+    %u32_let = OpConstant %uint 0
+      %float = OpTypeFloat 32
+%_ptr_Function_float = OpTypePointer Function %float
+    %f32_let = OpConstant %float 0
+      %v2int = OpTypeVector %int 2
+%_ptr_Function_v2int = OpTypePointer Function %v2int
+  %v2i32_let = OpConstantNull %v2int
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+  %v3u32_let = OpConstantNull %v3uint
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+  %v4f32_let = OpConstantNull %v4float
+    %v3float = OpTypeVector %float 3
+%mat2v3float = OpTypeMatrix %v3float 2
+%_ptr_Function_mat2v3float = OpTypePointer Function %mat2v3float
+         %37 = OpConstantNull %mat2v3float
+%mat3v4float = OpTypeMatrix %v4float 3
+   %m3x4_let = OpConstantNull %mat3v4float
+     %uint_4 = OpConstant %uint 4
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+%_ptr_Function__arr_float_uint_4 = OpTypePointer Function %_arr_float_uint_4
+    %arr_let = OpConstantNull %_arr_float_uint_4
+          %S = OpTypeStruct %float
+%_ptr_Function_S = OpTypePointer Function %S
+ %struct_let = OpConstantNull %S
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+   %bool_var = OpVariable %_ptr_Function_bool Function
+    %i32_var = OpVariable %_ptr_Function_int Function
+    %u32_var = OpVariable %_ptr_Function_uint Function
+    %f32_var = OpVariable %_ptr_Function_float Function
+  %v2i32_var = OpVariable %_ptr_Function_v2int Function
+  %v3u32_var = OpVariable %_ptr_Function_v3uint Function
+  %v4f32_var = OpVariable %_ptr_Function_v4float Function
+   %m2x3_var = OpVariable %_ptr_Function_mat2v3float Function
+    %arr_var = OpVariable %_ptr_Function__arr_float_uint_4 Function
+ %struct_var = OpVariable %_ptr_Function_S Function
+               OpStore %bool_var %bool_let
+               OpStore %i32_var %i32_let
+               OpStore %u32_var %u32_let
+               OpStore %f32_var %f32_let
+               OpStore %v2i32_var %v2i32_let
+               OpStore %v3u32_var %v3u32_let
+               OpStore %v4f32_var %v4f32_let
+               OpStore %m2x3_var %37
+               OpStore %arr_var %arr_let
+               OpStore %struct_var %struct_let
+               OpReturn
+               OpFunctionEnd

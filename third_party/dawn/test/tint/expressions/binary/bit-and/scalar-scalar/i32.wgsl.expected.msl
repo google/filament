@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  int const a = 1;
+  int const b = 2;
+  int const r = (a & b);
+}

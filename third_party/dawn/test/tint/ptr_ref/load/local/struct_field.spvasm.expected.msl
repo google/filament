@@ -1,0 +1,16 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  int i;
+};
+
+void main_1() {
+  int i = 0;
+  S V = {};
+  i = V.i;
+}
+
+kernel void v() {
+  main_1();
+}

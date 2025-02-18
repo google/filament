@@ -1,0 +1,44 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::read_write> arg_0;
+};
+
+void textureStore_65ba8b(tint_module_vars_struct tint_module_vars) {
+  int2 arg_1 = int2(1);
+  float4 arg_2 = float4(1.0f);
+  float4 const v = arg_2;
+  tint_module_vars.arg_0.write(v, uint2(arg_1));
+  const_cast<texture2d<float, access::read_write>thread &>(tint_module_vars.arg_0).fence();
+}
+
+fragment void fragment_main(texture2d<float, access::read_write> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  textureStore_65ba8b(tint_module_vars);
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::read_write> arg_0;
+};
+
+void textureStore_65ba8b(tint_module_vars_struct tint_module_vars) {
+  int2 arg_1 = int2(1);
+  float4 arg_2 = float4(1.0f);
+  float4 const v = arg_2;
+  tint_module_vars.arg_0.write(v, uint2(arg_1));
+  const_cast<texture2d<float, access::read_write>thread &>(tint_module_vars.arg_0).fence();
+}
+
+kernel void compute_main(texture2d<float, access::read_write> arg_0 [[texture(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.arg_0=arg_0};
+  textureStore_65ba8b(tint_module_vars);
+}

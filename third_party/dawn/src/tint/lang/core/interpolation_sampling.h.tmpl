@@ -1,0 +1,29 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate interpolate_attribute.h
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+
+#ifndef SRC_TINT_LANG_CORE_INTERPOLATION_SAMPLING_H_
+#define SRC_TINT_LANG_CORE_INTERPOLATION_SAMPLING_H_
+
+#include <cstdint>
+#include <string>
+
+#include "src/tint/utils/rtti/traits.h"
+
+namespace tint::core {
+
+/// The interpolation sampling.
+{{ Eval "DeclareEnum" ($I.Sem.Enum "interpolation_sampling") }}
+
+}  // namespace tint::core
+
+#endif  // SRC_TINT_LANG_CORE_INTERPOLATION_SAMPLING_H_

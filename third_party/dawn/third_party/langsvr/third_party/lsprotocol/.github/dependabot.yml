@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - 'no-changelog'
+
+  - package-ecosystem: 'github-actions'
+    directory: .github/actions/lint
+    schedule:
+      interval: monthly
+    labels:
+      - 'no-changelog'
+
+  - package-ecosystem: 'github-actions'
+    directory: .github/actions/build-package
+    schedule:
+      interval: monthly
+    labels:
+      - 'no-changelog'
+
+  - package-ecosystem: 'pip'
+    directory: /generator
+    schedule:
+      interval: daily
+    labels:
+      - 'no-changelog'
+
+  - package-ecosystem: 'pip'
+    directory: /tests
+    schedule:
+      interval: daily
+    labels:
+      - 'no-changelog'
+
+  - package-ecosystem: 'pip'
+    directory: /
+    schedule:
+      interval: daily
+    labels:
+      - 'debt'
+    commit-message:
+      include: 'scope'
+      prefix: 'pip'

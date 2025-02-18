@@ -1,0 +1,2 @@
+PROPTEST_FILES := \
+	proptest.c

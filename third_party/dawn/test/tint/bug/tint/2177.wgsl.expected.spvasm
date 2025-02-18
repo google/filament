@@ -1,0 +1,64 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+         %31 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %arr_block 0 "inner"
+               OpName %arr_block "arr_block"
+               OpName %f2 "f2"
+               OpName %f1 "f1"
+               OpName %f0 "f0"
+               OpName %main "main"
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %arr_block 0 Offset 0
+               OpDecorate %arr_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+  %arr_block = OpTypeStruct %_runtimearr_uint
+%_ptr_StorageBuffer_arr_block = OpTypePointer StorageBuffer %arr_block
+          %1 = OpVariable %_ptr_StorageBuffer_arr_block StorageBuffer
+          %7 = OpTypeFunction %uint
+%_ptr_StorageBuffer__runtimearr_uint = OpTypePointer StorageBuffer %_runtimearr_uint
+     %uint_0 = OpConstant %uint 0
+       %void = OpTypeVoid
+         %21 = OpTypeFunction %void
+     %uint_1 = OpConstant %uint 1
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+         %f2 = OpFunction %uint None %7
+          %8 = OpLabel
+          %9 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %1 %uint_0
+         %12 = OpArrayLength %uint %1 0
+               OpReturnValue %12
+               OpFunctionEnd
+         %f1 = OpFunction %uint None %7
+         %14 = OpLabel
+         %15 = OpFunctionCall %uint %f2
+               OpReturnValue %15
+               OpFunctionEnd
+         %f0 = OpFunction %uint None %7
+         %17 = OpLabel
+         %18 = OpFunctionCall %uint %f1
+               OpReturnValue %18
+               OpFunctionEnd
+       %main = OpFunction %void None %21
+         %22 = OpLabel
+         %23 = OpAccessChain %_ptr_StorageBuffer__runtimearr_uint %1 %uint_0
+         %24 = OpArrayLength %uint %1 0
+         %25 = OpISub %uint %24 %uint_1
+         %27 = OpBitcast %uint %int_0
+         %30 = OpExtInst %uint %31 UMin %27 %25
+         %32 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %30
+         %34 = OpFunctionCall %uint %f0
+               OpStore %32 %34 None
+               OpReturn
+               OpFunctionEnd

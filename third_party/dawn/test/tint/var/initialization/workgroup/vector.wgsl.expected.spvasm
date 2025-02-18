@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_local_invocation_index_Input
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %v "v"
+               OpName %main_local_invocation_index_Input "main_local_invocation_index_Input"
+               OpName %main_inner "main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %main "main"
+               OpDecorate %main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+        %int = OpTypeInt 32 1
+      %v3int = OpTypeVector %int 3
+%_ptr_Workgroup_v3int = OpTypePointer Workgroup %v3int
+          %v = OpVariable %_ptr_Workgroup_v3int Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+         %18 = OpConstantNull %v3int
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+         %24 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %11
+%tint_local_index = OpFunctionParameter %uint
+         %12 = OpLabel
+         %13 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %16 None
+               OpBranchConditional %13 %17 %16
+         %17 = OpLabel
+               OpStore %v %18 None
+               OpBranch %16
+         %16 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %22 = OpLoad %v3int %v None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %24
+         %25 = OpLabel
+         %26 = OpLoad %uint %main_local_invocation_index_Input None
+         %27 = OpFunctionCall %void %main_inner %26
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,117 @@
+# Copyright © 2017 Intel Corporation
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+option(
+  'intel',
+  type : 'feature',
+  description : '''Enable support for Intel's KMS API.''',
+)
+option(
+  'radeon',
+  type : 'feature',
+  description : '''Enable support for radeons's KMS API.''',
+)
+option(
+  'amdgpu',
+  type : 'feature',
+  description : '''Enable support for amdgpu's KMS API.''',
+)
+option(
+  'nouveau',
+  type : 'feature',
+  description : '''Enable support for nouveau's KMS API.''',
+)
+option(
+  'vmwgfx',
+  type : 'feature',
+  description : '''Enable support for vmgfx's KMS API.''',
+)
+option(
+  'omap',
+  type : 'feature',
+  value : 'disabled',
+  description : '''Enable support for OMAP's experimental KMS API.''',
+)
+option(
+  'exynos',
+  type : 'feature',
+  value : 'disabled',
+  description : '''Enable support for EXYNOS's experimental KMS API.''',
+)
+option(
+  'freedreno',
+  type : 'feature',
+  description : '''Enable support for freedreno's KMS API.''',
+)
+option(
+  'tegra',
+  type : 'feature',
+  value : 'disabled',
+  description : '''Enable support for Tegra's experimental KMS API.''',
+)
+option(
+  'vc4',
+  type : 'feature',
+  description : '''Enable support for vc4's KMS API.''',
+)
+option(
+  'etnaviv',
+  type : 'feature',
+  description : '''Enable support for etnaviv's KMS API.''',
+)
+option(
+  'cairo-tests',
+  type : 'feature',
+  description : 'Enable support for Cairo rendering in tests.',
+)
+option(
+  'man-pages',
+  type : 'feature',
+  description : 'Enable manpage generation and installation.',
+)
+option(
+  'valgrind',
+  type : 'feature',
+  description : 'Build libdrm with valgrind support.',
+)
+option(
+  'freedreno-kgsl',
+  type : 'boolean',
+  value : false,
+  description : 'Enable support for freedreno to use downstream android kernel API.',
+)
+option(
+  'install-test-programs',
+  type : 'boolean',
+  value : false,
+  description : 'Install test programs.',
+)
+option(
+  'udev',
+  type : 'boolean',
+  value : false,
+  description : 'Enable support for using udev instead of mknod.',
+)
+option(
+  'tests',
+  type : 'boolean',
+  value : true,
+  description : 'Build test programs.',
+)

@@ -1,0 +1,17 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S_packed_vec3 {
+  packed_int3 v;
+};
+
+struct tint_module_vars_struct {
+  device S_packed_vec3* U;
+};
+
+void f(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.U).v = packed_int3(int3(1, 2, 3));
+  (*tint_module_vars.U).v.x = 1;
+  (*tint_module_vars.U).v.y = 2;
+  (*tint_module_vars.U).v.z = 3;
+}

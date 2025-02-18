@@ -1,0 +1,22 @@
+; Test: SpvParserTest_EmitFunctions_Function_EntryPoint_MultipleEntryPoints.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 8
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %main "first_shader"
+OpEntryPoint Fragment %main "second_shader"
+OpExecutionMode %main OriginUpperLeft
+OpName %main "main"
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%main = OpFunction %void None %3
+%7 = OpLabel
+OpReturn
+OpFunctionEnd
+

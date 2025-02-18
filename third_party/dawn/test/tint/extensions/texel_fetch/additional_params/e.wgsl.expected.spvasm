@@ -1,0 +1,63 @@
+SKIP: FAILED
+
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 30
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %f "f" %f_Input %f_position_Input
+               OpExecutionMode %f OriginUpperLeft
+               OpName %f_Input "f_Input"
+               OpName %f_position_Input "f_position_Input"
+               OpName %g "g"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %f_inner "f_inner"
+               OpMemberName %In 0 "fbf"
+               OpMemberName %In 1 "pos"
+               OpName %In "In"
+               OpName %in "in"
+               OpName %f "f"
+               OpDecorate %f_position_Input BuiltIn FragCoord
+               OpMemberDecorate %In 0 Offset 0
+               OpMemberDecorate %In 1 Offset 16
+        %int = OpTypeInt 32 1
+      %v4int = OpTypeVector %int 4
+%_ptr_Input_v4int = OpTypePointer Input %v4int
+    %f_Input = OpVariable %_ptr_Input_v4int Input
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%f_position_Input = OpVariable %_ptr_Input_v4float Input
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void %int %float
+         %In = OpTypeStruct %v4int %v4float
+         %18 = OpTypeFunction %void %In
+         %24 = OpTypeFunction %void
+          %g = OpFunction %void None %13
+          %a = OpFunctionParameter %int
+          %b = OpFunctionParameter %float
+         %14 = OpLabel
+               OpReturn
+               OpFunctionEnd
+    %f_inner = OpFunction %void None %18
+         %in = OpFunctionParameter %In
+         %19 = OpLabel
+         %20 = OpCompositeExtract %int %in 0 3
+         %21 = OpCompositeExtract %float %in 1 0
+         %22 = OpFunctionCall %void %g %20 %21
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %24
+         %25 = OpLabel
+         %26 = OpLoad %v4int %f_Input None
+         %27 = OpLoad %v4float %f_position_Input None
+         %28 = OpCompositeConstruct %In %26 %27
+         %29 = OpFunctionCall %void %f_inner %28
+               OpReturn
+               OpFunctionEnd
+1:1: [VUID-StandaloneSpirv-Flat-04744] Fragment OpEntryPoint operand 1 with Input interfaces with integer or float type must have a Flat decoration for Entry Point id 23.
+  %f_Input = OpVariable %_ptr_Input_v4int Input
+

@@ -1,0 +1,14 @@
+LIBDRM_AMDGPU_FILES := \
+	amdgpu_asic_id.c \
+	amdgpu_bo.c \
+	amdgpu_cs.c \
+	amdgpu_device.c \
+	amdgpu_gpu_info.c \
+	amdgpu_internal.h \
+	amdgpu_vamgr.c \
+	amdgpu_vm.c \
+	handle_table.c \
+	handle_table.h
+
+LIBDRM_AMDGPU_H_FILES := \
+	amdgpu.h

@@ -1,0 +1,67 @@
+; Test: SpvModuleScopeVarParserTest_EntryPointWrapping_Interpolation_Flat_Vertex_Output.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 42
+; Schema: 0
+OpCapability Shader
+OpCapability SampleRateShading
+OpMemoryModel Logical Simple
+OpEntryPoint Vertex %7 "main" %1 %2 %3 %4 %5 %6 %gl_Position
+OpDecorate %1 Location 1
+OpDecorate %2 Location 2
+OpDecorate %3 Location 3
+OpDecorate %4 Location 4
+OpDecorate %5 Location 5
+OpDecorate %6 Location 6
+OpDecorate %1 Flat
+OpDecorate %2 Flat
+OpDecorate %3 Flat
+OpDecorate %4 Flat
+OpDecorate %5 Flat
+OpDecorate %6 Flat
+OpDecorate %gl_Position BuiltIn Position
+%void = OpTypeVoid
+%9 = OpTypeFunction %void
+%bool = OpTypeBool
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%_ptr_Private_bool = OpTypePointer Private %bool
+%_ptr_Private_float = OpTypePointer Private %float
+%_ptr_Private_uint = OpTypePointer Private %uint
+%_ptr_Private_int = OpTypePointer Private %int
+%true = OpConstantTrue %bool
+%false = OpConstantFalse %bool
+%float_0 = OpConstant %float 0
+%float_1_5 = OpConstant %float 1.5
+%uint_1 = OpConstant %uint 1
+%int_n1 = OpConstant %int -1
+%int_14 = OpConstant %int 14
+%uint_2 = OpConstant %uint 2
+%v2bool = OpTypeVector %bool 2
+%v2uint = OpTypeVector %uint 2
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%v4float = OpTypeVector %float 4
+%mat3v2float = OpTypeMatrix %v2float 3
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+%_ptr_Output_uint = OpTypePointer Output %uint
+%_ptr_Output_v2uint = OpTypePointer Output %v2uint
+%_ptr_Output_int = OpTypePointer Output %int
+%_ptr_Output_v2int = OpTypePointer Output %v2int
+%_ptr_Output_float = OpTypePointer Output %float
+%_ptr_Output_v2float = OpTypePointer Output %v2float
+%1 = OpVariable %_ptr_Output_uint Output
+%2 = OpVariable %_ptr_Output_v2uint Output
+%3 = OpVariable %_ptr_Output_int Output
+%4 = OpVariable %_ptr_Output_v2int Output
+%5 = OpVariable %_ptr_Output_float Output
+%6 = OpVariable %_ptr_Output_v2float Output
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%gl_Position = OpVariable %_ptr_Output_v4float Output
+%7 = OpFunction %void None %9
+%41 = OpLabel
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,70 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 35
+; Schema: 0
+               OpCapability Shader
+          %9 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %va "va"
+               OpName %a "a"
+               OpName %vb "vb"
+               OpName %b "b"
+               OpName %vc "vc"
+               OpName %c "c"
+               OpName %vd "vd"
+               OpName %d "d"
+               OpName %ve "ve"
+               OpName %e "e"
+               OpName %vf "vf"
+               OpName %f "f"
+               OpName %vg "vg"
+               OpName %g "g"
+               OpName %vh "vh"
+               OpName %h "h"
+               OpName %vi "vi"
+               OpName %i "i"
+               OpName %vj "vj"
+               OpName %j "j"
+               OpName %vk "vk"
+               OpName %k "k"
+               OpName %vl "vl"
+               OpName %l "l"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+         %va = OpConstantNull %v4float
+         %vj = OpConstant %float 1
+         %vb = OpConstantComposite %v4float %vj %vj %vj %vj
+         %vk = OpConstant %float 2
+         %vl = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+         %vc = OpConstantComposite %v4float %vj %vk %vl %float_4
+    %v3float = OpTypeVector %float 3
+         %vd = OpConstantNull %v3float
+         %ve = OpConstantComposite %v3float %vj %vj %vj
+         %vf = OpConstantComposite %v3float %vj %vk %vl
+    %v2float = OpTypeVector %float 2
+         %vg = OpConstantNull %v2float
+         %vh = OpConstantComposite %v2float %vj %vj
+         %vi = OpConstantComposite %v2float %vj %vk
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+          %a = OpExtInst %v4float %9 Degrees %va
+          %b = OpExtInst %v4float %9 Degrees %vb
+          %c = OpExtInst %v4float %9 Degrees %vc
+          %d = OpExtInst %v3float %9 Degrees %vd
+          %e = OpExtInst %v3float %9 Degrees %ve
+          %f = OpExtInst %v3float %9 Degrees %vf
+          %g = OpExtInst %v2float %9 Degrees %vg
+          %h = OpExtInst %v2float %9 Degrees %vh
+          %i = OpExtInst %v2float %9 Degrees %vi
+          %j = OpExtInst %float %9 Degrees %vj
+          %k = OpExtInst %float %9 Degrees %vk
+          %l = OpExtInst %float %9 Degrees %vl
+               OpReturn
+               OpFunctionEnd

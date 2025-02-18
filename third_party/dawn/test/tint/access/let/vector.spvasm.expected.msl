@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void main_1() {
+  float const x_11 = 2.0f;
+  float2 const x_13 = float2(1.0f, 3.0f);
+  float3 const x_14 = float3(1.0f, 3.0f, 2.0f);
+}
+
+kernel void v() {
+  main_1();
+}

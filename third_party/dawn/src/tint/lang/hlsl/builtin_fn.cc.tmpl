@@ -1,0 +1,103 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_fn.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/hlsl/hlsl.def" -}}
+#include "src/tint/lang/hlsl/builtin_fn.h"
+
+namespace tint::hlsl {
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
+    switch (fn) {
+        case BuiltinFn::kInterlockedCompareExchange:
+        case BuiltinFn::kInterlockedExchange:
+        case BuiltinFn::kInterlockedAdd:
+        case BuiltinFn::kInterlockedMax:
+        case BuiltinFn::kInterlockedMin:
+        case BuiltinFn::kInterlockedAnd:
+        case BuiltinFn::kInterlockedOr:
+        case BuiltinFn::kInterlockedXor:
+        case BuiltinFn::kWaveReadLaneAt:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kTextureStore:
+        case BuiltinFn::kStore:
+        case BuiltinFn::kStore2:
+        case BuiltinFn::kStore3:
+        case BuiltinFn::kStore4:
+        case BuiltinFn::kStoreF16:
+        case BuiltinFn::kStore2F16:
+        case BuiltinFn::kStore3F16:
+        case BuiltinFn::kStore4F16:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kLoad:
+        case BuiltinFn::kLoad2:
+        case BuiltinFn::kLoad3:
+        case BuiltinFn::kLoad4:
+        case BuiltinFn::kLoadF16:
+        case BuiltinFn::kLoad2F16:
+        case BuiltinFn::kLoad3F16:
+        case BuiltinFn::kLoad4F16:
+        case BuiltinFn::kGatherCmp:
+        case BuiltinFn::kGather:
+        case BuiltinFn::kGatherAlpha:
+        case BuiltinFn::kGatherBlue:
+        case BuiltinFn::kGatherGreen:
+        case BuiltinFn::kGatherRed:
+        case BuiltinFn::kSample:
+        case BuiltinFn::kSampleBias:
+        case BuiltinFn::kSampleCmp:
+        case BuiltinFn::kSampleCmpLevelZero:
+        case BuiltinFn::kSampleGrad:
+        case BuiltinFn::kSampleLevel:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
+
+        case BuiltinFn::kAsint:
+        case BuiltinFn::kAsuint:
+        case BuiltinFn::kAsfloat:
+        case BuiltinFn::kDot4AddI8Packed:
+        case BuiltinFn::kDot4AddU8Packed:
+        case BuiltinFn::kF32Tof16:
+        case BuiltinFn::kF16Tof32:
+        case BuiltinFn::kFrexp:
+        case BuiltinFn::kGetDimensions:
+        case BuiltinFn::kModf:
+        case BuiltinFn::kMul:
+        case BuiltinFn::kPackU8:
+        case BuiltinFn::kPackS8:
+        case BuiltinFn::kPackClampS8:
+        case BuiltinFn::kConvert:
+        case BuiltinFn::kSign:
+        case BuiltinFn::kUnpackS8S32:
+        case BuiltinFn::kUnpackU8U32:
+        case BuiltinFn::kWaveGetLaneIndex:
+        case BuiltinFn::kWaveGetLaneCount:
+        case BuiltinFn::kNone:
+            break;
+    }
+    return core::ir::Instruction::Accesses{};
+}
+
+}  // namespace tint::hlsl

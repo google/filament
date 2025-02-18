@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct In {
+  float4 a;
+  float4 b;
+  int4 fbf;
+};
+
+struct f_inputs {
+  float4 In_a [[user(locn0)]];
+  float4 In_b [[user(locn1)]] [[flat]];
+  int4 In_fbf [[color(1)]];
+};
+
+void g(float a, float b, int c) {
+}
+
+void f_inner(In in) {
+  g(in.a.x, in.b.y, in.fbf.x);
+}
+
+fragment void f(f_inputs inputs [[stage_in]]) {
+  f_inner(In{.a=inputs.In_a, .b=inputs.In_b, .fbf=inputs.In_fbf});
+}

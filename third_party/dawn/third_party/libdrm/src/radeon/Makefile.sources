@@ -1,0 +1,21 @@
+LIBDRM_RADEON_FILES := \
+	radeon_bo_gem.c \
+	radeon_cs_gem.c \
+	radeon_cs_space.c \
+	radeon_bo.c \
+	radeon_cs.c \
+	radeon_surface.c
+
+LIBDRM_RADEON_H_FILES := \
+	radeon_bo.h \
+	radeon_cs.h \
+	radeon_surface.h \
+	radeon_bo_gem.h \
+	radeon_cs_gem.h \
+	radeon_bo_int.h \
+	radeon_cs_int.h \
+	r600_pci_ids.h
+
+LIBDRM_RADEON_BOF_FILES := \
+	bof.c \
+	bof.h

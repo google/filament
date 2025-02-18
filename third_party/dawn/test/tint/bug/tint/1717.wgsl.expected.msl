@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+uint f() {
+  return 2147483648u;
+}

@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture2d<float, access::sample> t;
+  depth2d<float, access::sample> d;
+  sampler s;
+  sampler sc;
+};
+
+fragment void v(texture2d<float, access::sample> t [[texture(0)]], depth2d<float, access::sample> d [[texture(1)]], sampler s [[sampler(0)]], sampler sc [[sampler(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t=t, .d=d, .s=s, .sc=sc};
+  float4 a = tint_module_vars.t.sample(tint_module_vars.s, float2(1.0f));
+  float4 b = tint_module_vars.d.gather_compare(tint_module_vars.sc, float2(1.0f), 1.0f);
+}

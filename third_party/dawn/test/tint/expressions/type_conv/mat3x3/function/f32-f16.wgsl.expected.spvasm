@@ -1,0 +1,68 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 44
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %t "t"
+               OpName %m "m"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+%_ptr_Private_float = OpTypePointer Private %float
+          %4 = OpConstantNull %float
+          %t = OpVariable %_ptr_Private_float Private %4
+    %v3float = OpTypeVector %float 3
+%mat3v3float = OpTypeMatrix %v3float 3
+          %8 = OpTypeFunction %mat3v3float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+         %14 = OpConstantComposite %v3float %float_1 %float_2 %float_3
+    %float_4 = OpConstant %float 4
+    %float_5 = OpConstant %float 5
+    %float_6 = OpConstant %float 6
+         %17 = OpConstantComposite %v3float %float_4 %float_5 %float_6
+    %float_7 = OpConstant %float 7
+    %float_8 = OpConstant %float 8
+    %float_9 = OpConstant %float 9
+         %21 = OpConstantComposite %v3float %float_7 %float_8 %float_9
+         %13 = OpConstantComposite %mat3v3float %14 %17 %21
+       %void = OpTypeVoid
+         %27 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v3half = OpTypeVector %half 3
+ %mat3v3half = OpTypeMatrix %v3half 3
+%_ptr_Function_mat3v3half = OpTypePointer Function %mat3v3half
+          %m = OpFunction %mat3v3float None %8
+          %9 = OpLabel
+         %10 = OpLoad %float %t None
+         %11 = OpFAdd %float %10 %float_1
+               OpStore %t %11 None
+               OpReturnValue %13
+               OpFunctionEnd
+          %f = OpFunction %void None %27
+         %28 = OpLabel
+          %v = OpVariable %_ptr_Function_mat3v3half Function
+         %29 = OpFunctionCall %mat3v3float %m
+         %30 = OpCompositeExtract %v3float %29 0
+         %33 = OpFConvert %v3half %30
+         %34 = OpCompositeExtract %v3float %29 1
+         %35 = OpFConvert %v3half %34
+         %36 = OpCompositeExtract %v3float %29 2
+         %37 = OpFConvert %v3half %36
+         %39 = OpCompositeConstruct %mat3v3half %33 %35 %37
+               OpStore %v %39
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %27
+         %43 = OpLabel
+               OpReturn
+               OpFunctionEnd

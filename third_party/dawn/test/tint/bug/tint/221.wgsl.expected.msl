@@ -1,0 +1,65 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct Buf {
+  /* 0x0000 */ uint count;
+  /* 0x0004 */ tint_array<uint, 50> data;
+};
+
+struct tint_module_vars_struct {
+  device Buf* b;
+};
+
+uint tint_mod_u32(uint lhs, uint rhs) {
+  return (lhs - ((lhs / select(rhs, 1u, (rhs == 0u))) * select(rhs, 1u, (rhs == 0u))));
+}
+
+kernel void v(device Buf* b [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.b=b};
+  uint i = 0u;
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      if ((i >= (*tint_module_vars.b).count)) {
+        break;
+      }
+      device uint* const p = (&(*tint_module_vars.b).data[min(i, 49u)]);
+      if ((tint_mod_u32(i, 2u) == 0u)) {
+        {
+          uint const tint_low_inc = (tint_loop_idx.x + 1u);
+          tint_loop_idx.x = tint_low_inc;
+          uint const tint_carry = uint((tint_low_inc == 0u));
+          tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+          (*p) = ((*p) * 2u);
+          i = (i + 1u);
+        }
+        continue;
+      }
+      (*p) = 0u;
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        (*p) = ((*p) * 2u);
+        i = (i + 1u);
+      }
+      continue;
+    }
+  }
+}

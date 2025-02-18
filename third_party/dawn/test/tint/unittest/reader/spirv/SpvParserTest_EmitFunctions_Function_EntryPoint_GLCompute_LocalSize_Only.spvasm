@@ -1,0 +1,21 @@
+; Test: SpvParserTest_EmitFunctions_Function_EntryPoint_GLCompute_LocalSize_Only.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 8
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint GLCompute %main "comp_main"
+OpExecutionMode %main LocalSize 2 4 8
+OpName %main "main"
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%main = OpFunction %void None %3
+%7 = OpLabel
+OpReturn
+OpFunctionEnd
+

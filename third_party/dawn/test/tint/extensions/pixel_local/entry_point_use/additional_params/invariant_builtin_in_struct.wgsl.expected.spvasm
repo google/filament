@@ -1,0 +1,9 @@
+SKIP: FAILED
+
+<dawn>/src/tint/lang/spirv/writer/printer/printer.cc:2368 internal compiler error: unimplemented variable address space pixel_local
+********************************************************************
+*  The tint shader compiler has encountered an unexpected error.   *
+*                                                                  *
+*  Please help us fix this issue by submitting a bug report at     *
+*  crbug.com/tint with the source program that triggered the bug.  *
+********************************************************************

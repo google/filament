@@ -1,0 +1,319 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 67
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %countLeadingZeros_f70103 "countLeadingZeros_f70103"
+               OpName %arg_0 "arg_0"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+%prevent_dce_block = OpTypeStruct %v4uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v4uint
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+     %uint_1 = OpConstant %uint 1
+         %11 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+ %uint_65535 = OpConstant %uint 65535
+         %15 = OpConstantComposite %v4uint %uint_65535 %uint_65535 %uint_65535 %uint_65535
+       %bool = OpTypeBool
+     %v4bool = OpTypeVector %bool 4
+    %uint_16 = OpConstant %uint 16
+         %20 = OpConstantComposite %v4uint %uint_16 %uint_16 %uint_16 %uint_16
+         %22 = OpConstantNull %v4uint
+%uint_16777215 = OpConstant %uint 16777215
+         %25 = OpConstantComposite %v4uint %uint_16777215 %uint_16777215 %uint_16777215 %uint_16777215
+     %uint_8 = OpConstant %uint 8
+         %28 = OpConstantComposite %v4uint %uint_8 %uint_8 %uint_8 %uint_8
+%uint_268435455 = OpConstant %uint 268435455
+         %32 = OpConstantComposite %v4uint %uint_268435455 %uint_268435455 %uint_268435455 %uint_268435455
+     %uint_4 = OpConstant %uint 4
+         %35 = OpConstantComposite %v4uint %uint_4 %uint_4 %uint_4 %uint_4
+%uint_1073741823 = OpConstant %uint 1073741823
+         %39 = OpConstantComposite %v4uint %uint_1073741823 %uint_1073741823 %uint_1073741823 %uint_1073741823
+     %uint_2 = OpConstant %uint 2
+         %42 = OpConstantComposite %v4uint %uint_2 %uint_2 %uint_2 %uint_2
+%uint_2147483647 = OpConstant %uint 2147483647
+         %46 = OpConstantComposite %v4uint %uint_2147483647 %uint_2147483647 %uint_2147483647 %uint_2147483647
+       %void = OpTypeVoid
+         %61 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4uint = OpTypePointer StorageBuffer %v4uint
+     %uint_0 = OpConstant %uint 0
+%countLeadingZeros_f70103 = OpFunction %v4uint None %7
+          %8 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v4uint Function
+        %res = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_0 %11
+         %13 = OpLoad %v4uint %arg_0 None
+         %14 = OpULessThanEqual %v4bool %13 %15
+         %19 = OpSelect %v4uint %14 %20 %22
+         %23 = OpShiftLeftLogical %v4uint %13 %19
+         %24 = OpULessThanEqual %v4bool %23 %25
+         %27 = OpSelect %v4uint %24 %28 %22
+         %30 = OpShiftLeftLogical %v4uint %23 %27
+         %31 = OpULessThanEqual %v4bool %30 %32
+         %34 = OpSelect %v4uint %31 %35 %22
+         %37 = OpShiftLeftLogical %v4uint %30 %34
+         %38 = OpULessThanEqual %v4bool %37 %39
+         %41 = OpSelect %v4uint %38 %42 %22
+         %44 = OpShiftLeftLogical %v4uint %37 %41
+         %45 = OpULessThanEqual %v4bool %44 %46
+         %48 = OpSelect %v4uint %45 %11 %22
+         %49 = OpIEqual %v4bool %44 %22
+         %50 = OpSelect %v4uint %49 %11 %22
+         %51 = OpBitwiseOr %v4uint %48 %50
+         %52 = OpBitwiseOr %v4uint %41 %51
+         %53 = OpBitwiseOr %v4uint %34 %52
+         %54 = OpBitwiseOr %v4uint %27 %53
+         %55 = OpBitwiseOr %v4uint %19 %54
+         %56 = OpIAdd %v4uint %55 %50
+               OpStore %res %56
+         %58 = OpLoad %v4uint %res None
+               OpReturnValue %58
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %61
+         %62 = OpLabel
+         %63 = OpFunctionCall %v4uint %countLeadingZeros_f70103
+         %64 = OpAccessChain %_ptr_StorageBuffer_v4uint %1 %uint_0
+               OpStore %64 %63 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 67
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %countLeadingZeros_f70103 "countLeadingZeros_f70103"
+               OpName %arg_0 "arg_0"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+%prevent_dce_block = OpTypeStruct %v4uint
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %7 = OpTypeFunction %v4uint
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+     %uint_1 = OpConstant %uint 1
+         %11 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+ %uint_65535 = OpConstant %uint 65535
+         %15 = OpConstantComposite %v4uint %uint_65535 %uint_65535 %uint_65535 %uint_65535
+       %bool = OpTypeBool
+     %v4bool = OpTypeVector %bool 4
+    %uint_16 = OpConstant %uint 16
+         %20 = OpConstantComposite %v4uint %uint_16 %uint_16 %uint_16 %uint_16
+         %22 = OpConstantNull %v4uint
+%uint_16777215 = OpConstant %uint 16777215
+         %25 = OpConstantComposite %v4uint %uint_16777215 %uint_16777215 %uint_16777215 %uint_16777215
+     %uint_8 = OpConstant %uint 8
+         %28 = OpConstantComposite %v4uint %uint_8 %uint_8 %uint_8 %uint_8
+%uint_268435455 = OpConstant %uint 268435455
+         %32 = OpConstantComposite %v4uint %uint_268435455 %uint_268435455 %uint_268435455 %uint_268435455
+     %uint_4 = OpConstant %uint 4
+         %35 = OpConstantComposite %v4uint %uint_4 %uint_4 %uint_4 %uint_4
+%uint_1073741823 = OpConstant %uint 1073741823
+         %39 = OpConstantComposite %v4uint %uint_1073741823 %uint_1073741823 %uint_1073741823 %uint_1073741823
+     %uint_2 = OpConstant %uint 2
+         %42 = OpConstantComposite %v4uint %uint_2 %uint_2 %uint_2 %uint_2
+%uint_2147483647 = OpConstant %uint 2147483647
+         %46 = OpConstantComposite %v4uint %uint_2147483647 %uint_2147483647 %uint_2147483647 %uint_2147483647
+       %void = OpTypeVoid
+         %61 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4uint = OpTypePointer StorageBuffer %v4uint
+     %uint_0 = OpConstant %uint 0
+%countLeadingZeros_f70103 = OpFunction %v4uint None %7
+          %8 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v4uint Function
+        %res = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_0 %11
+         %13 = OpLoad %v4uint %arg_0 None
+         %14 = OpULessThanEqual %v4bool %13 %15
+         %19 = OpSelect %v4uint %14 %20 %22
+         %23 = OpShiftLeftLogical %v4uint %13 %19
+         %24 = OpULessThanEqual %v4bool %23 %25
+         %27 = OpSelect %v4uint %24 %28 %22
+         %30 = OpShiftLeftLogical %v4uint %23 %27
+         %31 = OpULessThanEqual %v4bool %30 %32
+         %34 = OpSelect %v4uint %31 %35 %22
+         %37 = OpShiftLeftLogical %v4uint %30 %34
+         %38 = OpULessThanEqual %v4bool %37 %39
+         %41 = OpSelect %v4uint %38 %42 %22
+         %44 = OpShiftLeftLogical %v4uint %37 %41
+         %45 = OpULessThanEqual %v4bool %44 %46
+         %48 = OpSelect %v4uint %45 %11 %22
+         %49 = OpIEqual %v4bool %44 %22
+         %50 = OpSelect %v4uint %49 %11 %22
+         %51 = OpBitwiseOr %v4uint %48 %50
+         %52 = OpBitwiseOr %v4uint %41 %51
+         %53 = OpBitwiseOr %v4uint %34 %52
+         %54 = OpBitwiseOr %v4uint %27 %53
+         %55 = OpBitwiseOr %v4uint %19 %54
+         %56 = OpIAdd %v4uint %55 %50
+               OpStore %res %56
+         %58 = OpLoad %v4uint %res None
+               OpReturnValue %58
+               OpFunctionEnd
+%compute_main = OpFunction %void None %61
+         %62 = OpLabel
+         %63 = OpFunctionCall %v4uint %countLeadingZeros_f70103
+         %64 = OpAccessChain %_ptr_StorageBuffer_v4uint %1 %uint_0
+               OpStore %64 %63 None
+               OpReturn
+               OpFunctionEnd
+;
+; vertex_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 86
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %vertex_main "vertex_main" %vertex_main_position_Output %vertex_main_loc0_Output %vertex_main___point_size_Output
+               OpName %vertex_main_position_Output "vertex_main_position_Output"
+               OpName %vertex_main_loc0_Output "vertex_main_loc0_Output"
+               OpName %vertex_main___point_size_Output "vertex_main___point_size_Output"
+               OpName %countLeadingZeros_f70103 "countLeadingZeros_f70103"
+               OpName %arg_0 "arg_0"
+               OpName %res "res"
+               OpName %vertex_main_inner "vertex_main_inner"
+               OpMemberName %VertexOutput 0 "pos"
+               OpMemberName %VertexOutput 1 "prevent_dce"
+               OpName %VertexOutput "VertexOutput"
+               OpName %out "out"
+               OpName %vertex_main "vertex_main"
+               OpDecorate %vertex_main_position_Output BuiltIn Position
+               OpDecorate %vertex_main_loc0_Output Location 0
+               OpDecorate %vertex_main_loc0_Output Flat
+               OpDecorate %vertex_main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %VertexOutput 0 Offset 0
+               OpMemberDecorate %VertexOutput 1 Offset 16
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%vertex_main_position_Output = OpVariable %_ptr_Output_v4float Output
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Output_v4uint = OpTypePointer Output %v4uint
+%vertex_main_loc0_Output = OpVariable %_ptr_Output_v4uint Output
+%_ptr_Output_float = OpTypePointer Output %float
+%vertex_main___point_size_Output = OpVariable %_ptr_Output_float Output
+         %12 = OpTypeFunction %v4uint
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+     %uint_1 = OpConstant %uint 1
+         %16 = OpConstantComposite %v4uint %uint_1 %uint_1 %uint_1 %uint_1
+ %uint_65535 = OpConstant %uint 65535
+         %20 = OpConstantComposite %v4uint %uint_65535 %uint_65535 %uint_65535 %uint_65535
+       %bool = OpTypeBool
+     %v4bool = OpTypeVector %bool 4
+    %uint_16 = OpConstant %uint 16
+         %25 = OpConstantComposite %v4uint %uint_16 %uint_16 %uint_16 %uint_16
+         %27 = OpConstantNull %v4uint
+%uint_16777215 = OpConstant %uint 16777215
+         %30 = OpConstantComposite %v4uint %uint_16777215 %uint_16777215 %uint_16777215 %uint_16777215
+     %uint_8 = OpConstant %uint 8
+         %33 = OpConstantComposite %v4uint %uint_8 %uint_8 %uint_8 %uint_8
+%uint_268435455 = OpConstant %uint 268435455
+         %37 = OpConstantComposite %v4uint %uint_268435455 %uint_268435455 %uint_268435455 %uint_268435455
+     %uint_4 = OpConstant %uint 4
+         %40 = OpConstantComposite %v4uint %uint_4 %uint_4 %uint_4 %uint_4
+%uint_1073741823 = OpConstant %uint 1073741823
+         %44 = OpConstantComposite %v4uint %uint_1073741823 %uint_1073741823 %uint_1073741823 %uint_1073741823
+     %uint_2 = OpConstant %uint 2
+         %47 = OpConstantComposite %v4uint %uint_2 %uint_2 %uint_2 %uint_2
+%uint_2147483647 = OpConstant %uint 2147483647
+         %51 = OpConstantComposite %v4uint %uint_2147483647 %uint_2147483647 %uint_2147483647 %uint_2147483647
+%VertexOutput = OpTypeStruct %v4float %v4uint
+         %66 = OpTypeFunction %VertexOutput
+%_ptr_Function_VertexOutput = OpTypePointer Function %VertexOutput
+         %70 = OpConstantNull %VertexOutput
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+     %uint_0 = OpConstant %uint 0
+         %74 = OpConstantNull %v4float
+       %void = OpTypeVoid
+         %80 = OpTypeFunction %void
+    %float_1 = OpConstant %float 1
+%countLeadingZeros_f70103 = OpFunction %v4uint None %12
+         %13 = OpLabel
+      %arg_0 = OpVariable %_ptr_Function_v4uint Function
+        %res = OpVariable %_ptr_Function_v4uint Function
+               OpStore %arg_0 %16
+         %18 = OpLoad %v4uint %arg_0 None
+         %19 = OpULessThanEqual %v4bool %18 %20
+         %24 = OpSelect %v4uint %19 %25 %27
+         %28 = OpShiftLeftLogical %v4uint %18 %24
+         %29 = OpULessThanEqual %v4bool %28 %30
+         %32 = OpSelect %v4uint %29 %33 %27
+         %35 = OpShiftLeftLogical %v4uint %28 %32
+         %36 = OpULessThanEqual %v4bool %35 %37
+         %39 = OpSelect %v4uint %36 %40 %27
+         %42 = OpShiftLeftLogical %v4uint %35 %39
+         %43 = OpULessThanEqual %v4bool %42 %44
+         %46 = OpSelect %v4uint %43 %47 %27
+         %49 = OpShiftLeftLogical %v4uint %42 %46
+         %50 = OpULessThanEqual %v4bool %49 %51
+         %53 = OpSelect %v4uint %50 %16 %27
+         %54 = OpIEqual %v4bool %49 %27
+         %55 = OpSelect %v4uint %54 %16 %27
+         %56 = OpBitwiseOr %v4uint %53 %55
+         %57 = OpBitwiseOr %v4uint %46 %56
+         %58 = OpBitwiseOr %v4uint %39 %57
+         %59 = OpBitwiseOr %v4uint %32 %58
+         %60 = OpBitwiseOr %v4uint %24 %59
+         %61 = OpIAdd %v4uint %60 %55
+               OpStore %res %61
+         %63 = OpLoad %v4uint %res None
+               OpReturnValue %63
+               OpFunctionEnd
+%vertex_main_inner = OpFunction %VertexOutput None %66
+         %67 = OpLabel
+        %out = OpVariable %_ptr_Function_VertexOutput Function %70
+         %71 = OpAccessChain %_ptr_Function_v4float %out %uint_0
+               OpStore %71 %74 None
+         %75 = OpAccessChain %_ptr_Function_v4uint %out %uint_1
+         %76 = OpFunctionCall %v4uint %countLeadingZeros_f70103
+               OpStore %75 %76 None
+         %77 = OpLoad %VertexOutput %out None
+               OpReturnValue %77
+               OpFunctionEnd
+%vertex_main = OpFunction %void None %80
+         %81 = OpLabel
+         %82 = OpFunctionCall %VertexOutput %vertex_main_inner
+         %83 = OpCompositeExtract %v4float %82 0
+               OpStore %vertex_main_position_Output %83 None
+         %84 = OpCompositeExtract %v4uint %82 1
+               OpStore %vertex_main_loc0_Output %84 None
+               OpStore %vertex_main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

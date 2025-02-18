@@ -1,0 +1,13 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread float4x2* m;
+  device float4x2* out;
+};
+
+kernel void f(device float4x2* out [[buffer(0)]]) {
+  thread float4x2 m = float4x2(float2(0.0f, 1.0f), float2(2.0f, 3.0f), float2(4.0f, 5.0f), float2(6.0f, 7.0f));
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.m=(&m), .out=out};
+  (*tint_module_vars.out) = float4x2((*tint_module_vars.m));
+}

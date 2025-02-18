@@ -1,0 +1,43 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 23
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %a "a"
+               OpName %b "b"
+               OpName %f "f"
+               OpName %x "x"
+               OpName %y "y"
+               OpName %unused_entry_point "unused_entry_point"
+               OpDecorate %_arr_float_uint_10 ArrayStride 4
+               OpDecorate %_arr_float_uint_20 ArrayStride 4
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+    %uint_10 = OpConstant %uint 10
+%_arr_float_uint_10 = OpTypeArray %float %uint_10
+%_ptr_Workgroup__arr_float_uint_10 = OpTypePointer Workgroup %_arr_float_uint_10
+          %a = OpVariable %_ptr_Workgroup__arr_float_uint_10 Workgroup
+    %uint_20 = OpConstant %uint 20
+%_arr_float_uint_20 = OpTypeArray %float %uint_20
+%_ptr_Workgroup__arr_float_uint_20 = OpTypePointer Workgroup %_arr_float_uint_20
+          %b = OpVariable %_ptr_Workgroup__arr_float_uint_20 Workgroup
+       %void = OpTypeVoid
+         %13 = OpTypeFunction %void
+%_ptr_Workgroup_float = OpTypePointer Workgroup %float
+     %uint_0 = OpConstant %uint 0
+          %f = OpFunction %void None %13
+         %14 = OpLabel
+         %15 = OpAccessChain %_ptr_Workgroup_float %a %uint_0
+          %x = OpLoad %float %15 None
+         %19 = OpAccessChain %_ptr_Workgroup_float %b %uint_0
+          %y = OpLoad %float %19 None
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %13
+         %22 = OpLabel
+               OpReturn
+               OpFunctionEnd

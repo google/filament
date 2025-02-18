@@ -1,0 +1,116 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 73
+; Schema: 0
+               OpCapability Shader
+         %33 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %main_vertex_index_Input %main_instance_index_Input %main_position_Output %main_loc0_Output %main___point_size_Output
+               OpName %main_vertex_index_Input "main_vertex_index_Input"
+               OpName %main_instance_index_Input "main_instance_index_Input"
+               OpName %main_position_Output "main_position_Output"
+               OpName %main_loc0_Output "main_loc0_Output"
+               OpName %main___point_size_Output "main___point_size_Output"
+               OpName %main_inner "main_inner"
+               OpMemberName %Output 0 "Position"
+               OpMemberName %Output 1 "color"
+               OpName %Output "Output"
+               OpName %VertexIndex "VertexIndex"
+               OpName %InstanceIndex "InstanceIndex"
+               OpName %zv "zv"
+               OpName %z "z"
+               OpName %output "output"
+               OpName %colors "colors"
+               OpName %main "main"
+               OpDecorate %main_vertex_index_Input BuiltIn VertexIndex
+               OpDecorate %main_instance_index_Input BuiltIn InstanceIndex
+               OpDecorate %main_position_Output BuiltIn Position
+               OpDecorate %main_loc0_Output Location 0
+               OpDecorate %main___point_size_Output BuiltIn PointSize
+               OpMemberDecorate %Output 0 Offset 0
+               OpMemberDecorate %Output 1 Offset 16
+               OpDecorate %_arr_v2float_uint_4 ArrayStride 8
+               OpDecorate %_arr_v4float_uint_4 ArrayStride 16
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_vertex_index_Input = OpVariable %_ptr_Input_uint Input
+%main_instance_index_Input = OpVariable %_ptr_Input_uint Input
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%main_position_Output = OpVariable %_ptr_Output_v4float Output
+%main_loc0_Output = OpVariable %_ptr_Output_v4float Output
+%_ptr_Output_float = OpTypePointer Output %float
+%main___point_size_Output = OpVariable %_ptr_Output_float Output
+     %Output = OpTypeStruct %v4float %v4float
+         %16 = OpTypeFunction %Output %uint %uint
+    %v2float = OpTypeVector %float 2
+     %uint_4 = OpConstant %uint 4
+%_arr_v2float_uint_4 = OpTypeArray %v2float %uint_4
+%float_0_200000003 = OpConstant %float 0.200000003
+         %22 = OpConstantComposite %v2float %float_0_200000003 %float_0_200000003
+%float_0_300000012 = OpConstant %float 0.300000012
+         %24 = OpConstantComposite %v2float %float_0_300000012 %float_0_300000012
+%float_n0_100000001 = OpConstant %float -0.100000001
+         %26 = OpConstantComposite %v2float %float_n0_100000001 %float_n0_100000001
+%float_1_10000002 = OpConstant %float 1.10000002
+         %28 = OpConstantComposite %v2float %float_1_10000002 %float_1_10000002
+         %zv = OpConstantComposite %_arr_v2float_uint_4 %22 %24 %26 %28
+%_ptr_Function__arr_v2float_uint_4 = OpTypePointer Function %_arr_v2float_uint_4
+     %uint_3 = OpConstant %uint 3
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+%_ptr_Function_float = OpTypePointer Function %float
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_Output = OpTypePointer Function %Output
+         %43 = OpConstantNull %Output
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+  %float_0_5 = OpConstant %float 0.5
+    %float_1 = OpConstant %float 1
+%_arr_v4float_uint_4 = OpTypeArray %v4float %uint_4
+    %float_0 = OpConstant %float 0
+         %51 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %53 = OpConstantComposite %v4float %float_0 %float_1 %float_0 %float_1
+         %54 = OpConstantComposite %v4float %float_0 %float_0 %float_1 %float_1
+         %55 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+     %colors = OpConstantComposite %_arr_v4float_uint_4 %51 %53 %54 %55
+%_ptr_Function__arr_v4float_uint_4 = OpTypePointer Function %_arr_v4float_uint_4
+     %uint_1 = OpConstant %uint 1
+       %void = OpTypeVoid
+         %66 = OpTypeFunction %void
+ %main_inner = OpFunction %Output None %16
+%VertexIndex = OpFunctionParameter %uint
+%InstanceIndex = OpFunctionParameter %uint
+         %17 = OpLabel
+         %30 = OpVariable %_ptr_Function__arr_v2float_uint_4 Function
+     %output = OpVariable %_ptr_Function_Output Function %43
+         %56 = OpVariable %_ptr_Function__arr_v4float_uint_4 Function
+               OpStore %30 %zv
+         %32 = OpExtInst %uint %33 UMin %InstanceIndex %uint_3
+         %35 = OpAccessChain %_ptr_Function_v2float %30 %32
+         %37 = OpAccessChain %_ptr_Function_float %35 %uint_0
+          %z = OpLoad %float %37 None
+         %44 = OpAccessChain %_ptr_Function_v4float %output %uint_0
+         %46 = OpCompositeConstruct %v4float %float_0_5 %float_0_5 %z %float_1
+               OpStore %44 %46 None
+               OpStore %56 %colors
+         %58 = OpAccessChain %_ptr_Function_v4float %output %uint_1
+         %60 = OpExtInst %uint %33 UMin %InstanceIndex %uint_3
+         %61 = OpAccessChain %_ptr_Function_v4float %56 %60
+         %62 = OpLoad %v4float %61 None
+               OpStore %58 %62 None
+         %63 = OpLoad %Output %output None
+               OpReturnValue %63
+               OpFunctionEnd
+       %main = OpFunction %void None %66
+         %67 = OpLabel
+         %68 = OpLoad %uint %main_vertex_index_Input None
+         %69 = OpLoad %uint %main_instance_index_Input None
+         %70 = OpFunctionCall %Output %main_inner %68 %69
+         %71 = OpCompositeExtract %v4float %70 0
+               OpStore %main_position_Output %71 None
+         %72 = OpCompositeExtract %v4float %70 1
+               OpStore %main_loc0_Output %72 None
+               OpStore %main___point_size_Output %float_1 None
+               OpReturn
+               OpFunctionEnd

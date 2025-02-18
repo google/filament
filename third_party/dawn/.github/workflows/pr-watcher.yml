@@ -1,0 +1,131 @@
+# Workflow that runs periodically to check whether PRs have been imported into
+# Gerrit and if they have been merged. The workflow adds a PR comment after
+# import and after merge. PRs that are merged upstream are then closed.
+name: PR Watcher
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *" # Every 10 minutes
+
+jobs:
+  check:
+    name: Check Copybara Import Status
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Check Pull Requests
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Get all open PRs.
+            const pulls = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: 'main',
+            });
+
+            for (const pull of pulls.data) {
+              const query = `query($owner:String!, $name:String!, $pullNumber:Int!, $statusContext:String!) {
+                repository(owner:$owner, name:$name) {
+                  pullRequest(number:$pullNumber) {
+                    commits(last:1) {
+                      nodes {
+                        commit {
+                          status {
+                            context(name: $statusContext) {
+                              state
+                              targetUrl
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`;
+
+              // Query the import/copybara status check.
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                name: context.repo.repo,
+                pullNumber: pull.number,
+                statusContext: 'import/copybara',
+              });
+              const nodes = result.repository.pullRequest.commits.nodes;
+              const commit = nodes[0].commit;
+              if (commit && commit.status && commit.status.context) {
+                // Forward the status check information to the pr-manager workflow.
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: 'main',
+                  workflow_id: 'pr-manager.yml',
+                  inputs: {
+                    pullNumber: pull.number.toString(),
+                    state: commit.status.context.state,
+                    targetUrl: commit.status.context.targetUrl,
+                  },
+                });
+              }
+
+              // Look through all timeline events on the PR.
+              // When the PR is merged upstream, it will include a backreference back to
+              // the PR in the commit message.
+              const timeline = github.paginate.iterator(github.rest.issues.listEventsForTimeline, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pull.number,
+              });
+              for await (const { data: timelineData } of timeline) {
+                for (const timelineItem of timelineData) {
+                  if (timelineItem.event === 'referenced' && timelineItem.commit_id) {
+                    try {
+                      // Compare commit ids against refs/heads/main to see if they are
+                      // included in the main branch.
+                      const compare = await github.rest.repos.compareCommitsWithBasehead({
+                        basehead: `${timelineItem.commit_id}...refs/heads/main`,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                      });
+                      if (compare.data.status == "ahead" || compare.data.status == "identical") {
+                        // This is a commit that has already been merged into main.
+                        const commit = await github.rest.repos.getCommit({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          ref: timelineItem.commit_id,
+                        });
+                        const message = commit.data.commit.message;
+                        const lines = message.split('\n');
+                        for (const line of lines) {
+                          // Check if the commit has a footer referencing a PR.
+                          const tag = 'GITHUB_PR_HEAD_SHA=';
+                          if (line.startsWith(tag)) {
+                            const sha = line.slice(tag.length);
+                            // The merged commit footer matches the PR sha.
+                            if (pull.head.sha === sha) {
+                              // Close the PR.
+                              await github.rest.actions.createWorkflowDispatch({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                ref: 'main',
+                                workflow_id: 'pr-manager.yml',
+                                inputs: {
+                                  pullNumber: pull.number.toString(),
+                                  state: 'merged',
+                                  targetUrl: commit.data.html_url,
+                                },
+                              });
+                            }
+                          }
+                        }
+                      }
+                    } catch (err) {
+                      // This is OK because not all commits will be comparable.
+                      console.warn(err);
+                    }
+                  }
+                }
+              }
+            }

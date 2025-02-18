@@ -1,0 +1,4291 @@
+{
+    "_comment": [
+        "Copyright 2017 The Dawn & Tint Authors",
+        "",
+        "Redistribution and use in source and binary forms, with or without",
+        "modification, are permitted provided that the following conditions are met:",
+        "",
+        "  1. Redistributions of source code must retain the above copyright notice, this",
+        "     list of conditions and the following disclaimer.",
+        "",
+        "  2. Redistributions in binary form must reproduce the above copyright notice,",
+        "     this list of conditions and the following disclaimer in the documentation",
+        "     and/or other materials provided with the distribution.",
+        "",
+        "  3. Neither the name of the copyright holder nor the names of its",
+        "     contributors may be used to endorse or promote products derived from",
+        "     this software without specific prior written permission.",
+        "  ",
+        "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+        "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+        "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE",
+        "DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE",
+        "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+        "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR",
+        "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER",
+        "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,",
+        "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE",
+        "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
+    ],
+
+    "_doc": "See docs/dawn/codegen.md",
+
+    "_metadata": {
+        "api": "WebGPU",
+        "c_prefix": "WGPU",
+        "namespace": "wgpu",
+        "proc_table_prefix": "Dawn",
+        "native_namespace": "dawn native",
+        "copyright_year": "2019"
+    },
+
+    "INTERNAL_HAVE_EMDAWNWEBGPU_HEADER": {
+        "category": "structure",
+        "tags": ["emscripten"],
+        "_comment": "TODO(issues.chromium.org/issues/366932309): The struct must have at least one field.",
+        "members": [
+            {"name": "unused", "type": "bool", "default": "false"}
+        ]
+    },
+
+    "create instance": {
+        "category": "function",
+        "returns": "instance",
+        "_comment": "TODO(crbug.com/dawn/2048): The return type should be nullable; null is returned in error cases.",
+        "args": [
+            {"name": "descriptor", "type": "instance descriptor", "annotation": "const*", "optional": true}
+        ]
+    },
+    "proc": {
+        "category": "function pointer",
+        "returns": "void",
+        "args": []
+    },
+    "get proc address": {
+        "category": "function",
+        "returns": "proc",
+        "args": [
+            {"name": "proc name", "type": "string view"}
+        ]
+    },
+
+    "request adapter options": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "compatible surface", "type": "surface", "optional": true},
+            {"name": "feature level", "type": "feature level", "default": "core"},
+            {"name": "power preference", "type": "power preference", "default": "undefined"},
+            {"name": "backend type", "type": "backend type", "default": "undefined"},
+            {"name": "force fallback adapter", "type": "bool", "default": "false"}
+        ]
+    },
+    "request adapter callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "request adapter status"},
+            {"name": "adapter", "type": "adapter", "optional": true},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "request adapter callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "request adapter callback"}
+        ]
+   },
+    "request adapter status": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"},
+            {"value": 3, "name": "unavailable"},
+            {"value": 4, "name": "error"}
+        ]
+    },
+    "adapter": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "get instance",
+                "tags": ["dawn"],
+                "returns": "instance"
+            },
+            {
+                "name": "get limits",
+                "returns": "status",
+                "args": [
+                    {"name": "limits", "type": "supported limits", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "get info",
+                "returns": "status",
+                "args": [
+                    {"name": "info", "type": "adapter info", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "has feature",
+                "returns": "bool",
+                "args": [
+                    {"name": "feature", "type": "feature name"}
+                ]
+            },
+            {
+                "name": "get features",
+                "returns": "void",
+                "args": [
+                    {"name": "features", "type": "supported features", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "request device",
+                "returns": "future",
+                "args": [
+                    {"name": "options", "type": "device descriptor", "annotation": "const*", "optional": true, "no_default": true},
+                    {"name": "callback info", "type": "request device callback info"}
+                ]
+            },
+            {
+                "name": "create device",
+                "tags": ["dawn"],
+                "returns": "device",
+                "args": [
+                    {"name": "descriptor", "type": "device descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "get format capabilities",
+                "tags": ["dawn"],
+                "returns": "status",
+                "args": [
+                    {"name": "format", "type": "texture format"},
+                    {"name": "capabilities", "type": "dawn format capabilities", "annotation": "*"}
+                ]
+            }
+        ]
+    },
+    "adapter info": {
+        "category": "structure",
+        "extensible": "out",
+        "members": [
+            {"name": "vendor", "type": "string view"},
+            {"name": "architecture", "type": "string view"},
+            {"name": "device", "type": "string view"},
+            {"name": "description", "type": "string view"},
+            {"name": "backend type", "type": "backend type"},
+            {"name": "adapter type", "type": "adapter type"},
+            {"name": "vendor ID", "type": "uint32_t"},
+            {"name": "device ID", "type": "uint32_t"},
+            {"name": "subgroup min size", "type": "uint32_t"},
+            {"name": "subgroup max size", "type": "uint32_t"},
+            {"name": "compatibility mode", "type": "bool", "default": "false", "tags": ["dawn", "emscripten"]}
+        ]
+    },
+    "adapter type": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "discrete GPU"},
+            {"value": 2, "name": "integrated GPU"},
+            {"value": 3, "name": "CPU"},
+            {"value": 4, "name": "unknown"}
+        ]
+    },
+    "device descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "required feature count", "type": "size_t", "default": 0},
+            {"name": "required features", "type": "feature name", "annotation": "const*", "length": "required feature count", "default": "nullptr"},
+            {"name": "required limits", "type": "required limits", "annotation": "const*", "optional": true},
+            {"name": "default queue", "type": "queue descriptor"},
+            {"name": "device lost callback info", "type": "device lost callback info"},
+            {"name": "uncaptured error callback info", "type": "uncaptured error callback info"}
+        ]
+    },
+    "dawn toggles descriptor": {
+        "tags": ["dawn", "native"],
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["instance descriptor", "request adapter options", "device descriptor"],
+        "members": [
+            {"name": "enabled toggle count", "type": "size_t", "default": 0},
+            {"name": "enabled toggles", "type": "char", "annotation": "const*const*", "length": "enabled toggle count"},
+            {"name": "disabled toggle count", "type": "size_t", "default": 0},
+            {"name": "disabled toggles", "type": "char", "annotation": "const*const*", "length": "disabled toggle count"}
+        ]
+    },
+    "dawn load cache data function": {
+        "tags": ["dawn", "native"],
+        "category": "function pointer",
+        "returns": "size_t",
+        "args": [
+            {"name": "key", "type": "void const *"},
+            {"name": "key size", "type": "size_t"},
+            {"name": "value", "type": "void *"},
+            {"name": "value size", "type": "size_t"},
+            {"name": "userdata", "type": "void *"}
+        ]
+    },
+    "dawn store cache data function": {
+        "tags": ["dawn", "native"],
+        "category": "function pointer",
+        "args": [
+            {"name": "key", "type": "void const *"},
+            {"name": "key size", "type": "size_t"},
+            {"name": "value", "type": "void const *"},
+            {"name": "value size", "type": "size_t"},
+            {"name": "userdata", "type": "void *"}
+        ]
+    },
+    "dawn cache device descriptor" : {
+        "tags": ["dawn", "native"],
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["device descriptor"],
+        "members": [
+            {"name": "isolation key", "type": "string view"},
+            {"name": "load data function", "type": "dawn load cache data function", "default": "nullptr"},
+            {"name": "store data function", "type": "dawn store cache data function", "default": "nullptr"},
+            {"name": "function userdata", "type": "void *", "default": "nullptr"}
+        ]
+    },
+    "dawn WGSL blocklist": {
+        "tags": ["dawn", "native"],
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["instance descriptor"],
+        "members": [
+            {"name": "blocklisted feature count", "type": "size_t", "default": 0},
+            {"name": "blocklisted features", "type": "char", "annotation": "const*const*", "length": "blocklisted feature count"}
+        ]
+    },
+    "address mode": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "clamp to edge"},
+            {"value": 2, "name": "repeat"},
+            {"value": 3, "name": "mirror repeat"}
+        ]
+    },
+    "backend type": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined", "valid": false},
+            {"value": 1, "name": "null"},
+            {"value": 2, "name": "WebGPU"},
+            {"value": 3, "name": "D3D11"},
+            {"value": 4, "name": "D3D12"},
+            {"value": 5, "name": "metal"},
+            {"value": 6, "name": "vulkan"},
+            {"value": 7, "name": "openGL"},
+            {"value": 8, "name": "openGLES"}
+        ]
+    },
+    "bind group": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "bind group entry": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "binding", "type": "uint32_t"},
+            {"name": "buffer", "type": "buffer", "optional": true},
+            {"name": "offset", "type": "uint64_t", "default": "0"},
+            {"name": "size", "type": "uint64_t", "default": "WGPU_WHOLE_SIZE"},
+            {"name": "sampler", "type": "sampler", "optional": true},
+            {"name": "texture view", "type": "texture view", "optional": true}
+        ]
+    },
+    "bind group descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "layout", "type": "bind group layout"},
+            {"name": "entry count", "type": "size_t"},
+            {"name": "entries", "type": "bind group entry", "annotation": "const*", "length": "entry count"}
+        ]
+    },
+    "bind group layout": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+
+    "buffer binding type": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "binding not used"},
+            {"value": 1, "name": "undefined", "jsrepr": "undefined", "valid": false},
+            {"value": 2, "name": "uniform"},
+            {"value": 3, "name": "storage"},
+            {"value": 4, "name": "read only storage"}
+        ]
+    },
+    "buffer binding layout": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "type", "type": "buffer binding type", "default": "uniform"},
+            {"name": "has dynamic offset", "type": "bool", "default": "false"},
+            {"name": "min binding size", "type": "uint64_t", "default": "0"}
+        ]
+    },
+
+    "sampler binding type": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "binding not used"},
+            {"value": 1, "name": "undefined", "jsrepr": "undefined", "valid": false},
+            {"value": 2, "name": "filtering"},
+            {"value": 3, "name": "non filtering"},
+            {"value": 4, "name": "comparison"}
+        ]
+    },
+    "sampler binding layout": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "type", "type": "sampler binding type", "default": "filtering"}
+        ]
+    },
+    "static sampler binding layout": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["bind group layout entry"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "sampler", "type": "sampler"},
+            {"name": "sampled texture binding", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED" }
+        ]
+    },
+    "texture sample type": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "binding not used"},
+            {"value": 1, "name": "undefined", "jsrepr": "undefined", "valid": false},
+            {"value": 2, "name": "float"},
+            {"value": 3, "name": "unfilterable float"},
+            {"value": 4, "name": "depth"},
+            {"value": 5, "name": "sint"},
+            {"value": 6, "name": "uint"}
+        ]
+    },
+    "texture binding layout": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "sample type", "type": "texture sample type", "default": "float"},
+            {"name": "view dimension", "type": "texture view dimension", "default": "2D"},
+            {"name": "multisampled", "type": "bool", "default": "false"}
+        ]
+    },
+    "surface capabilities": {
+        "category": "structure",
+        "extensible": "out",
+        "members": [
+            {"name": "usages", "type": "texture usage"},
+            {"name": "format count", "type": "size_t"},
+            {"name": "formats", "type": "texture format", "annotation": "const*", "length": "format count"},
+            {"name": "present mode count", "type": "size_t"},
+            {"name": "present modes", "type": "present mode", "annotation": "const*", "length": "present mode count"},
+            {"name": "alpha mode count", "type": "size_t"},
+            {"name": "alpha modes", "type": "composite alpha mode", "annotation": "const*", "length": "alpha mode count"}
+        ],
+        "methods": [
+            {
+                "name": "free members",
+                "returns": "void",
+                "args": []
+            }
+        ]
+    },
+    "surface configuration": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "device", "type": "device"},
+            {"name": "format", "type": "texture format"},
+            {"name": "usage", "type": "texture usage", "default": "render attachment"},
+            {"name": "view format count", "type": "size_t", "default": 0},
+            {"name": "view formats", "type": "texture format", "annotation": "const*", "length": "view format count", "default": "nullptr"},
+            {"name": "alpha mode", "type": "composite alpha mode", "default": "auto"},
+            {"name": "width", "type": "uint32_t"},
+            {"name": "height", "type": "uint32_t"},
+            {"name": "present mode", "type": "present mode", "default": "fifo"}
+        ]
+    },
+    "external texture binding entry": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["bind group entry"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "external texture", "type": "external texture"}
+        ]
+    },
+
+    "external texture binding layout": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["bind group layout entry"],
+        "tags": ["dawn"],
+        "members": []
+    },
+
+    "storage texture access": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "binding not used"},
+            {"value": 1, "name": "undefined", "jsrepr": "undefined", "valid": false},
+            {"value": 2, "name": "write only"},
+            {"value": 3, "name": "read only"},
+            {"value": 4, "name": "read write"}
+        ]
+    },
+    "storage texture binding layout": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "access", "type": "storage texture access", "default": "write only"},
+            {"name": "format", "type": "texture format", "default": "undefined"},
+            {"name": "view dimension", "type": "texture view dimension", "default": "2D"}
+        ]
+    },
+
+    "bind group layout entry": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "binding", "type": "uint32_t"},
+            {"name": "visibility", "type": "shader stage"},
+            {"name": "buffer", "type": "buffer binding layout"},
+            {"name": "sampler", "type": "sampler binding layout"},
+            {"name": "texture", "type": "texture binding layout"},
+            {"name": "storage texture", "type": "storage texture binding layout"}
+        ]
+    },
+    "bind group layout descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "entry count", "type": "size_t"},
+            {"name": "entries", "type": "bind group layout entry", "annotation": "const*", "length": "entry count"}
+        ]
+    },
+    "blend component": {
+        "category": "structure",
+        "extensible": false,
+        "members": [
+            {"name": "operation", "type": "blend operation", "default": "add"},
+            {"name": "src factor", "type": "blend factor", "default": "one"},
+            {"name": "dst factor", "type": "blend factor", "default": "zero"}
+        ]
+    },
+    "blend factor": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "zero"},
+            {"value": 2, "name": "one"},
+            {"value": 3, "name": "src"},
+            {"value": 4, "name": "one minus src"},
+            {"value": 5, "name": "src alpha"},
+            {"value": 6, "name": "one minus src alpha"},
+            {"value": 7, "name": "dst"},
+            {"value": 8, "name": "one minus dst"},
+            {"value": 9, "name": "dst alpha"},
+            {"value": 10, "name": "one minus dst alpha"},
+            {"value": 11, "name": "src alpha saturated"},
+            {"value": 12, "name": "constant"},
+            {"value": 13, "name": "one minus constant"},
+            {"value": 14, "name": "src1"},
+            {"value": 15, "name": "one minus src1"},
+            {"value": 16, "name": "src1 alpha"},
+            {"value": 17, "name": "one minus src1 alpha"}
+        ]
+    },
+    "blend operation": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "add"},
+            {"value": 2, "name": "subtract"},
+            {"value": 3, "name": "reverse subtract"},
+            {"value": 4, "name": "min"},
+            {"value": 5, "name": "max"}
+        ]
+    },
+    "bool": {
+        "category": "native",
+        "wasm type": "i"
+    },
+    "optional bool": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "false"},
+            {"value": 1, "name": "true"},
+            {"value": 2, "name": "undefined", "jsrepr": "undefined"}
+        ]
+    },
+    "string view": {
+        "category": "structure",
+        "members": [
+            {"name": "data", "type": "char", "annotation": "const*", "optional": true},
+            {"name": "length", "type": "size_t", "default": "WGPU_STRLEN"}
+        ]
+    },
+    "buffer": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "map async",
+                "returns": "future",
+                "args": [
+                    {"name": "mode", "type": "map mode"},
+                    {"name": "offset", "type": "size_t"},
+                    {"name": "size", "type": "size_t"},
+                    {"name": "callback info", "type": "buffer map callback info"}
+                ]
+            },
+            {
+                "name": "get mapped range",
+                "returns": "void *",
+                "args": [
+                    {"name": "offset", "type": "size_t", "default": 0},
+                    {"name": "size", "type": "size_t", "default": "WGPU_WHOLE_MAP_SIZE"}
+                ]
+            },
+            {
+                "name": "get const mapped range",
+                "returns": "void const *",
+                "args": [
+                    {"name": "offset", "type": "size_t", "default": 0},
+                    {"name": "size", "type": "size_t", "default": "WGPU_WHOLE_MAP_SIZE"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "get usage",
+                "no autolock": true,
+                "returns": "buffer usage"
+            },
+            {
+                "name": "get size",
+                "no autolock": true,
+                "returns": "uint64_t"
+            },
+            {
+                "name": "get map state",
+                "returns": "buffer map state"
+            },
+            {
+                "name": "unmap"
+            },
+            {
+                "name": "destroy"
+            }
+        ]
+    },
+    "buffer descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "usage", "type": "buffer usage"},
+            {"name": "size", "type": "uint64_t"},
+            {"name": "mapped at creation", "type": "bool", "default": "false"}
+        ]
+    },
+    "buffer host mapped pointer": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["buffer descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "pointer", "type": "void *"},
+            {"name": "dispose callback", "type": "callback"},
+            {"name": "userdata", "type": "void *"}
+        ]
+    },
+    "callback": {
+        "category": "function pointer",
+        "tags": ["dawn"],
+        "args": [
+            {"name": "userdata", "type": "void *"}
+        ]
+    },
+    "buffer map callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "map async status"},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "buffer map callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "buffer map callback"}
+        ]
+    },
+    "map async status": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"},
+            {"value": 3, "name": "error"},
+            {"value": 4, "name": "aborted"}
+        ]
+    },
+    "buffer map state": {
+        "category": "enum",
+        "emscripten_string_to_int": true,
+        "values": [
+            {"value": 1, "name": "unmapped"},
+            {"value": 2, "name": "pending"},
+            {"value": 3, "name": "mapped"}
+        ]
+    },
+    "buffer usage": {
+        "category": "bitmask",
+        "values": [
+            {"value": 0, "name": "none"},
+            {"value": 1, "name": "map read"},
+            {"value": 2, "name": "map write"},
+            {"value": 4, "name": "copy src"},
+            {"value": 8, "name": "copy dst"},
+            {"value": 16, "name": "index"},
+            {"value": 32, "name": "vertex"},
+            {"value": 64, "name": "uniform"},
+            {"value": 128, "name": "storage"},
+            {"value": 256, "name": "indirect"},
+            {"value": 512, "name": "query resolve"}
+        ]
+    },
+    "char": {
+        "category": "native"
+    },
+    "color": {
+        "category": "structure",
+        "members": [
+            {"name": "r", "type": "double"},
+            {"name": "g", "type": "double"},
+            {"name": "b", "type": "double"},
+            {"name": "a", "type": "double"}
+        ]
+    },
+    "color write mask": {
+        "category": "bitmask",
+        "values": [
+            {"value": 0, "name": "none"},
+            {"value": 1, "name": "red"},
+            {"value": 2, "name": "green"},
+            {"value": 4, "name": "blue"},
+            {"value": 8, "name": "alpha"},
+            {"value": 15, "name": "all"}
+        ]
+    },
+    "constant entry": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "key", "type": "string view"},
+            {"name": "value", "type": "double"}
+        ]
+    },
+    "command buffer": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "command buffer descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "command encoder": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "finish",
+                "returns": "command buffer",
+                "args": [
+                    {"name": "descriptor", "type": "command buffer descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "begin compute pass",
+                "returns": "compute pass encoder",
+                "args": [
+                    {"name": "descriptor", "type": "compute pass descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "begin render pass",
+                "returns": "render pass encoder",
+                "args": [
+                    {"name": "descriptor", "type": "render pass descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "copy buffer to buffer",
+                "args": [
+                    {"name": "source", "type": "buffer"},
+                    {"name": "source offset", "type": "uint64_t"},
+                    {"name": "destination", "type": "buffer"},
+                    {"name": "destination offset", "type": "uint64_t"},
+                    {"name": "size", "type": "uint64_t"}
+                ]
+            },
+            {
+                "name": "copy buffer to texture",
+                "args": [
+                    {"name": "source", "type": "texel copy buffer info", "annotation": "const*"},
+                    {"name": "destination", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "copy size", "type": "extent 3D", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "copy texture to buffer",
+                "args": [
+                    {"name": "source", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "destination", "type": "texel copy buffer info", "annotation": "const*"},
+                    {"name": "copy size", "type": "extent 3D", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "copy texture to texture",
+                "args": [
+                    {"name": "source", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "destination", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "copy size", "type": "extent 3D", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "clear buffer",
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "offset", "type": "uint64_t", "default": 0},
+                    {"name": "size", "type": "uint64_t", "default": "WGPU_WHOLE_SIZE"}
+                ]
+            },
+            {
+                "name": "inject validation error",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "message", "type": "string view"}
+                ]
+            },
+            {
+                "name": "insert debug marker",
+                "args": [
+                    {"name": "marker label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "pop debug group",
+                "args": []
+            },
+            {
+                "name": "push debug group",
+                "args": [
+                    {"name": "group label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "resolve query set",
+                "args": [
+                    {"name": "query set", "type": "query set"},
+                    {"name": "first query", "type": "uint32_t"},
+                    {"name": "query count", "type": "uint32_t"},
+                    {"name": "destination", "type": "buffer"},
+                    {"name": "destination offset", "type": "uint64_t"}
+                ]
+            },
+            {
+                "name": "write buffer",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "buffer offset", "type": "uint64_t"},
+                    {"name": "data", "type": "uint8_t", "annotation": "const*", "length": "size"},
+                    {"name": "size", "type": "uint64_t"}
+                ]
+            },
+            {
+                "name": "write timestamp",
+                "args": [
+                    {"name": "query set", "type": "query set"},
+                    {"name": "query index", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "command encoder descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "compare function": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "never"},
+            {"value": 2, "name": "less"},
+            {"value": 3, "name": "equal"},
+            {"value": 4, "name": "less equal"},
+            {"value": 5, "name": "greater"},
+            {"value": 6, "name": "not equal"},
+            {"value": 7, "name": "greater equal"},
+            {"value": 8, "name": "always"}
+        ]
+    },
+    "compilation info": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "message count", "type": "size_t"},
+            {"name": "messages", "type": "compilation message", "annotation": "const*", "length": "message count"}
+        ]
+    },
+    "compilation info callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "compilation info request status"},
+            {"name": "compilation info", "type": "compilation info", "annotation": "const*"}
+        ]
+    },
+    "compilation info callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "compilation info callback"}
+        ]
+    },
+    "compilation info request status": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"}
+        ]
+    },
+    "compilation message": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "message", "type": "string view"},
+            {"name": "type", "type": "compilation message type"},
+            {"name": "line num", "type": "uint64_t"},
+            {"name": "line pos", "type": "uint64_t"},
+            {"name": "offset", "type": "uint64_t"},
+            {"name": "length", "type": "uint64_t"},
+            {"name": "utf16 line pos", "type": "uint64_t"},
+            {"name": "utf16 offset", "type": "uint64_t"},
+            {"name": "utf16 length", "type": "uint64_t"}
+        ]
+    },
+    "compilation message type": {
+        "category": "enum",
+        "emscripten_string_to_int": true,
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "error"},
+            {"value": 2, "name": "warning"},
+            {"value": 3, "name": "info"}
+        ]
+    },
+    "compute pass descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "timestamp writes", "type": "pass timestamp writes", "annotation": "const*", "optional": true}
+        ]
+    },
+    "compute pass encoder": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "insert debug marker",
+                "args": [
+                    {"name": "marker label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "pop debug group",
+                "args": []
+            },
+            {
+                "name": "push debug group",
+                "args": [
+                    {"name": "group label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "set pipeline",
+                "args": [
+                    {"name": "pipeline", "type": "compute pipeline"}
+                ]
+            },
+            {
+                "name": "set bind group",
+                "args": [
+                    {"name": "group index", "type": "uint32_t"},
+                    {"name": "group", "type": "bind group", "optional": true},
+                    {"name": "dynamic offset count", "type": "size_t", "default": "0"},
+                    {"name": "dynamic offsets", "type": "uint32_t", "annotation": "const*", "length": "dynamic offset count", "default": "nullptr"}
+                ]
+            },
+            {
+                "name": "write timestamp",
+                "tags": ["emscripten", "dawn"],
+                "args": [
+                    {"name": "query set", "type": "query set"},
+                    {"name": "query index", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "dispatch workgroups",
+                "args": [
+                    {"name": "workgroupCountX", "type": "uint32_t"},
+                    {"name": "workgroupCountY", "type": "uint32_t", "default": "1"},
+                    {"name": "workgroupCountZ", "type": "uint32_t", "default": "1"}
+                ]
+            },
+            {
+                "name": "dispatch workgroups indirect",
+                "args": [
+                  {"name": "indirect buffer", "type": "buffer"},
+                  {"name": "indirect offset", "type": "uint64_t"}
+                ]
+            },
+            {
+                "name": "end"
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "composite alpha mode": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "auto", "jsrepr": "undefined"},
+            {"value": 1, "name": "opaque"},
+            {"value": 2, "name": "premultiplied"},
+            {"value": 3, "name": "unpremultiplied"},
+            {"value": 4, "name": "inherit"}
+        ]
+    },
+    "compute pipeline": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "get bind group layout",
+                "returns": "bind group layout",
+                "args": [
+                    {"name": "group index", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "compute pipeline descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "layout", "type": "pipeline layout", "optional": true},
+            {"name": "compute", "type": "compute state"}
+        ]
+    },
+    "alpha mode": {
+        "category": "enum",
+        "tags": ["dawn"],
+        "values": [
+            {"value": 1, "name": "opaque"},
+            {"value": 2, "name": "premultiplied"},
+            {"value": 3, "name": "unpremultiplied"}
+        ]
+    },
+    "copy texture for browser options": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "flip y", "type": "bool", "default": "false"},
+            {"name": "needs color space conversion", "type": "bool", "default": "false"},
+            {"name": "src alpha mode", "type": "alpha mode", "default": "unpremultiplied"},
+            {"name": "src transfer function parameters", "type": "float", "annotation": "const*",
+                     "length": 7, "optional": true},
+            {"name": "conversion matrix", "type": "float", "annotation": "const*",
+                     "length": 9, "optional": true},
+            {"name": "dst transfer function parameters", "type": "float", "annotation": "const*",
+                     "length": 7, "optional": true},
+            {"name": "dst alpha mode", "type": "alpha mode", "default": "unpremultiplied"},
+            {"name": "internal usage", "type": "bool", "default": "false"}
+        ]
+    },
+    "create compute pipeline async callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "create pipeline async status"},
+            {"name": "pipeline", "type": "compute pipeline", "optional": true},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "create compute pipeline async callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "create compute pipeline async callback"}
+        ]
+    },
+    "create pipeline async status": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"},
+            {"value": 3, "name": "validation error"},
+            {"value": 4, "name": "internal error"}
+        ]
+    },
+    "create render pipeline async callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "create pipeline async status"},
+            {"name": "pipeline", "type": "render pipeline", "optional": true},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "create render pipeline async callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "create render pipeline async callback"}
+        ]
+    },
+    "cull mode": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "none"},
+            {"value": 2, "name": "front"},
+            {"value": 3, "name": "back"}
+        ]
+    },
+    "a hardware buffer properties": {
+        "category": "structure",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "y cb cr info", "type": "y cb cr vk descriptor"}
+        ]
+    },
+    "device": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "create bind group",
+                "returns": "bind group",
+                "args": [
+                    {"name": "descriptor", "type": "bind group descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create bind group layout",
+                "returns": "bind group layout",
+                "args": [
+                    {"name": "descriptor", "type": "bind group layout descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create buffer",
+                "no autolock": true,
+                "returns": "buffer",
+                "args": [
+                    {"name": "descriptor", "type": "buffer descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create error buffer",
+                "returns": "buffer",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "descriptor", "type": "buffer descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create command encoder",
+                "returns": "command encoder",
+                "args": [
+                    {"name": "descriptor", "type": "command encoder descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "create compute pipeline",
+                "no autolock": true,
+                "returns": "compute pipeline",
+                "args": [
+                    {"name": "descriptor", "type": "compute pipeline descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create compute pipeline async",
+                "returns": "future",
+                "args": [
+                    {"name": "descriptor", "type": "compute pipeline descriptor", "annotation": "const*"},
+                    {"name": "callback info", "type": "create compute pipeline async callback info"}
+                ]
+            },
+            {
+                "name": "create external texture",
+                "returns": "external texture",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "external texture descriptor", "type": "external texture descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create error external texture",
+                "returns": "external texture",
+                "tags": ["dawn"]
+            },
+            {
+                "name": "create pipeline layout",
+                "returns": "pipeline layout",
+                "args": [
+                    {"name": "descriptor", "type": "pipeline layout descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create query set",
+                "returns": "query set",
+                "args": [
+                    {"name": "descriptor", "type": "query set descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create render pipeline async",
+                "returns": "future",
+                "args": [
+                    {"name": "descriptor", "type": "render pipeline descriptor", "annotation": "const*"},
+                    {"name": "callback info", "type": "create render pipeline async callback info"}
+                ]
+            },
+            {
+                "name": "create render bundle encoder",
+                "returns": "render bundle encoder",
+                "args": [
+                    {"name": "descriptor", "type": "render bundle encoder descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create render pipeline",
+                "no autolock": true,
+                "returns": "render pipeline",
+                "args": [
+                    {"name": "descriptor", "type": "render pipeline descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create sampler",
+                "returns": "sampler",
+                "args": [
+                    {"name": "descriptor", "type": "sampler descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "create shader module",
+                "no autolock": true,
+                "returns": "shader module",
+                "args": [
+                    {"name": "descriptor", "type": "shader module descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create error shader module",
+                "returns": "shader module",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "descriptor", "type": "shader module descriptor", "annotation": "const*"},
+                    {"name": "error message", "type": "string view"}
+                ]
+            },
+            {
+                "name": "create texture",
+                "returns": "texture",
+                "args": [
+                    {"name": "descriptor", "type": "texture descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "import shared buffer memory",
+                "returns": "shared buffer memory",
+                "tags": ["dawn", "native"],
+                "args": [
+                    {"name": "descriptor", "type": "shared buffer memory descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "import shared texture memory",
+                "returns": "shared texture memory",
+                "tags": ["dawn", "native"],
+                "args": [
+                    {"name": "descriptor", "type": "shared texture memory descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "import shared fence",
+                "returns": "shared fence",
+                "tags": ["dawn", "native"],
+                "args": [
+                    {"name": "descriptor", "type": "shared fence descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "create error texture",
+                "returns": "texture",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "descriptor", "type": "texture descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "destroy"
+            },
+            {
+                "name": "get a hardware buffer properties",
+                "tags": ["dawn", "native"],
+                "returns": "status",
+                "args": [
+                    {"name": "handle", "type": "void *"},
+                    {"name": "properties", "type": "a hardware buffer properties", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "get limits",
+                "returns": "status",
+                "args": [
+                    {"name": "limits", "type": "supported limits", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "get lost future",
+                "returns": "future"
+            },
+            {
+                "name": "has feature",
+                "returns": "bool",
+                "args": [
+                    {"name": "feature", "type": "feature name"}
+                ]
+            },
+            {
+                "name": "get features",
+                "returns": "void",
+                "args": [
+                    {"name": "features", "type": "supported features", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "get adapter info",
+                "returns": "status",
+                "args": [
+                    {"name": "adapter info", "type": "adapter info", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "get adapter",
+                "returns": "adapter",
+                "tags": ["dawn"]
+            },
+            {
+                "name": "get queue",
+                "returns": "queue"
+            },
+            {
+                "name": "inject error",
+                "args": [
+                    {"name": "type", "type": "error type"},
+                    {"name": "message", "type": "string view"}
+                ],
+                "tags": ["dawn"]
+            },
+            {
+                "name": "force loss",
+                "args": [
+                    {"name": "type", "type": "device lost reason"},
+                    {"name": "message", "type": "string view"}
+                ],
+                "tags": ["dawn"]
+            },
+            {
+                "name": "tick",
+                "no autolock": true,
+                "tags": ["dawn"]
+            },
+            {
+                "name": "set logging callback",
+                "no autolock": true,
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "callback info", "type": "logging callback info"}
+                ]
+            },
+            {
+                "name": "push error scope",
+                "args": [
+                    {"name": "filter", "type": "error filter"}
+                ]
+            },
+            {
+                "name": "pop error scope",
+                "no autolock": true,
+                "returns": "future",
+                "args": [
+                    {"name": "callback info", "type": "pop error scope callback info"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "validate texture descriptor",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "descriptor", "type": "texture descriptor", "annotation": "const*"}
+                ]
+            }
+        ]
+    },
+    "device lost callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "device", "type": "device", "annotation": "const*", "length": 1},
+            {"name": "reason", "type": "device lost reason"},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "device lost callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "device lost callback", "default": "nullptr"}
+        ]
+    },
+    "device lost reason": {
+        "category": "enum",
+        "emscripten_string_to_int": true,
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "unknown"},
+            {"value": 2, "name": "destroyed"},
+            {"value": 3, "name": "instance dropped", "emscripten_string_to_int": false},
+            {"value": 4, "name": "failed creation", "emscripten_string_to_int": false}
+        ]
+    },
+    "double": {
+        "category": "native",
+        "wasm type": "d"
+    },
+    "uncaptured error callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "device", "type": "device", "annotation": "const*", "length": 1},
+            {"name": "type", "type": "error type"},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "uncaptured error callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "callback", "type": "uncaptured error callback", "default": "nullptr"}
+        ]
+    },
+    "pop error scope status": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"},
+            {"value": 3, "name": "empty stack"}
+        ]
+    },
+    "pop error scope callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "pop error scope status"},
+            {"name": "type", "type": "error type"},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "pop error scope callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "pop error scope callback"}
+        ]
+    },
+    "limits": {
+        "category": "structure",
+        "members": [
+            {"name": "max texture dimension 1D", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max texture dimension 2D", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max texture dimension 3D", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max texture array layers", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max bind groups", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max bind groups plus vertex buffers", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max bindings per bind group", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max dynamic uniform buffers per pipeline layout", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max dynamic storage buffers per pipeline layout", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max sampled textures per shader stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max samplers per shader stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max storage buffers per shader stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max storage textures per shader stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max uniform buffers per shader stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max uniform buffer binding size", "type": "uint64_t", "default": "WGPU_LIMIT_U64_UNDEFINED"},
+            {"name": "max storage buffer binding size", "type": "uint64_t", "default": "WGPU_LIMIT_U64_UNDEFINED"},
+            {"name": "min uniform buffer offset alignment", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "min storage buffer offset alignment", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max vertex buffers", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max buffer size", "type": "uint64_t", "default": "WGPU_LIMIT_U64_UNDEFINED"},
+            {"name": "max vertex attributes", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max vertex buffer array stride", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max inter stage shader components", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max inter stage shader variables", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max color attachments", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max color attachment bytes per sample", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max compute workgroup storage size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max compute invocations per workgroup", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max compute workgroup size x", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max compute workgroup size y", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max compute workgroup size z", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max compute workgroups per dimension", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max storage buffers in vertex stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max storage textures in vertex stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max storage buffers in fragment stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max storage textures in fragment stage", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
+        ]
+    },
+    "adapter properties subgroups": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["adapter info"],
+        "members": [
+            {"name": "subgroup min size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "subgroup max size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
+        ]
+    },
+    "dawn experimental subgroup limits": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["supported limits"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "min subgroup size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "max subgroup size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
+        ]
+    },
+    "dawn experimental immediate data limits": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["supported limits"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "max immediate data range byte size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
+        ]
+    },
+    "dawn texel copy buffer row alignment limits": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["supported limits"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "min texel copy buffer row alignment", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
+        ]
+    },
+    "required limits": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "limits", "type": "limits"}
+        ]
+    },
+    "supported limits": {
+        "category": "structure",
+        "extensible": "out",
+        "members": [
+            {"name": "limits", "type": "limits"}
+        ]
+    },
+    "supported features": {
+        "category": "structure",
+        "out": true,
+        "members": [
+            {"name": "feature count", "type": "size_t"},
+            {"name": "features", "type": "feature name", "annotation": "const*", "length": "feature count"}
+        ]
+    },
+    "supported WGSL language features": {
+        "category": "structure",
+        "out": true,
+        "members": [
+            {"name": "feature count", "type": "size_t"},
+            {"name": "features", "type": "WGSL language feature name", "annotation": "const*", "length": "feature count"}
+        ]
+    },
+    "logging callback": {
+        "category": "callback function",
+        "tags": ["dawn"],
+        "args": [
+            {"name": "type", "type": "logging type"},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "logging callback info": {
+        "category": "callback info",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "callback", "type": "logging callback", "default": "nullptr"}
+        ]
+    },
+    "error filter": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "validation"},
+            {"value": 2, "name": "out of memory"},
+            {"value": 3, "name": "internal"}
+        ]
+    },
+    "error type": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "no error"},
+            {"value": 2, "name": "validation"},
+            {"value": 3, "name": "out of memory"},
+            {"value": 4, "name": "internal"},
+            {"value": 5, "name": "unknown"}
+        ]
+    },
+    "logging type": {
+        "category": "enum",
+        "tags": ["dawn"],
+        "values": [
+            {"value": 1, "name": "verbose"},
+            {"value": 2, "name": "info"},
+            {"value": 3, "name": "warning"},
+            {"value": 4, "name": "error"}
+        ]
+    },
+    "extent 2D": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "width", "type": "uint32_t"},
+            {"name": "height", "type": "uint32_t"}
+        ]
+    },
+    "extent 3D": {
+        "category": "structure",
+        "members": [
+            {"name": "width", "type": "uint32_t"},
+            {"name": "height", "type": "uint32_t", "default": 1},
+            {"name": "depth or array layers", "type": "uint32_t", "default": 1}
+        ]
+    },
+    "external texture": {
+        "category": "object",
+        "tags": ["dawn"],
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "destroy",
+                "returns": "void"
+            },
+            {
+                "name": "expire",
+                "returns": "void"
+            },
+            {
+                "name": "refresh",
+                "returns": "void"
+            }
+        ]
+    },
+    "external texture rotation":{
+        "category": "enum",
+        "tags": ["dawn"],
+        "_comment": "ANGLEs are clockwise rotation degrees and not trigonometric.",
+        "values": [
+            {"value": 1, "name": "rotate 0 degrees"},
+            {"value": 2, "name": "rotate 90 degrees"},
+            {"value": 3, "name": "rotate 180 degrees"},
+            {"value": 4, "name": "rotate 270 degrees"}
+        ]
+    },
+    "external texture descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn"],
+        "_comment": "TODO(crbug.com/1514732): deprecate flipY",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "plane 0", "type": "texture view"},
+            {"name": "plane 1", "type": "texture view", "optional": true},
+            {"name": "crop origin", "type": "origin 2D"},
+            {"name": "crop size", "type": "extent 2D"},
+            {"name": "apparent size", "type": "extent 2D"},
+            {"name": "do yuv to rgb conversion only", "type": "bool", "default": "false"},
+            {"name": "yuv to rgb conversion matrix", "type": "float", "annotation": "const*",
+                "length": 12, "optional": true},
+            {"name": "src transfer function parameters", "type": "float", "annotation": "const*",
+                "length": 7},
+            {"name": "dst transfer function parameters", "type": "float", "annotation": "const*",
+                "length": 7},
+            {"name": "gamut conversion matrix", "type": "float", "annotation": "const*",
+                "length": 9},
+            {"name": "mirrored", "type": "bool", "default": "false"},
+            {"name": "rotation", "type": "external texture rotation", "default": "rotate 0 degrees"}
+        ]
+    },
+    "status": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "error"}
+        ]
+    },
+    "shared buffer memory": {
+        "category": "object",
+        "tags": ["dawn", "native"],
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "get properties",
+                "returns": "status",
+                "args": [
+                    {"name": "properties", "type": "shared buffer memory properties", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "create buffer",
+                "returns": "buffer",
+                "args": [
+                    {"name": "descriptor", "type": "buffer descriptor", "annotation": "const*", "optional": true, "default": "nullptr"}
+                ]
+            },
+            {
+                "name": "begin access",
+                "returns": "status",
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "descriptor", "type": "shared buffer memory begin access descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "end access",
+                "returns": "status",
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "descriptor", "type": "shared buffer memory end access state", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "is device lost",
+                "returns": "bool",
+                "args": []
+            }
+        ]
+    },
+    "shared buffer memory properties": {
+        "category": "structure",
+        "extensible": "out",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "usage", "type": "buffer usage"},
+            {"name": "size", "type": "uint64_t"}
+        ]
+    },
+    "shared buffer memory descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "shared texture memory": {
+        "category": "object",
+        "tags": ["dawn", "native"],
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "get properties",
+                "returns": "status",
+                "args": [
+                    {"name": "properties", "type": "shared texture memory properties", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "create texture",
+                "returns": "texture",
+                "args": [
+                    {"name": "descriptor", "type": "texture descriptor", "annotation": "const*", "optional": true, "default": "nullptr"}
+                ]
+            },
+            {
+                "name": "begin access",
+                "returns": "status",
+                "args": [
+                    {"name": "texture", "type": "texture"},
+                    {"name": "descriptor", "type": "shared texture memory begin access descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "end access",
+                "returns": "status",
+                "args": [
+                    {"name": "texture", "type": "texture"},
+                    {"name": "descriptor", "type": "shared texture memory end access state", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "is device lost",
+                "returns": "bool",
+                "args": []
+            }
+        ]
+    },
+    "shared texture memory properties": {
+        "category": "structure",
+        "extensible": "out",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "usage", "type": "texture usage"},
+            {"name": "size", "type": "extent 3D"},
+            {"name": "format", "type": "texture format"}
+        ]
+    },
+    "shared texture memory a hardware buffer properties": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared texture memory properties"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "y cb cr info", "type": "y cb cr vk descriptor"}
+        ]
+    },
+    "shared texture memory descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "shared buffer memory begin access descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "initialized", "type": "bool"},
+            {"name": "fence count", "type": "size_t", "default": "0"},
+            {"name": "fences", "type": "shared fence", "annotation": "const*", "length": "fence count"},
+            {"name": "signaled values", "type": "uint64_t", "annotation": "const*", "length": "fence count"}
+        ]
+    },
+    "shared buffer memory end access state": {
+        "category": "structure",
+        "extensible": "out",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "initialized", "type": "bool"},
+            {"name": "fence count", "type": "size_t", "default": "0"},
+            {"name": "fences", "type": "shared fence", "annotation": "const*", "length": "fence count"},
+            {"name": "signaled values", "type": "uint64_t", "annotation": "const*", "length": "fence count"}
+        ]
+    },
+    "shared texture memory vk dedicated allocation descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "dedicated allocation", "type": "bool"}
+        ]
+    },
+    "shared texture memory a hardware buffer descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "void *"},
+            {"name": "use external format", "type" : "bool"}
+        ]
+    },
+    "shared texture memory dma buf plane": {
+        "category": "structure",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "fd", "type": "int"},
+            {"name": "offset", "type": "uint64_t"},
+            {"name": "stride", "type": "uint32_t"}
+        ]
+    },
+    "shared texture memory dma buf descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "size", "type": "extent 3D"},
+            {"name": "drm format", "type": "uint32_t"},
+            {"name": "drm modifier", "type": "uint64_t"},
+            {"name": "plane count", "type": "size_t"},
+            {"name": "planes", "type": "shared texture memory dma buf plane", "annotation": "const*", "length": "plane count"}
+        ]
+    },
+    "shared texture memory opaque FD descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "vk image create info", "type": "void const *"},
+            {"name": "memory FD", "type": "int"},
+            {"name": "memory type index", "type": "uint32_t"},
+            {"name": "allocation size", "type": "uint64_t"},
+            {"name": "dedicated allocation", "type": "bool"}
+        ]
+    },
+    "shared texture memory zircon handle descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "memory FD", "type": "uint32_t"},
+            {"name": "allocation size", "type": "uint64_t"}
+        ]
+    },
+    "shared texture memory DXGI shared handle descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "handle", "type": "void *"},
+            {"name": "use keyed mutex", "type": "bool"}
+        ]
+    },
+    "shared texture memory IO surface descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "io surface", "type": "void *"},
+            {"name": "allow storage binding", "type": "bool", "default": "true"}
+        ]
+    },
+    "shared texture memory EGL image descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory descriptor"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "image", "type": "void *"}
+        ]
+    },
+    "shared texture memory begin access descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "concurrent read", "type": "bool"},
+            {"name": "initialized", "type": "bool"},
+            {"name": "fence count", "type": "size_t"},
+            {"name": "fences", "type": "shared fence", "annotation": "const*", "length": "fence count"},
+            {"name": "signaled values", "type": "uint64_t", "annotation": "const*", "length": "fence count"}
+        ]
+    },
+    "shared texture memory end access state": {
+        "category": "structure",
+        "extensible": "out",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "initialized", "type": "bool"},
+            {"name": "fence count", "type": "size_t"},
+            {"name": "fences", "type": "shared fence", "annotation": "const*", "length": "fence count"},
+            {"name": "signaled values", "type": "uint64_t", "annotation": "const*", "length": "fence count"}
+        ]
+    },
+    "shared texture memory vk image layout begin state": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory begin access descriptor"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "old layout", "type": "int32_t"},
+            {"name": "new layout", "type": "int32_t"}
+        ]
+    },
+    "shared texture memory vk image layout end state": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared texture memory end access state"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "old layout", "type": "int32_t"},
+            {"name": "new layout", "type": "int32_t"}
+        ]
+    },
+    "shared texture memory D3D swapchain begin state": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared texture memory begin access descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "is swapchain", "type": "bool", "default": "false"}
+        ]
+    },
+    "shared fence": {
+        "category": "object",
+        "tags": ["dawn", "native"],
+        "methods": [
+            {
+                "name": "export info",
+                "returns": "void",
+                "args": [
+                    {"name": "info", "type": "shared fence export info", "annotation": "*"}
+                ]
+            }
+        ]
+    },
+    "shared fence descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "shared fence vk semaphore opaque FD descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared fence descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "int"}
+        ]
+    },
+    "shared fence sync FD descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared fence descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "int"}
+        ]
+    },
+    "shared fence vk semaphore zircon handle descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared fence descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "uint32_t"}
+        ]
+    },
+    "shared fence DXGI shared handle descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared fence descriptor"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "void *"}
+        ]
+    },
+    "shared fence MTL shared event descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shared fence descriptor"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "shared event", "type": "void *"}
+        ]
+    },
+    "shared fence type": {
+        "category": "enum",
+        "tags": ["dawn", "native"],
+        "values": [
+            {"value": 1, "name": "vk semaphore opaque FD"},
+            {"value": 2, "name": "sync FD"},
+            {"value": 3, "name": "vk semaphore zircon handle"},
+            {"value": 4, "name": "DXGI shared handle"},
+            {"value": 5, "name": "MTL shared event"}
+        ]
+    },
+    "shared fence export info": {
+        "category": "structure",
+        "extensible": "out",
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "type", "type": "shared fence type"}
+        ]
+    },
+    "shared fence vk semaphore opaque FD export info": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared fence export info"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "int"}
+        ]
+    },
+    "shared fence sync FD export info": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared fence export info"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "int"}
+        ]
+    },
+    "shared fence vk semaphore zircon handle export info": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared fence export info"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "uint32_t"}
+        ]
+    },
+    "shared fence DXGI shared handle export info": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared fence export info"],
+        "tags": ["dawn", "native"],
+        "members": [
+            {"name": "handle", "type": "void *"}
+        ]
+    },
+    "shared fence MTL shared event export info": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["shared fence export info"],
+        "tags": ["dawn", "native"],
+        "_comment": "TODO(crbug.com/dawn/1745): improve type safety",
+        "members": [
+            {"name": "shared event", "type": "void *"}
+        ]
+    },
+    "feature level": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "compatibility"},
+            {"value": 2, "name": "core"}
+        ]
+    },
+    "feature name": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "depth clip control"},
+            {"value": 2, "name": "depth32 float stencil8"},
+            {"value": 3, "name": "timestamp query"},
+            {"value": 4, "name": "texture compression BC"},
+            {"value": 5, "name": "texture compression ETC2"},
+            {"value": 6, "name": "texture compression ASTC"},
+            {"value": 7, "name": "indirect first instance"},
+            {"value": 8, "name": "shader f16"},
+            {"value": 9, "name": "RG11B10 ufloat renderable"},
+            {"value": 10, "name": "BGRA8 unorm storage"},
+            {"value": 11, "name": "float32 filterable", "jsrepr": "'float32-filterable'"},
+            {"value": 12, "name": "float32 blendable", "jsrepr": "'float32-blendable'"},
+            {"value": 13, "name": "subgroups"},
+            {"value": 14, "name": "subgroups f16"},
+
+            {"value": 0, "name": "dawn internal usages", "tags": ["dawn"]},
+            {"value": 1, "name": "dawn multi planar formats", "tags": ["dawn"]},
+            {"value": 2, "name": "dawn native", "tags": ["dawn", "native"]},
+            {"value": 3, "name": "chromium experimental timestamp query inside passes", "tags": ["dawn"]},
+            {"value": 4, "name": "implicit device synchronization", "tags": ["dawn", "native"]},
+            {"value": 5, "name": "chromium experimental immediate data", "tags": ["dawn"]},
+            {"value": 6, "name": "transient attachments", "tags": ["dawn"]},
+            {"value": 7, "name": "MSAA render to single sampled", "tags": ["dawn"]},
+            {"value": 8, "name": "dual source blending", "tags": ["dawn"]},
+            {"value": 9, "name": "D3D11 multithread protected", "tags": ["dawn", "native"]},
+            {"value": 10, "name": "ANGLE texture sharing", "tags": ["dawn", "native"]},
+            {"value": 11, "name": "pixel local storage coherent", "tags": ["dawn"]},
+            {"value": 12, "name": "pixel local storage non coherent", "tags": ["dawn"]},
+            {"value": 13, "name": "unorm16 texture formats", "tags": ["dawn"]},
+            {"value": 14, "name": "snorm16 texture formats", "tags": ["dawn"]},
+            {"value": 15, "name": "multi planar format extended usages", "tags": ["dawn"]},
+            {"value": 16, "name": "multi planar format p010", "tags": ["dawn"]},
+            {"value": 17, "name": "host mapped pointer", "tags": ["dawn"]},
+            {"value": 18, "name": "multi planar render targets", "tags": ["dawn"]},
+            {"value": 19, "name": "multi planar format nv12a", "tags": ["dawn"]},
+            {"value": 20, "name": "framebuffer fetch", "tags": ["dawn"]},
+            {"value": 21, "name": "buffer map extended usages", "tags": ["dawn"]},
+            {"value": 22, "name": "adapter properties memory heaps", "tags": ["dawn"]},
+            {"value": 23, "name": "adapter properties D3D", "tags": ["dawn"]},
+            {"value": 24, "name": "adapter properties vk", "tags": ["dawn"]},
+            {"value": 25, "name": "r8 unorm storage", "tags": ["dawn"]},
+            {"value": 26, "name": "dawn format capabilities", "tags": ["dawn"]},
+            {"value": 27, "name": "dawn drm format capabilities", "tags": ["dawn"]},
+            {"value": 28, "name": "norm16 texture formats", "tags": ["dawn"]},
+            {"value": 29, "name": "multi planar format nv16", "tags": ["dawn"]},
+            {"value": 30, "name": "multi planar format nv24", "tags": ["dawn"]},
+            {"value": 31, "name": "multi planar format p210", "tags": ["dawn"]},
+            {"value": 32, "name": "multi planar format p410", "tags": ["dawn"]},
+
+            {"value": 33, "name": "shared texture memory vk dedicated allocation", "tags": ["dawn", "native"]},
+            {"value": 34, "name": "shared texture memory a hardware buffer", "tags": ["dawn", "native"]},
+            {"value": 35, "name": "shared texture memory dma buf", "tags": ["dawn", "native"]},
+            {"value": 36, "name": "shared texture memory opaque FD", "tags": ["dawn", "native"]},
+            {"value": 37, "name": "shared texture memory zircon handle", "tags": ["dawn", "native"]},
+            {"value": 38, "name": "shared texture memory DXGI shared handle", "tags": ["dawn", "native"]},
+            {"value": 39, "name": "shared texture memory D3D11 texture 2D", "tags": ["dawn", "native"]},
+            {"value": 40, "name": "shared texture memory IO surface", "tags": ["dawn", "native"]},
+            {"value": 41, "name": "shared texture memory EGL image", "tags": ["dawn", "native"]},
+            {"value": 42, "name": "shared fence vk semaphore opaque FD", "tags": ["dawn", "native"]},
+            {"value": 43, "name": "shared fence sync FD", "tags": ["dawn", "native"]},
+            {"value": 44, "name": "shared fence vk semaphore zircon handle", "tags": ["dawn", "native"]},
+            {"value": 45, "name": "shared fence DXGI shared handle", "tags": ["dawn", "native"]},
+            {"value": 46, "name": "shared fence MTL shared event", "tags": ["dawn", "native"]},
+            {"value": 47, "name": "shared buffer memory D3D12 resource", "tags": ["dawn", "native"]},
+            {"value": 48, "name": "static samplers", "tags": ["dawn"]},
+            {"value": 49, "name": "y cb cr vulkan samplers", "tags": ["dawn"]},
+            {"value": 50, "name": "shader module compilation options", "tags": ["dawn"]},
+
+            {"value": 51, "name": "dawn load resolve texture", "tags": ["dawn"]},
+            {"value": 52, "name": "dawn partial load resolve texture", "tags": ["dawn"]},
+            {"value": 53, "name": "multi draw indirect", "tags": ["dawn"]},
+            {"value": 54, "name": "clip distances", "tags": ["dawn"]},
+            {"value": 55, "name": "dawn texel copy buffer row alignment", "tags": ["dawn"]},
+            {"value": 56, "name": "flexible texture views", "tags": ["dawn"]}
+        ]
+    },
+    "filter mode": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "nearest"},
+            {"value": 2, "name": "linear"}
+        ]
+    },
+    "float": {
+        "category": "native",
+        "wasm type": "f"
+    },
+    "dawn format capabilities": {
+      "category": "structure",
+      "tags": ["dawn"],
+      "extensible": "out",
+      "members": []
+    },
+    "dawn drm format capabilities": {
+      "category": "structure",
+      "tags": ["dawn"],
+      "chained": "out",
+      "chain roots": ["dawn format capabilities"],
+      "members": [
+          {"name": "properties count", "type": "size_t"},
+          {"name": "properties", "type": "dawn drm format properties", "annotation": "const*", "length": "properties count"}
+      ]
+    },
+    "dawn drm format properties": {
+      "category": "structure",
+      "tags": ["dawn"],
+      "members": [
+          {"name": "modifier", "type": "uint64_t"},
+          {"name": "modifier plane count", "type": "uint32_t"}
+      ]
+    },
+    "front face": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "CCW"},
+            {"value": 2, "name": "CW"}
+        ]
+    },
+    "image copy buffer": {
+        "category": "typedef",
+        "type": "texel copy buffer info"
+    },
+    "texel copy buffer info": {
+        "category": "structure",
+        "members": [
+            {"name": "layout", "type": "texel copy buffer layout"},
+            {"name": "buffer", "type": "buffer"}
+        ]
+    },
+    "texel copy buffer layout": {
+        "category": "structure",
+        "members": [
+            {"name": "offset", "type": "uint64_t", "default": 0},
+            {"name": "bytes per row", "type": "uint32_t", "default": "WGPU_COPY_STRIDE_UNDEFINED"},
+            {"name": "rows per image", "type": "uint32_t", "default": "WGPU_COPY_STRIDE_UNDEFINED"}
+        ]
+    },
+    "image copy texture": {
+        "category": "typedef",
+        "type": "texel copy texture info"
+    },
+    "texel copy texture info": {
+        "category": "structure",
+        "members": [
+            {"name": "texture", "type": "texture"},
+            {"name": "mip level", "type": "uint32_t", "default": "0"},
+            {"name": "origin", "type": "origin 3D"},
+            {"name": "aspect", "type": "texture aspect", "default": "all"}
+        ]
+    },
+    "image copy external texture": {
+        "category": "structure",
+        "extensible": "in",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "external texture", "type": "external texture"},
+            {"name": "origin", "type": "origin 3D"},
+            {"name": "natural size", "type": "extent 2D"}
+        ]
+    },
+    "index format": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "uint16"},
+            {"value": 2, "name": "uint32"}
+        ]
+    },
+    "instance": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "create surface",
+                "returns": "surface",
+                "args": [
+                    {"name": "descriptor", "type": "surface descriptor", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "process events"
+            },
+            {
+                "name": "wait any",
+                "returns": "wait status",
+                "args": [
+                    {"name": "future count", "type": "size_t"},
+                    {"name": "futures", "type": "future wait info", "annotation": "*", "length": "future count"},
+                    {"name": "timeout NS", "type": "uint64_t"}
+                ]
+            },
+            {
+                "name": "request adapter",
+                "returns": "future",
+                "args": [
+                    {"name": "options", "type": "request adapter options", "annotation": "const*", "optional": true, "no_default": true},
+                    {"name": "callback info", "type": "request adapter callback info"}
+                ]
+            },
+            {
+                "name": "has WGSL language feature",
+                "returns": "bool",
+                "args": [
+                    {"name": "feature", "type": "WGSL language feature name"}
+                ]
+            },
+            {
+                "name": "get WGSL language features",
+                "returns": "status",
+                "args": [
+                    {"name": "features", "type": "supported WGSL language features", "annotation": "*"}
+                ]
+            }
+        ]
+    },
+    "callback mode": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "wait any only"},
+            {"value": 2, "name": "allow process events"},
+            {"value": 3, "name": "allow spontaneous"}
+        ]
+    },
+    "future": {
+        "category": "structure",
+        "members": [
+            {"name": "id", "type": "uint64_t"}
+        ]
+    },
+    "wait status": {
+        "category": "enum",
+        "_comment": "TODO(crbug.com/dawn/2053): This could possibly be [[nodiscard]].",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "timed out"},
+            {"value": 3, "name": "error"}
+        ]
+    },
+    "future wait info": {
+        "category": "structure",
+        "members": [
+            {"name": "future", "type": "future"},
+            {"name": "completed", "type": "bool", "default": "false"}
+        ]
+    },
+    "instance capabilities": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "timed wait any enable", "type": "bool", "default": "false"},
+            {"name": "timed wait any max count", "type": "size_t", "default": "0"}
+        ]
+    },
+    "instance descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "capabilities", "type": "instance capabilities"}
+        ]
+    },
+    "get instance capabilities": {
+        "category": "function",
+        "returns": "status",
+        "args": [
+            {"name": "capabilities", "type": "instance capabilities", "annotation": "*"}
+        ]
+    },
+    "dawn wire WGSL control": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "chained": "in",
+        "chain roots": ["instance descriptor"],
+        "members": [
+            {"name": "enable experimental", "type": "bool", "default": "false"},
+            {"name": "enable unsafe", "type": "bool", "default": "false"},
+            {"name": "enable testing", "type": "bool", "default": "false"}
+        ]
+    },
+    "vertex attribute": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "format", "type": "vertex format"},
+            {"name": "offset", "type": "uint64_t"},
+            {"name": "shader location", "type": "uint32_t"}
+        ]
+    },
+    "vertex buffer layout": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "array stride", "type": "uint64_t"},
+            {"name": "step mode", "type": "vertex step mode"},
+            {"name": "attribute count", "type": "size_t"},
+            {"name": "attributes", "type": "vertex attribute", "annotation": "const*", "length": "attribute count"}
+        ]
+    },
+    "vertex step mode": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "vertex"},
+            {"value": 2, "name": "instance"}
+        ]
+    },
+    "load op": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "load"},
+            {"value": 2, "name": "clear"},
+            {"value": 3, "name": "expand resolve texture", "tags": ["dawn"]}
+        ]
+    },
+    "map mode": {
+        "category": "bitmask",
+        "values": [
+            {"value": 0, "name": "none"},
+            {"value": 1, "name": "read"},
+            {"value": 2, "name": "write"}
+        ]
+    },
+    "mipmap filter mode": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "nearest"},
+            {"value": 2, "name": "linear"}
+        ]
+    },
+    "store op": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "store"},
+            {"value": 2, "name": "discard"}
+        ]
+    },
+    "origin 3D": {
+        "category": "structure",
+        "members": [
+            {"name": "x", "type": "uint32_t", "default": "0"},
+            {"name": "y", "type": "uint32_t", "default": "0"},
+            {"name": "z", "type": "uint32_t", "default": "0"}
+        ]
+    },
+    "origin 2D": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "x", "type": "uint32_t", "default": "0"},
+            {"name": "y", "type": "uint32_t", "default": "0"}
+        ]
+    },
+    "pass timestamp writes": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "query set", "type": "query set"},
+            {"name": "beginning of pass write index", "type": "uint32_t", "default": "WGPU_QUERY_SET_INDEX_UNDEFINED"},
+            {"name": "end of pass write index", "type": "uint32_t", "default": "WGPU_QUERY_SET_INDEX_UNDEFINED"}
+        ]
+    },
+    "pipeline layout": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "pipeline layout descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "bind group layout count", "type": "size_t"},
+            {"name": "bind group layouts", "type": "bind group layout", "annotation": "const*", "length": "bind group layout count", "optional": true},
+            {"name": "immediate data range byte size", "type": "uint32_t", "default": 0}
+        ]
+    },
+    "pipeline layout pixel local storage": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "chained": "in",
+        "chain roots": ["pipeline layout descriptor"],
+        "members": [
+            {"name": "total pixel local storage size", "type": "uint64_t"},
+            {"name": "storage attachment count", "type": "size_t", "default": 0},
+            {"name": "storage attachments", "type": "pipeline layout storage attachment", "annotation": "const*", "length": "storage attachment count"}
+        ]
+    },
+    "pipeline layout storage attachment": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "offset", "type": "uint64_t", "default": 0},
+            {"name": "format", "type": "texture format"}
+        ]
+    },
+    "power preference": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "low power"},
+            {"value": 2, "name": "high performance"}
+        ]
+    },
+    "present mode": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "fifo"},
+            {"value": 2, "name": "fifo relaxed"},
+            {"value": 3, "name": "immediate"},
+            {"value": 4, "name": "mailbox"}
+        ]
+    },
+    "compute state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "module", "type": "shader module"},
+            {"name": "entry point", "type": "string view", "optional": true},
+            {"name": "constant count", "type": "size_t", "default": 0},
+            {"name": "constants", "type": "constant entry", "annotation": "const*", "length": "constant count"}
+        ]
+    },
+    "primitive topology": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "point list"},
+            {"value": 2, "name": "line list"},
+            {"value": 3, "name": "line strip"},
+            {"value": 4, "name": "triangle list"},
+            {"value": 5, "name": "triangle strip"}
+        ]
+    },
+    "query set": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "get type",
+                "returns": "query type"
+            },
+            {
+                "name": "get count",
+                "returns": "uint32_t"
+            },
+            {
+                "name": "destroy"
+            }
+        ]
+    },
+    "query set descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "type", "type": "query type"},
+            {"name": "count", "type": "uint32_t"}
+        ]
+    },
+    "query type": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "occlusion"},
+            {"value": 2, "name": "timestamp"}
+        ]
+    },
+    "queue": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "submit",
+                "args": [
+                    {"name": "command count", "type": "size_t"},
+                    {"name": "commands", "type": "command buffer", "annotation": "const*", "length": "command count"}
+                ]
+            },
+            {
+                "name": "on submitted work done",
+                "returns": "future",
+                "args": [
+                    {"name": "callback info", "type": "queue work done callback info"}
+                ]
+            },
+            {
+                "name": "write buffer",
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "buffer offset", "type": "uint64_t"},
+                    {"name": "data", "type": "void", "annotation": "const*", "length": "size"},
+                    {"name": "size", "type": "size_t"}
+                ]
+            },
+            {
+                "name": "write texture",
+                "args": [
+                    {"name": "destination", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "data", "type": "void", "annotation": "const*", "length": "data size"},
+                    {"name": "data size", "type": "size_t"},
+                    {"name": "data layout", "type": "texel copy buffer layout", "annotation": "const*"},
+                    {"name": "write size", "type": "extent 3D", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "copy texture for browser",
+                "extensible": "in",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "source", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "destination", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "copy size", "type": "extent 3D", "annotation": "const*"},
+                    {"name": "options", "type": "copy texture for browser options", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "copy external texture for browser",
+                "extensible": "in",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "source", "type": "image copy external texture", "annotation": "const*"},
+                    {"name": "destination", "type": "texel copy texture info", "annotation": "const*"},
+                    {"name": "copy size", "type": "extent 3D", "annotation": "const*"},
+                    {"name": "options", "type": "copy texture for browser options", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "queue descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "queue work done callback": {
+        "category": "callback function",
+        "args": [
+            {"name": "status", "type": "queue work done status"}
+        ]
+    },
+    "queue work done callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "queue work done callback"}
+        ]
+    },
+    "queue work done status": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"},
+            {"value": 3, "name": "error"}
+        ]
+    },
+
+    "render bundle": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+
+    "render bundle encoder": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "set pipeline",
+                "args": [
+                    {"name": "pipeline", "type": "render pipeline"}
+                ]
+            },
+            {
+                "name": "set bind group",
+                "args": [
+                    {"name": "group index", "type": "uint32_t"},
+                    {"name": "group", "type": "bind group", "optional": true},
+                    {"name": "dynamic offset count", "type": "size_t", "default": "0"},
+                    {"name": "dynamic offsets", "type": "uint32_t", "annotation": "const*", "length": "dynamic offset count", "default": "nullptr"}
+                ]
+            },
+            {
+                "name": "draw",
+                "args": [
+                    {"name": "vertex count", "type": "uint32_t"},
+                    {"name": "instance count", "type": "uint32_t", "default": "1"},
+                    {"name": "first vertex", "type": "uint32_t", "default": "0"},
+                    {"name": "first instance", "type": "uint32_t",  "default": "0"}
+                ]
+            },
+            {
+                "name": "draw indexed",
+                "args": [
+                    {"name": "index count", "type": "uint32_t"},
+                    {"name": "instance count", "type": "uint32_t", "default": "1"},
+                    {"name": "first index", "type": "uint32_t", "default": "0"},
+                    {"name": "base vertex", "type": "int32_t", "default": "0"},
+                    {"name": "first instance", "type": "uint32_t", "default": "0"}
+                ]
+            },
+            {
+              "name": "draw indirect",
+              "args": [
+                    {"name": "indirect buffer", "type": "buffer"},
+                    {"name": "indirect offset", "type": "uint64_t"}
+              ]
+            },
+            {
+              "name": "draw indexed indirect",
+              "args": [
+                    {"name": "indirect buffer", "type": "buffer"},
+                    {"name": "indirect offset", "type": "uint64_t"}
+              ]
+            },
+            {
+                "name": "insert debug marker",
+                "args": [
+                    {"name": "marker label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "pop debug group",
+                "args": []
+            },
+            {
+                "name": "push debug group",
+                "args": [
+                    {"name": "group label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "set vertex buffer",
+                "args": [
+                    {"name": "slot", "type": "uint32_t"},
+                    {"name": "buffer", "type": "buffer", "optional": true},
+                    {"name": "offset", "type": "uint64_t", "default": "0"},
+                    {"name": "size", "type": "uint64_t", "default": "WGPU_WHOLE_SIZE"}
+                ]
+            },
+            {
+                "name": "set index buffer",
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "format", "type": "index format"},
+                    {"name": "offset", "type": "uint64_t", "default": "0"},
+                    {"name": "size", "type": "uint64_t", "default": "WGPU_WHOLE_SIZE"}
+                ]
+            },
+            {
+                "name": "finish",
+                "returns": "render bundle",
+                "args": [
+                    {"name": "descriptor", "type": "render bundle descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+
+    "render bundle descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+
+    "render bundle encoder descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "color format count", "type": "size_t"},
+            {"name": "color formats", "type": "texture format", "annotation": "const*", "length": "color format count"},
+            {"name": "depth stencil format", "type": "texture format", "default": "undefined"},
+            {"name": "sample count", "type": "uint32_t", "default": "1"},
+            {"name": "depth read only", "type": "bool", "default": "false"},
+            {"name": "stencil read only", "type": "bool", "default": "false"}
+        ]
+    },
+
+    "render pass color attachment": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "view", "type": "texture view", "optional": true},
+            {"name": "depth slice", "type": "uint32_t", "default": "WGPU_DEPTH_SLICE_UNDEFINED"},
+            {"name": "resolve target", "type": "texture view", "optional": true},
+            {"name": "load op", "type": "load op"},
+            {"name": "store op", "type": "store op"},
+            {"name": "clear value", "type": "color"}
+        ]
+    },
+    "dawn render pass color attachment render to single sampled": {
+        "tags": ["dawn"],
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["render pass color attachment"],
+        "members": [
+            {"name": "implicit sample count", "type": "uint32_t", "default": 1}
+        ]
+    },
+    "render pass depth stencil attachment": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "view", "type": "texture view"},
+            {"name": "depth load op", "type": "load op", "default": "undefined"},
+            {"name": "depth store op", "type": "store op", "default": "undefined"},
+            {"name": "depth clear value", "type": "float", "default": "NAN"},
+            {"name": "depth read only", "type": "bool", "default": "false"},
+            {"name": "stencil load op", "type": "load op", "default": "undefined"},
+            {"name": "stencil store op", "type": "store op", "default": "undefined"},
+            {"name": "stencil clear value", "type": "uint32_t", "default": "0"},
+            {"name": "stencil read only", "type": "bool", "default": "false"}
+        ]
+    },
+
+    "render pass descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "color attachment count", "type": "size_t"},
+            {"name": "color attachments", "type": "render pass color attachment", "annotation": "const*", "length": "color attachment count"},
+            {"name": "depth stencil attachment", "type": "render pass depth stencil attachment", "annotation": "const*", "optional": true},
+            {"name": "occlusion query set", "type": "query set", "optional": true},
+            {"name": "timestamp writes", "type": "pass timestamp writes", "annotation": "const*", "optional": true}
+        ]
+    },
+    "render pass descriptor max draw count": {
+        "category": "typedef",
+        "type": "render pass max draw count"
+    },
+    "render pass max draw count": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["render pass descriptor"],
+        "members": [
+            {"name": "max draw count", "type": "uint64_t", "default": 50000000}
+        ]
+    },
+    "render pass descriptor expand resolve rect": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "chained": "in",
+        "chain roots": ["render pass descriptor"],
+        "members": [
+            {"name": "x", "type": "uint32_t"},
+            {"name": "y", "type": "uint32_t"},
+            {"name": "width", "type": "uint32_t"},
+            {"name": "height", "type": "uint32_t"}
+        ]
+    },
+    "render pass pixel local storage": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "chained": "in",
+        "chain roots": ["render pass descriptor"],
+        "members": [
+            {"name": "total pixel local storage size", "type": "uint64_t"},
+            {"name": "storage attachment count", "type": "size_t", "default": 0},
+            {"name": "storage attachments", "type": "render pass storage attachment", "annotation": "const*", "length": "storage attachment count"}
+        ]
+    },
+    "render pass storage attachment": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "extensible": "in",
+        "members": [
+            {"name": "offset", "type": "uint64_t", "default": 0},
+            {"name": "storage", "type": "texture view"},
+            {"name": "load op", "type": "load op"},
+            {"name": "store op", "type": "store op"},
+            {"name": "clear value", "type": "color"}
+        ]
+    },
+    "render pass encoder": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "set pipeline",
+                "args": [
+                    {"name": "pipeline", "type": "render pipeline"}
+                ]
+            },
+            {
+                "name": "set bind group",
+                "args": [
+                    {"name": "group index", "type": "uint32_t"},
+                    {"name": "group", "type": "bind group", "optional": true},
+                    {"name": "dynamic offset count", "type": "size_t", "default": "0"},
+                    {"name": "dynamic offsets", "type": "uint32_t", "annotation": "const*", "length": "dynamic offset count", "default": "nullptr"}
+                ]
+            },
+            {
+                "name": "draw",
+                "args": [
+                    {"name": "vertex count", "type": "uint32_t"},
+                    {"name": "instance count", "type": "uint32_t", "default": "1"},
+                    {"name": "first vertex", "type": "uint32_t", "default": "0"},
+                    {"name": "first instance", "type": "uint32_t",  "default": "0"}
+                ]
+            },
+            {
+                "name": "draw indexed",
+                "args": [
+                    {"name": "index count", "type": "uint32_t"},
+                    {"name": "instance count", "type": "uint32_t", "default": "1"},
+                    {"name": "first index", "type": "uint32_t", "default": "0"},
+                    {"name": "base vertex", "type": "int32_t", "default": "0"},
+                    {"name": "first instance", "type": "uint32_t", "default": "0"}
+                ]
+            },
+            {
+              "name": "draw indirect",
+              "args": [
+                    {"name": "indirect buffer", "type": "buffer"},
+                    {"name": "indirect offset", "type": "uint64_t"}
+              ]
+            },
+            {
+              "name": "draw indexed indirect",
+              "args": [
+                    {"name": "indirect buffer", "type": "buffer"},
+                    {"name": "indirect offset", "type": "uint64_t"}
+              ]
+            },
+            {
+                "name": "multi draw indirect",
+                "args": [
+                    {"name": "indirect buffer", "type": "buffer"},
+                    {"name": "indirect offset", "type": "uint64_t"},
+                    {"name": "max draw count", "type": "uint32_t"},
+                    {"name": "draw count buffer", "type": "buffer", "optional": true},
+                    {"name": "draw count buffer offset", "type": "uint64_t", "default": "0"}
+
+                ]
+            },
+            {
+                "name": "multi draw indexed indirect",
+                "args": [
+                    {"name": "indirect buffer", "type": "buffer"},
+                    {"name": "indirect offset", "type": "uint64_t"},
+                    {"name": "max draw count", "type": "uint32_t"},
+                    {"name": "draw count buffer", "type": "buffer", "optional": true},
+                    {"name": "draw count buffer offset", "type": "uint64_t", "default": "0"}
+                ]
+            },
+            {
+              "name": "execute bundles",
+              "args": [
+                  {"name": "bundle count", "type": "size_t"},
+                  {"name": "bundles", "type": "render bundle", "annotation": "const*", "length": "bundle count"}
+              ]
+            },
+            {
+                "name": "insert debug marker",
+                "args": [
+                    {"name": "marker label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "pop debug group",
+                "args": []
+            },
+            {
+                "name": "push debug group",
+                "args": [
+                    {"name": "group label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "set stencil reference",
+                "args": [
+                    {"name": "reference", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "set blend constant",
+                "args": [
+                    {"name": "color", "type": "color", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "set viewport",
+                "args": [
+                    {"name": "x", "type": "float"},
+                    {"name": "y", "type": "float"},
+                    {"name": "width", "type": "float"},
+                    {"name": "height", "type": "float"},
+                    {"name": "min depth", "type": "float"},
+                    {"name": "max depth", "type": "float"}
+                ]
+            },
+            {
+                "name": "set scissor rect",
+                "args": [
+                    {"name": "x", "type": "uint32_t"},
+                    {"name": "y", "type": "uint32_t"},
+                    {"name": "width", "type": "uint32_t"},
+                    {"name": "height", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "set vertex buffer",
+                "args": [
+                    {"name": "slot", "type": "uint32_t"},
+                    {"name": "buffer", "type": "buffer", "optional": true},
+                    {"name": "offset", "type": "uint64_t", "default": "0"},
+                    {"name": "size", "type": "uint64_t", "default": "WGPU_WHOLE_SIZE"}
+                ]
+            },
+            {
+                "name": "set index buffer",
+                "args": [
+                    {"name": "buffer", "type": "buffer"},
+                    {"name": "format", "type": "index format"},
+                    {"name": "offset", "type": "uint64_t", "default": "0"},
+                    {"name": "size", "type": "uint64_t", "default": "WGPU_WHOLE_SIZE"}
+                ]
+            },
+            {
+                "name": "begin occlusion query",
+                "args": [
+                    {"name": "query index", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "end occlusion query"
+            },
+            {
+                "name": "write timestamp",
+                "tags": ["emscripten", "dawn"],
+                "args": [
+                    {"name": "query set", "type": "query set"},
+                    {"name": "query index", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "pixel local storage barrier",
+                "tags": ["dawn"]
+            },
+            {
+                "name": "end"
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "render pipeline": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "get bind group layout",
+                "returns": "bind group layout",
+                "args": [
+                    {"name": "group index", "type": "uint32_t"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+
+    "request device callback": {
+        "category": "callback function",
+        "_comment": "crbug.com/1234617: Revisit optional status of device once requestDevice can return lost devices",
+        "args": [
+            {"name": "status", "type": "request device status"},
+            {"name": "device", "type": "device", "optional": true},
+            {"name": "message", "type": "string view"}
+        ]
+    },
+    "request device callback info": {
+        "category": "callback info",
+        "members": [
+            {"name": "mode", "type": "callback mode"},
+            {"name": "callback", "type": "request device callback"}
+        ]
+   },
+
+    "request device status": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "instance dropped"},
+            {"value": 3, "name": "error"}
+        ]
+    },
+
+    "vertex state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "module", "type": "shader module"},
+            {"name": "entry point", "type": "string view", "optional": true},
+            {"name": "constant count", "type": "size_t", "default": 0},
+            {"name": "constants", "type": "constant entry", "annotation": "const*", "length": "constant count"},
+            {"name": "buffer count", "type": "size_t", "default": 0},
+            {"name": "buffers", "type": "vertex buffer layout", "annotation": "const*", "length": "buffer count"}
+        ]
+    },
+
+    "primitive state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "topology", "type": "primitive topology", "default": "triangle list"},
+            {"name": "strip index format", "type": "index format", "default": "undefined"},
+            {"name": "front face", "type": "front face", "default": "CCW"},
+            {"name": "cull mode", "type": "cull mode", "default": "none"},
+            {"name": "unclipped depth", "type": "bool", "default": "false"}
+        ]
+    },
+
+    "depth stencil state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "format", "type": "texture format"},
+            {"name": "depth write enabled", "type": "optional bool", "default": "undefined"},
+            {"name": "depth compare", "type": "compare function", "default": "undefined"},
+            {"name": "stencil front", "type": "stencil face state"},
+            {"name": "stencil back", "type": "stencil face state"},
+            {"name": "stencil read mask", "type": "uint32_t", "default": "0xFFFFFFFF"},
+            {"name": "stencil write mask", "type": "uint32_t", "default": "0xFFFFFFFF"},
+            {"name": "depth bias", "type": "int32_t", "default": "0"},
+            {"name": "depth bias slope scale", "type": "float", "default": "0.0f"},
+            {"name": "depth bias clamp", "type": "float", "default": "0.0f"}
+        ]
+    },
+
+    "multisample state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "count", "type": "uint32_t", "default": "1"},
+            {"name": "mask", "type": "uint32_t", "default": "0xFFFFFFFF"},
+            {"name": "alpha to coverage enabled", "type": "bool", "default": "false"}
+        ]
+    },
+
+    "fragment state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "module", "type": "shader module"},
+            {"name": "entry point", "type": "string view", "optional": true},
+            {"name": "constant count", "type": "size_t", "default": 0},
+            {"name": "constants", "type": "constant entry", "annotation": "const*", "length": "constant count"},
+            {"name": "target count", "type": "size_t"},
+            {"name": "targets", "type": "color target state", "annotation": "const*", "length": "target count"}
+        ]
+    },
+    "color target state": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "format", "type": "texture format"},
+            {"name": "blend", "type": "blend state", "annotation": "const*", "optional": true},
+            {"name": "write mask", "type": "color write mask", "default": "all"}
+        ]
+    },
+    "color target state expand resolve texture dawn": {
+        "tags": ["dawn"],
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["color target state"],
+        "members": [
+            {"name": "enabled", "type": "bool", "default": "false"}
+        ]
+    },
+    "blend state": {
+        "category": "structure",
+        "extensible": false,
+        "members": [
+            {"name": "color", "type": "blend component"},
+            {"name": "alpha", "type": "blend component"}
+        ]
+    },
+
+    "render pipeline descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "layout", "type": "pipeline layout", "optional": true},
+            {"name": "vertex", "type": "vertex state"},
+            {"name": "primitive", "type": "primitive state"},
+            {"name": "depth stencil", "type": "depth stencil state", "annotation": "const*", "optional": true},
+            {"name": "multisample", "type": "multisample state"},
+            {"name": "fragment", "type": "fragment state", "annotation": "const*", "optional": true}
+        ]
+    },
+
+    "sampler": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "sampler descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "address mode u", "type": "address mode", "default": "clamp to edge"},
+            {"name": "address mode v", "type": "address mode", "default": "clamp to edge"},
+            {"name": "address mode w", "type": "address mode", "default": "clamp to edge"},
+            {"name": "mag filter", "type": "filter mode", "default": "nearest"},
+            {"name": "min filter", "type": "filter mode", "default": "nearest"},
+            {"name": "mipmap filter", "type": "mipmap filter mode", "default": "nearest"},
+            {"name": "lod min clamp", "type": "float", "default": "0.0f"},
+            {"name": "lod max clamp", "type": "float", "default": "32.0f"},
+            {"name": "compare", "type": "compare function", "default": "undefined"},
+            {"name": "max anisotropy", "type": "uint16_t", "default": "1"}
+        ]
+    },
+    "shader module": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "get compilation info",
+                "returns": "future",
+                "args": [
+                    {"name": "callback info", "type": "compilation info callback info"}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "shader module descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "shader module SPIRV descriptor": {
+        "category": "typedef",
+        "type": "shader source SPIRV"
+    },
+    "shader source SPIRV": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shader module descriptor"],
+        "members": [
+            {"name": "code size", "type": "uint32_t"},
+            {"name": "code", "type": "uint32_t", "annotation": "const*", "length": "code size"}
+        ]
+    },
+    "shader module WGSL descriptor": {
+        "category": "typedef",
+        "type": "shader source WGSL"
+    },
+    "shader source WGSL": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shader module descriptor"],
+        "members": [
+            {"name": "code", "type": "string view"}
+        ]
+    },
+    "dawn shader module SPIRV options descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shader module descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "allow non uniform derivatives", "type": "bool", "default": "false"}
+        ]
+    },
+    "shader module compilation options": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["shader module descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "strict math", "type": "bool"}
+        ]
+    },
+    "shader stage": {
+        "category": "bitmask",
+        "values": [
+            {"value": 0, "name": "none"},
+            {"value": 1, "name": "vertex"},
+            {"value": 2, "name": "fragment"},
+            {"value": 4, "name": "compute"}
+        ]
+    },
+    "stencil operation": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "keep"},
+            {"value": 2, "name": "zero"},
+            {"value": 3, "name": "replace"},
+            {"value": 4, "name": "invert"},
+            {"value": 5, "name": "increment clamp"},
+            {"value": 6, "name": "decrement clamp"},
+            {"value": 7, "name": "increment wrap"},
+            {"value": 8, "name": "decrement wrap"}
+        ]
+    },
+    "stencil face state": {
+        "category": "structure",
+        "extensible": false,
+        "members": [
+            {"name": "compare", "type": "compare function", "default": "always"},
+            {"name": "fail op", "type": "stencil operation", "default": "keep"},
+            {"name": "depth fail op", "type": "stencil operation", "default": "keep"},
+            {"name": "pass op", "type": "stencil operation", "default": "keep"}
+        ]
+    },
+    "surface": {
+        "category": "object",
+        "no autolock": true,
+        "methods": [
+            {
+                "name": "configure",
+                "returns": "void",
+                "args": [
+                    {"name": "config", "type": "surface configuration", "annotation": "const*"}
+                ]
+            },
+            {
+                "name": "get capabilities",
+                "returns": "status",
+                "args": [
+                    {"name": "adapter", "type": "adapter"},
+                    {"name": "capabilities", "type": "surface capabilities", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "get current texture",
+                "returns": "void",
+                "args": [
+                    {"name": "surface texture", "type": "surface texture", "annotation": "*"}
+                ]
+            },
+            {
+                "name": "present",
+                "returns": "void",
+                "args": []
+            },
+            {
+                "name": "unconfigure",
+                "returns": "void",
+                "args": []
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "surface descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true}
+        ]
+    },
+    "surface descriptor from android native window": {
+        "category": "typedef",
+        "type": "surface source android native window",
+        "tags": ["art", "native"]
+    },
+    "surface source android native window": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["art", "native"],
+        "members": [
+            {"name": "window", "type": "void *"}
+        ]
+    },
+    "emscripten surface source canvas HTML selector": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["emscripten"],
+        "members": [
+            {"name": "selector", "type": "string view"}
+        ]
+    },
+    "surface descriptor from metal layer": {
+        "category": "typedef",
+        "type": "surface source metal layer",
+        "tags": ["native"]
+    },
+    "surface source metal layer": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["native"],
+        "members": [
+            {"name": "layer", "type": "void", "annotation": "*"}
+        ]
+    },
+    "surface descriptor from windows HWND": {
+        "category": "typedef",
+        "type": "surface source windows HWND",
+        "tags": ["native"]
+    },
+    "surface source windows HWND": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["native"],
+        "members": [
+            {"name": "hinstance", "type": "void", "annotation": "*"},
+            {"name": "hwnd", "type": "void", "annotation": "*"}
+        ]
+    },
+    "surface descriptor from xcb window": {
+        "category": "typedef",
+        "type": "surface source XCB window",
+        "tags": ["native"]
+    },
+    "surface source XCB window": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["native"],
+        "members": [
+            {"name": "connection", "type": "void", "annotation": "*"},
+            {"name": "window", "type": "uint32_t"}
+        ]
+    },
+    "surface descriptor from xlib window": {
+        "category": "typedef",
+        "type": "surface source xlib window",
+        "tags": ["native"]
+    },
+    "surface source xlib window": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["native"],
+        "members": [
+            {"name": "display", "type": "void", "annotation": "*"},
+            {"name": "window", "type": "uint64_t"}
+        ]
+    },
+    "surface descriptor from wayland surface": {
+        "category": "typedef",
+        "type": "surface source wayland surface",
+        "tags": ["native"]
+    },
+    "surface source wayland surface": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["native"],
+        "members": [
+            {"name": "display", "type": "void", "annotation": "*"},
+            {"name": "surface", "type": "void", "annotation": "*"}
+        ]
+    },
+    "surface descriptor from windows core window": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "core window", "type": "void", "annotation": "*"}
+        ]
+    },
+    "surface descriptor from windows swap chain panel": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["surface descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "swap chain panel", "type": "void", "annotation": "*"}
+        ]
+    },
+    "surface texture": {
+        "category": "structure",
+        "members": [
+            {"name": "texture", "type": "texture"},
+            {"name": "suboptimal", "type": "bool"},
+            {"name": "status", "type": "surface get current texture status"}
+        ]
+    },
+    "s type": {
+        "category": "enum",
+        "emscripten_no_enum_table": true,
+        "values": [
+            {"value": 1, "name": "shader source SPIRV"},
+            {"value": 2, "name": "shader source WGSL"},
+            {"value": 3, "name": "render pass max draw count"},
+            {"value": 4, "name": "surface source metal layer"},
+            {"value": 5, "name": "surface source windows HWND"},
+            {"value": 6, "name": "surface source xlib window"},
+            {"value": 7, "name": "surface source wayland surface"},
+            {"value": 8, "name": "surface source android native window"},
+            {"value": 9, "name": "surface source XCB window"},
+            {"value": 10, "name": "adapter properties subgroups"},
+
+            {"value": 0, "name": "texture binding view dimension descriptor", "tags": ["compat"]},
+
+            {"value": 0, "name": "emscripten surface source canvas HTML selector", "tags": ["emscripten"]},
+
+            {"value": 0, "name": "surface descriptor from windows core window", "tags": ["dawn"]},
+            {"value": 1, "name": "external texture binding entry", "tags": ["dawn"]},
+            {"value": 2, "name": "external texture binding layout", "tags": ["dawn"]},
+            {"value": 3, "name": "surface descriptor from windows swap chain panel", "tags": ["dawn"]},
+            {"value": 4, "name": "dawn texture internal usage descriptor", "tags": ["dawn"]},
+            {"value": 5, "name": "dawn encoder internal usage descriptor", "tags": ["dawn"]},
+            {"value": 6, "name": "dawn instance descriptor", "tags": ["dawn", "native"]},
+            {"value": 7, "name": "dawn cache device descriptor", "tags": ["dawn", "native"]},
+            {"value": 8, "name": "dawn adapter properties power preference", "tags": ["dawn", "native"]},
+            {"value": 9, "name": "dawn buffer descriptor error info from wire client", "tags": ["dawn"]},
+            {"value": 10, "name": "dawn toggles descriptor", "tags": ["dawn", "native"]},
+            {"value": 11, "name": "dawn shader module SPIRV options descriptor", "tags": ["dawn"]},
+            {"value": 12, "name": "request adapter options LUID", "tags": ["dawn", "native"]},
+            {"value": 13, "name": "request adapter options get GL proc", "tags": ["dawn", "native"]},
+            {"value": 14, "name": "request adapter options D3D11 device", "tags": ["dawn", "native"]},
+            {"value": 15, "name": "dawn render pass color attachment render to single sampled", "tags": ["dawn"]},
+            {"value": 16, "name": "render pass pixel local storage", "tags": ["dawn"]},
+            {"value": 17, "name": "pipeline layout pixel local storage", "tags": ["dawn"]},
+            {"value": 18, "name": "buffer host mapped pointer", "tags": ["dawn"]},
+            {"value": 19, "name": "dawn experimental subgroup limits", "tags": ["dawn"]},
+            {"value": 20, "name": "adapter properties memory heaps", "tags": ["dawn"]},
+            {"value": 21, "name": "adapter properties D3D", "tags": ["dawn"]},
+            {"value": 22, "name": "adapter properties vk", "tags": ["dawn"]},
+            {"value": 23, "name": "dawn wire WGSL control", "tags": ["dawn"]},
+            {"value": 24, "name": "dawn WGSL blocklist", "tags": ["dawn", "native"]},
+            {"value": 25, "name": "dawn drm format capabilities", "tags": ["dawn"]},
+            {"value": 26, "name": "shader module compilation options", "tags": ["dawn"]},
+            {"value": 27, "name": "color target state expand resolve texture dawn", "tags": ["dawn"]},
+            {"value": 28, "name": "render pass descriptor expand resolve rect", "tags": ["dawn"]},
+
+            {"value": 29, "name": "shared texture memory vk dedicated allocation descriptor", "tags": ["dawn", "native"]},
+            {"value": 30, "name": "shared texture memory a hardware buffer descriptor", "tags": ["dawn", "native"]},
+            {"value": 31, "name": "shared texture memory dma buf descriptor", "tags": ["dawn", "native"]},
+            {"value": 32, "name": "shared texture memory opaque FD descriptor", "tags": ["dawn", "native"]},
+            {"value": 33, "name": "shared texture memory zircon handle descriptor", "tags": ["dawn", "native"]},
+            {"value": 34, "name": "shared texture memory DXGI shared handle descriptor", "tags": ["dawn", "native"]},
+            {"value": 35, "name": "shared texture memory D3D11 texture 2D descriptor", "tags": ["dawn", "native"]},
+            {"value": 36, "name": "shared texture memory IO surface descriptor", "tags": ["dawn", "native"]},
+            {"value": 37, "name": "shared texture memory EGL image descriptor", "tags": ["dawn", "native"]},
+            {"value": 38, "name": "shared texture memory initialized begin state", "tags": ["dawn", "native"]},
+            {"value": 39, "name": "shared texture memory initialized end state", "tags": ["dawn", "native"]},
+            {"value": 40, "name": "shared texture memory vk image layout begin state", "tags": ["dawn", "native"]},
+            {"value": 41, "name": "shared texture memory vk image layout end state", "tags": ["dawn", "native"]},
+            {"value": 42, "name": "shared texture memory D3D swapchain begin state", "tags": ["dawn", "native"]},
+            {"value": 43, "name": "shared fence vk semaphore opaque FD descriptor", "tags": ["dawn", "native"]},
+            {"value": 44, "name": "shared fence vk semaphore opaque FD export info", "tags": ["dawn", "native"]},
+            {"value": 45, "name": "shared fence sync FD descriptor", "tags": ["dawn", "native"]},
+            {"value": 46, "name": "shared fence sync FD export info", "tags": ["dawn", "native"]},
+            {"value": 47, "name": "shared fence vk semaphore zircon handle descriptor", "tags": ["dawn", "native"]},
+            {"value": 48, "name": "shared fence vk semaphore zircon handle export info", "tags": ["dawn", "native"]},
+            {"value": 49, "name": "shared fence DXGI shared handle descriptor", "tags": ["dawn", "native"]},
+            {"value": 50, "name": "shared fence DXGI shared handle export info", "tags": ["dawn", "native"]},
+            {"value": 51, "name": "shared fence MTL shared event descriptor", "tags": ["dawn", "native"]},
+            {"value": 52, "name": "shared fence MTL shared event export info", "tags": ["dawn", "native"]},
+            {"value": 53, "name": "shared buffer memory D3D12 resource descriptor", "tags": ["dawn", "native"]},
+            {"value": 54, "name": "static sampler binding layout", "tags": ["dawn"]},
+            {"value": 55, "name": "y cb cr vk descriptor", "tags": ["dawn"]},
+            {"value": 56, "name": "shared texture memory a hardware buffer properties", "tags": ["dawn", "native"]},
+            {"value": 57, "name": "a hardware buffer properties", "tags": ["dawn", "native"]},
+            {"value": 58, "name": "dawn experimental immediate data limits", "tags": ["dawn"]},
+            {"value": 59, "name": "dawn texel copy buffer row alignment limits", "tags": ["dawn"]}
+        ]
+    },
+    "texture": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "create view",
+                "returns": "texture view",
+                "args": [
+                    {"name": "descriptor", "type": "texture view descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "create error view",
+                "returns": "texture view",
+                "tags": ["dawn"],
+                "args": [
+                    {"name": "descriptor", "type": "texture view descriptor", "annotation": "const*", "optional": true}
+                ]
+            },
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            },
+            {
+                "name": "get width",
+                "returns": "uint32_t"
+            },
+            {
+                "name": "get height",
+                "returns": "uint32_t"
+            },
+            {
+                "name": "get depth or array layers",
+                "returns": "uint32_t"
+            },
+            {
+                "name": "get mip level count",
+                "returns": "uint32_t"
+            },
+            {
+                "name": "get sample count",
+                "returns": "uint32_t"
+            },
+            {
+                "name": "get dimension",
+                "returns": "texture dimension"
+            },
+            {
+                "name": "get format",
+                "returns": "texture format"
+            },
+            {
+                "name": "get usage",
+                "returns": "texture usage"
+            },
+            {
+                "name": "destroy"
+            }
+        ]
+    },
+    "surface get current texture status": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "success"},
+            {"value": 2, "name": "timeout"},
+            {"value": 3, "name": "outdated"},
+            {"value": 4, "name": "lost"},
+            {"value": 5, "name": "out of memory"},
+            {"value": 6, "name": "device lost"},
+            {"value": 7, "name": "error"}
+        ]
+    },
+    "texture aspect": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "all"},
+            {"value": 2, "name": "stencil only"},
+            {"value": 3, "name": "depth only"},
+            {"value": 0, "name": "plane 0 only", "tags": ["dawn"]},
+            {"value": 1, "name": "plane 1 only", "tags": ["dawn"]},
+            {"value": 2, "name": "plane 2 only", "tags": ["dawn"]}
+        ]
+    },
+    "texture data layout": {
+        "category": "typedef",
+        "type": "texel copy buffer layout"
+    },
+    "texture descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "usage", "type": "texture usage"},
+            {"name": "dimension", "type": "texture dimension", "default": "2D"},
+            {"name": "size", "type": "extent 3D"},
+            {"name": "format", "type": "texture format"},
+            {"name": "mip level count", "type": "uint32_t", "default": 1},
+            {"name": "sample count", "type": "uint32_t", "default": 1},
+            {"name": "view format count", "type": "size_t", "default": 0},
+            {"name": "view formats", "type": "texture format", "annotation": "const*", "length": "view format count", "default": "nullptr"}
+        ]
+    },
+    "texture binding view dimension descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["texture descriptor"],
+        "members": [
+            {"name": "texture binding view dimension", "type": "texture view dimension", "default": "undefined"}
+        ]
+    },
+    "texture dimension": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "1D"},
+            {"value": 2, "name": "2D"},
+            {"value": 3, "name": "3D"}
+        ]
+    },
+    "texture format": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined", "valid": false},
+
+            {"value": 1, "name": "R8 unorm"},
+            {"value": 2, "name": "R8 snorm"},
+            {"value": 3, "name": "R8 uint"},
+            {"value": 4, "name": "R8 sint"},
+
+            {"value": 5, "name": "R16 uint"},
+            {"value": 6, "name": "R16 sint"},
+            {"value": 7, "name": "R16 float"},
+            {"value": 8, "name": "RG8 unorm"},
+            {"value": 9, "name": "RG8 snorm"},
+            {"value": 10, "name": "RG8 uint"},
+            {"value": 11, "name": "RG8 sint"},
+
+            {"value": 12, "name": "R32 float"},
+            {"value": 13, "name": "R32 uint"},
+            {"value": 14, "name": "R32 sint"},
+            {"value": 15, "name": "RG16 uint"},
+            {"value": 16, "name": "RG16 sint"},
+            {"value": 17, "name": "RG16 float"},
+            {"value": 18, "name": "RGBA8 unorm"},
+            {"value": 19, "name": "RGBA8 unorm srgb"},
+            {"value": 20, "name": "RGBA8 snorm"},
+            {"value": 21, "name": "RGBA8 uint"},
+            {"value": 22, "name": "RGBA8 sint"},
+            {"value": 23, "name": "BGRA8 unorm"},
+            {"value": 24, "name": "BGRA8 unorm srgb"},
+            {"value": 25, "name": "RGB10 A2 uint"},
+            {"value": 26, "name": "RGB10 A2 unorm"},
+            {"value": 27, "name": "RG11 B10 ufloat"},
+            {"value": 28, "name": "RGB9 E5 ufloat"},
+
+            {"value": 29, "name": "RG32 float"},
+            {"value": 30, "name": "RG32 uint"},
+            {"value": 31, "name": "RG32 sint"},
+            {"value": 32, "name": "RGBA16 uint"},
+            {"value": 33, "name": "RGBA16 sint"},
+            {"value": 34, "name": "RGBA16 float"},
+
+            {"value": 35, "name": "RGBA32 float"},
+            {"value": 36, "name": "RGBA32 uint"},
+            {"value": 37, "name": "RGBA32 sint"},
+
+            {"value": 38, "name": "stencil8"},
+            {"value": 39, "name": "depth16 unorm"},
+            {"value": 40, "name": "depth24 plus"},
+            {"value": 41, "name": "depth24 plus stencil8"},
+            {"value": 42, "name": "depth32 float"},
+            {"value": 43, "name": "depth32 float stencil8"},
+
+            {"value": 44, "name": "BC1 RGBA unorm",         "jsrepr": "'bc1-rgba-unorm'"},
+            {"value": 45, "name": "BC1 RGBA unorm srgb",    "jsrepr": "'bc1-rgba-unorm-srgb'"},
+            {"value": 46, "name": "BC2 RGBA unorm",         "jsrepr": "'bc2-rgba-unorm'"},
+            {"value": 47, "name": "BC2 RGBA unorm srgb",    "jsrepr": "'bc2-rgba-unorm-srgb'"},
+            {"value": 48, "name": "BC3 RGBA unorm",         "jsrepr": "'bc3-rgba-unorm'"},
+            {"value": 49, "name": "BC3 RGBA unorm srgb",    "jsrepr": "'bc3-rgba-unorm-srgb'"},
+            {"value": 50, "name": "BC4 R unorm",            "jsrepr": "'bc4-r-unorm'"},
+            {"value": 51, "name": "BC4 R snorm",            "jsrepr": "'bc4-r-snorm'"},
+            {"value": 52, "name": "BC5 RG unorm",           "jsrepr": "'bc5-rg-unorm'"},
+            {"value": 53, "name": "BC5 RG snorm",           "jsrepr": "'bc5-rg-snorm'"},
+            {"value": 54, "name": "BC6H RGB ufloat",        "jsrepr": "'bc6h-rgb-ufloat'"},
+            {"value": 55, "name": "BC6H RGB float",         "jsrepr": "'bc6h-rgb-float'"},
+            {"value": 56, "name": "BC7 RGBA unorm",         "jsrepr": "'bc7-rgba-unorm'"},
+            {"value": 57, "name": "BC7 RGBA unorm srgb",    "jsrepr": "'bc7-rgba-unorm-srgb'"},
+
+            {"value": 58, "name": "ETC2 RGB8 unorm",        "jsrepr": "'etc2-rgb8unorm'"},
+            {"value": 59, "name": "ETC2 RGB8 unorm srgb",   "jsrepr": "'etc2-rgb8unorm-srgb'"},
+            {"value": 60, "name": "ETC2 RGB8A1 unorm",      "jsrepr": "'etc2-rgb8a1unorm'"},
+            {"value": 61, "name": "ETC2 RGB8A1 unorm srgb", "jsrepr": "'etc2-rgb8a1unorm-srgb'"},
+            {"value": 62, "name": "ETC2 RGBA8 unorm",       "jsrepr": "'etc2-rgba8unorm'"},
+            {"value": 63, "name": "ETC2 RGBA8 unorm srgb",  "jsrepr": "'etc2-rgba8unorm-srgb'"},
+            {"value": 64, "name": "EAC R11 unorm",          "jsrepr": "'eac-r11unorm'"},
+            {"value": 65, "name": "EAC R11 snorm",          "jsrepr": "'eac-r11snorm'"},
+            {"value": 66, "name": "EAC RG11 unorm",         "jsrepr": "'eac-rg11unorm'"},
+            {"value": 67, "name": "EAC RG11 snorm",         "jsrepr": "'eac-rg11snorm'"},
+
+            {"value": 68, "name": "ASTC 4x4 unorm",         "jsrepr": "'astc-4x4-unorm'"},
+            {"value": 69, "name": "ASTC 4x4 unorm srgb",    "jsrepr": "'astc-4x4-unorm-srgb'"},
+            {"value": 70, "name": "ASTC 5x4 unorm",         "jsrepr": "'astc-5x4-unorm'"},
+            {"value": 71, "name": "ASTC 5x4 unorm srgb",    "jsrepr": "'astc-5x4-unorm-srgb'"},
+            {"value": 72, "name": "ASTC 5x5 unorm",         "jsrepr": "'astc-5x5-unorm'"},
+            {"value": 73, "name": "ASTC 5x5 unorm srgb",    "jsrepr": "'astc-5x5-unorm-srgb'"},
+            {"value": 74, "name": "ASTC 6x5 unorm",         "jsrepr": "'astc-6x5-unorm'"},
+            {"value": 75, "name": "ASTC 6x5 unorm srgb",    "jsrepr": "'astc-6x5-unorm-srgb'"},
+            {"value": 76, "name": "ASTC 6x6 unorm",         "jsrepr": "'astc-6x6-unorm'"},
+            {"value": 77, "name": "ASTC 6x6 unorm srgb",    "jsrepr": "'astc-6x6-unorm-srgb'"},
+            {"value": 78, "name": "ASTC 8x5 unorm",         "jsrepr": "'astc-8x5-unorm'"},
+            {"value": 79, "name": "ASTC 8x5 unorm srgb",    "jsrepr": "'astc-8x5-unorm-srgb'"},
+            {"value": 80, "name": "ASTC 8x6 unorm",         "jsrepr": "'astc-8x6-unorm'"},
+            {"value": 81, "name": "ASTC 8x6 unorm srgb",    "jsrepr": "'astc-8x6-unorm-srgb'"},
+            {"value": 82, "name": "ASTC 8x8 unorm",         "jsrepr": "'astc-8x8-unorm'"},
+            {"value": 83, "name": "ASTC 8x8 unorm srgb",    "jsrepr": "'astc-8x8-unorm-srgb'"},
+            {"value": 84, "name": "ASTC 10x5 unorm",        "jsrepr": "'astc-10x5-unorm'"},
+            {"value": 85, "name": "ASTC 10x5 unorm srgb",   "jsrepr": "'astc-10x5-unorm-srgb'"},
+            {"value": 86, "name": "ASTC 10x6 unorm",        "jsrepr": "'astc-10x6-unorm'"},
+            {"value": 87, "name": "ASTC 10x6 unorm srgb",   "jsrepr": "'astc-10x6-unorm-srgb'"},
+            {"value": 88, "name": "ASTC 10x8 unorm",        "jsrepr": "'astc-10x8-unorm'"},
+            {"value": 89, "name": "ASTC 10x8 unorm srgb",   "jsrepr": "'astc-10x8-unorm-srgb'"},
+            {"value": 90, "name": "ASTC 10x10 unorm",       "jsrepr": "'astc-10x10-unorm'"},
+            {"value": 91, "name": "ASTC 10x10 unorm srgb",  "jsrepr": "'astc-10x10-unorm-srgb'"},
+            {"value": 92, "name": "ASTC 12x10 unorm",       "jsrepr": "'astc-12x10-unorm'"},
+            {"value": 93, "name": "ASTC 12x10 unorm srgb",  "jsrepr": "'astc-12x10-unorm-srgb'"},
+            {"value": 94, "name": "ASTC 12x12 unorm",       "jsrepr": "'astc-12x12-unorm'"},
+            {"value": 95, "name": "ASTC 12x12 unorm srgb",  "jsrepr": "'astc-12x12-unorm-srgb'"},
+
+            {"value": 0, "name": "R16 unorm", "tags": ["dawn"]},
+            {"value": 1, "name": "RG16 unorm", "tags": ["dawn"]},
+            {"value": 2, "name": "RGBA16 unorm", "tags": ["dawn"]},
+            {"value": 3, "name": "R16 snorm", "tags": ["dawn"]},
+            {"value": 4, "name": "RG16 snorm", "tags": ["dawn"]},
+            {"value": 5, "name": "RGBA16 snorm", "tags": ["dawn"]},
+
+            {"value": 6, "name": "R8 BG8 Biplanar 420 unorm", "tags": ["dawn"]},
+            {"value": 7, "name": "R10X6 BG10X6 Biplanar 420 unorm", "tags": ["dawn"]},
+            {"value": 8, "name": "R8 BG8 A8 Triplanar 420 unorm", "tags": ["dawn"]},
+            {"value": 9, "name": "R8 BG8 Biplanar 422 unorm", "tags": ["dawn"]},
+            {"value": 10, "name": "R8 BG8 Biplanar 444 unorm", "tags": ["dawn"]},
+            {"value": 11, "name": "R10X6 BG10X6 Biplanar 422 unorm", "tags": ["dawn"]},
+            {"value": 12, "name": "R10X6 BG10X6 Biplanar 444 unorm", "tags": ["dawn"]},
+            {"value": 13, "name": "External", "tags": ["dawn"]}
+        ]
+    },
+    "texture usage": {
+        "category": "bitmask",
+        "values": [
+            {"value": 0, "name": "none"},
+            {"value": 1, "name": "copy src"},
+            {"value": 2, "name": "copy dst"},
+            {"value": 4, "name": "texture binding"},
+            {"value": 8, "name": "storage binding"},
+            {"value": 16, "name": "render attachment"},
+            {"value": 32, "name": "transient attachment", "tags": ["dawn"]},
+            {"value": 64, "name": "storage attachment", "tags": ["dawn"]}
+        ]
+    },
+    "texture view descriptor": {
+        "category": "structure",
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "format", "type": "texture format", "default": "undefined"},
+            {"name": "dimension", "type": "texture view dimension", "default": "undefined"},
+            {"name": "base mip level", "type": "uint32_t", "default": "0"},
+            {"name": "mip level count", "type": "uint32_t", "default": "WGPU_MIP_LEVEL_COUNT_UNDEFINED"},
+            {"name": "base array layer", "type": "uint32_t", "default": "0"},
+            {"name": "array layer count", "type": "uint32_t", "default": "WGPU_ARRAY_LAYER_COUNT_UNDEFINED"},
+            {"name": "aspect", "type": "texture aspect", "default": "all"},
+            {"name": "usage", "type": "texture usage", "default": "none"}
+        ]
+    },
+    "texture view": {
+        "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "returns": "void",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "texture view dimension": {
+        "category": "enum",
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined"},
+            {"value": 1, "name": "1D"},
+            {"value": 2, "name": "2D"},
+            {"value": 3, "name": "2D array"},
+            {"value": 4, "name": "cube"},
+            {"value": 5, "name": "cube array"},
+            {"value": 6, "name": "3D"}
+        ]
+    },
+    "y cb cr vk descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["sampler descriptor", "texture view descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "vk format", "type": "uint32_t", "default": "0"},
+            {"name": "vk y cb cr model", "type": "uint32_t", "default": "0"},
+            {"name": "vk y cb cr range", "type": "uint32_t", "default": "0"},
+            {"name": "vk component swizzle red", "type": "uint32_t", "default": "0"},
+            {"name": "vk component swizzle green", "type": "uint32_t", "default": "0"},
+            {"name": "vk component swizzle blue", "type": "uint32_t", "default": "0"},
+            {"name": "vk component swizzle alpha", "type": "uint32_t", "default": "0"},
+            {"name": "vk x chroma offset", "type": "uint32_t", "default": "0"},
+            {"name": "vk y chroma offset", "type": "uint32_t", "default": "0"},
+            {"name": "vk chroma filter", "type": "filter mode", "default": "nearest"},
+            {"name": "force explicit reconstruction", "type": "bool", "default": "false"},
+            {"name": "external format", "type": "uint64_t", "default": "0"}
+        ]
+    },
+    "vertex format": {
+        "category": "enum",
+        "values": [
+            {"value": 1,  "name": "uint8"},
+            {"value": 2,  "name": "uint8x2"},
+            {"value": 3,  "name": "uint8x4"},
+            {"value": 4,  "name": "sint8"},
+            {"value": 5,  "name": "sint8x2"},
+            {"value": 6,  "name": "sint8x4"},
+            {"value": 7,  "name": "unorm8"},
+            {"value": 8,  "name": "unorm8x2"},
+            {"value": 9,  "name": "unorm8x4"},
+            {"value": 10, "name": "snorm8"},
+            {"value": 11, "name": "snorm8x2"},
+            {"value": 12, "name": "snorm8x4"},
+            {"value": 13, "name": "uint16"},
+            {"value": 14, "name": "uint16x2"},
+            {"value": 15, "name": "uint16x4"},
+            {"value": 16, "name": "sint16"},
+            {"value": 17, "name": "sint16x2"},
+            {"value": 18, "name": "sint16x4"},
+            {"value": 19, "name": "unorm16"},
+            {"value": 20, "name": "unorm16x2"},
+            {"value": 21, "name": "unorm16x4"},
+            {"value": 22, "name": "snorm16"},
+            {"value": 23, "name": "snorm16x2"},
+            {"value": 24, "name": "snorm16x4"},
+            {"value": 25, "name": "float16"},
+            {"value": 26, "name": "float16x2"},
+            {"value": 27, "name": "float16x4"},
+            {"value": 28, "name": "float32"},
+            {"value": 29, "name": "float32x2"},
+            {"value": 30, "name": "float32x3"},
+            {"value": 31, "name": "float32x4"},
+            {"value": 32, "name": "uint32"},
+            {"value": 33, "name": "uint32x2"},
+            {"value": 34, "name": "uint32x3"},
+            {"value": 35, "name": "uint32x4"},
+            {"value": 36, "name": "sint32"},
+            {"value": 37, "name": "sint32x2"},
+            {"value": 38, "name": "sint32x3"},
+            {"value": 39, "name": "sint32x4"},
+            {"value": 40, "name": "unorm 10_10_10_2", "jsrepr": "'unorm10-10-10-2'"},
+            {"value": 41, "name": "unorm8x4 BGRA", "jsrepr": "'unorm8x4-bgra'"}
+        ]
+    },
+    "WGSL language feature name": {
+        "category": "enum",
+        "values": [
+            {"value": 1, "name": "readonly and readwrite storage textures",  "jsrepr": "'readonly_and_readwrite_storage_textures'"},
+            {"value": 2, "name": "packed 4x8 integer dot product", "jsrepr": "'packed_4x8_integer_dot_product'"},
+            {"value": 3, "name": "unrestricted pointer parameters", "jsrepr": "'unrestricted_pointer_parameters'"},
+            {"value": 4, "name": "pointer composite access", "jsrepr": "'pointer_composite_access'"},
+            {"value": 5, "name": "sized binding array", "jsrepr": "'sized_binding_array'"},
+
+            {"value": 0, "name": "chromium testing unimplemented", "jsrepr": "'chromium_testing_unimplemented'", "tags": ["dawn"]},
+            {"value": 1, "name": "chromium testing unsafe experimental", "jsrepr": "'chromium_testing_unsafe_experimental'", "tags": ["dawn"]},
+            {"value": 2, "name": "chromium testing experimental", "jsrepr": "'chromium_testing_experimental'", "tags": ["dawn"]},
+            {"value": 3, "name": "chromium testing shipped with killswitch", "jsrepr": "'chromium_testing_shipped_with_killswitch'", "tags": ["dawn"]},
+            {"value": 4, "name": "chromium testing shipped", "jsrepr": "'chromium_testing_shipped'", "tags": ["dawn"]}
+        ]
+    },
+    "whole size" : {
+        "category": "constant",
+        "type": "uint64_t",
+        "value":  "UINT64_MAX"
+    },
+    "whole map size" : {
+        "category": "constant",
+        "type": "size_t",
+        "value":  "SIZE_MAX"
+    },
+    "copy stride undefined" : {
+        "category": "constant",
+        "type": "uint32_t",
+        "value":  "UINT32_MAX"
+    },
+    "limit u32 undefined" : {
+        "category": "constant",
+        "type": "uint32_t",
+        "value":  "UINT32_MAX"
+    },
+    "limit u64 undefined" : {
+        "category": "constant",
+        "type": "uint64_t",
+        "value":  "UINT64_MAX"
+    },
+    "array layer count undefined" : {
+        "category": "constant",
+        "type": "uint32_t",
+        "value":  "UINT32_MAX"
+    },
+    "mip level count undefined" : {
+        "category": "constant",
+        "type": "uint32_t",
+        "value":  "UINT32_MAX"
+    },
+    "depth slice undefined" : {
+        "category": "constant",
+        "type": "uint32_t",
+        "value":  "UINT32_MAX"
+    },
+    "query set index undefined" : {
+        "category": "constant",
+        "type": "uint32_t",
+        "value":  "UINT32_MAX"
+    },
+    "strlen" : {
+        "category": "constant",
+        "type": "size_t",
+        "value":  "SIZE_MAX"
+    },
+    "ObjectType": {
+      "_comment": "Only used for the wire",
+      "category": "native"
+    },
+    "ObjectId": {
+      "_comment": "Only used for the wire",
+      "category": "native"
+    },
+    "ObjectHandle": {
+      "_comment": "Only used for the wire",
+      "category": "native"
+    },
+    "void": {
+        "category": "native",
+        "wasm type": "v"
+    },
+    "void *": {
+        "category": "native",
+        "wasm type": "p"
+    },
+    "void const *": {
+        "category": "native",
+        "wasm type": "p"
+    },
+    "int": {
+        "category": "native",
+        "wasm type": "i"
+    },
+    "int32_t": {
+        "category": "native",
+        "wasm type": "i"
+    },
+    "size_t": {
+        "category": "native",
+        "wasm type": "p",
+        "wire transparent": false
+    },
+    "uint16_t": {
+        "category": "native"
+    },
+    "uint32_t": {
+        "category": "native",
+        "wasm type": "i"
+    },
+    "uint64_t": {
+        "category": "native",
+        "wasm type": "j"
+    },
+    "uint8_t": {
+        "category": "native"
+    },
+    "dawn texture internal usage descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["texture descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "internal usage", "type": "texture usage", "default": "none"}
+        ]
+    },
+    "dawn encoder internal usage descriptor": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["command encoder descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "use internal usages", "type": "bool", "default": "false"}
+        ]
+    },
+    "dawn adapter properties power preference": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["adapter info"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "power preference", "type": "power preference", "default": "undefined"}
+        ]
+    },
+    "heap property": {
+        "category": "bitmask",
+        "tags": ["dawn"],
+        "values": [
+            {"value": 1, "name": "device local"},
+            {"value": 2, "name": "host visible"},
+            {"value": 4, "name": "host coherent"},
+            {"value": 8, "name": "host uncached"},
+            {"value": 16, "name": "host cached"}
+        ]
+    },
+    "memory heap info": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "members": [
+            {"name": "properties", "type": "heap property"},
+            {"name": "size", "type": "uint64_t"}
+        ]
+    },
+    "adapter properties memory heaps": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["adapter info"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "heap count", "type": "size_t"},
+            {"name": "heap info", "type": "memory heap info", "annotation": "const*", "length": "heap count"}
+        ]
+    },
+    "adapter properties D3D": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["adapter info"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "shader model", "type": "uint32_t"}
+        ]
+    },
+    "adapter properties vk": {
+      "category": "structure",
+      "chained": "out",
+      "chain roots": ["adapter info"],
+      "tags": ["dawn"],
+      "members": [
+          {"name": "driver version", "type": "uint32_t"}
+      ]
+    },
+    "dawn buffer descriptor error info from wire client": {
+        "category": "structure",
+        "chained": "in",
+        "chain roots": ["buffer descriptor"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "out of memory", "type": "bool", "default": "false"}
+        ]
+    }
+}

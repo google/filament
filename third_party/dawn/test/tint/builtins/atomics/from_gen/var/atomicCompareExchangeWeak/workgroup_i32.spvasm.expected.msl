@@ -1,0 +1,66 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct atomic_compare_exchange_result_i32 {
+  int old_value;
+  bool exchanged;
+};
+
+struct tint_module_vars_struct {
+  thread uint* local_invocation_index_1;
+  threadgroup atomic_int* arg_0;
+};
+
+struct x__atomic_compare_exchange_resulti32 {
+  int old_value;
+  bool exchanged;
+};
+
+struct tint_symbol_1 {
+  atomic_int tint_symbol;
+};
+
+atomic_compare_exchange_result_i32 v(threadgroup atomic_int* const atomic_ptr, int cmp, int val) {
+  int old_value = cmp;
+  bool const v_1 = atomic_compare_exchange_weak_explicit(atomic_ptr, (&old_value), val, memory_order_relaxed, memory_order_relaxed);
+  return atomic_compare_exchange_result_i32{.old_value=old_value, .exchanged=v_1};
+}
+
+void atomicCompareExchangeWeak_e88938(tint_module_vars_struct tint_module_vars) {
+  int arg_1 = 0;
+  int arg_2 = 0;
+  x__atomic_compare_exchange_resulti32 res = x__atomic_compare_exchange_resulti32{};
+  arg_1 = 1;
+  arg_2 = 1;
+  int const x_22 = arg_2;
+  int const x_23 = arg_1;
+  int const old_value_1 = v(tint_module_vars.arg_0, x_23, x_22).old_value;
+  int const x_24 = old_value_1;
+  res = x__atomic_compare_exchange_resulti32{.old_value=x_24, .exchanged=(x_24 == x_22)};
+}
+
+void compute_main_inner(uint local_invocation_index_2, tint_module_vars_struct tint_module_vars) {
+  atomic_store_explicit(tint_module_vars.arg_0, 0, memory_order_relaxed);
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  atomicCompareExchangeWeak_e88938(tint_module_vars);
+}
+
+void compute_main_1(tint_module_vars_struct tint_module_vars) {
+  uint const x_41 = (*tint_module_vars.local_invocation_index_1);
+  compute_main_inner(x_41, tint_module_vars);
+}
+
+void compute_main_inner_1(uint local_invocation_index_1_param, tint_module_vars_struct tint_module_vars) {
+  if ((local_invocation_index_1_param < 1u)) {
+    atomic_store_explicit(tint_module_vars.arg_0, 0, memory_order_relaxed);
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  (*tint_module_vars.local_invocation_index_1) = local_invocation_index_1_param;
+  compute_main_1(tint_module_vars);
+}
+
+kernel void compute_main(uint local_invocation_index_1_param [[thread_index_in_threadgroup]], threadgroup tint_symbol_1* v_2 [[threadgroup(0)]]) {
+  thread uint local_invocation_index_1 = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.local_invocation_index_1=(&local_invocation_index_1), .arg_0=(&(*v_2).tint_symbol)};
+  compute_main_inner_1(local_invocation_index_1_param, tint_module_vars);
+}

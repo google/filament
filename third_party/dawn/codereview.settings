@@ -1,0 +1,5 @@
+# This file is used by git cl to get repository specific information.
+GERRIT_HOST: True
+CODE_REVIEW_SERVER: https://dawn-review.googlesource.com
+GERRIT_SQUASH_UPLOADS: False
+TRYSERVER_GERRIT_URL: https://dawn-review.googlesource.com

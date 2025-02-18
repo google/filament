@@ -1,0 +1,115 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %x "x"
+               OpMemberName %S1 0 "a"
+               OpMemberName %S1 1 "b"
+               OpMemberName %S1 2 "c"
+               OpMemberName %S1 3 "d"
+               OpName %S1 "S1"
+               OpName %empty "empty"
+               OpName %nonempty "nonempty"
+               OpName %nonempty_with_expr "nonempty_with_expr"
+               OpMemberName %S3 0 "g"
+               OpMemberName %S3 1 "h"
+               OpMemberName %S2 0 "e"
+               OpMemberName %S2 1 "f"
+               OpName %S2 "S2"
+               OpMemberName %S3 2 "i"
+               OpName %S3 "S3"
+               OpName %nested_empty "nested_empty"
+               OpName %nested_nonempty "nested_nonempty"
+               OpName %nested_nonempty_with_expr "nested_nonempty_with_expr"
+               OpName %subexpr_empty "subexpr_empty"
+               OpName %subexpr_nonempty "subexpr_nonempty"
+               OpName %subexpr_nonempty_with_expr "subexpr_nonempty_with_expr"
+               OpName %empty "subexpr_nested_empty"
+               OpName %subexpr_nested_nonempty "subexpr_nested_nonempty"
+               OpName %subexpr_nested_nonempty_with_expr "subexpr_nested_nonempty_with_expr"
+               OpMemberName %T 0 "a"
+               OpName %T "T"
+               OpName %aosoa_empty "aosoa_empty"
+               OpName %aosoa_nonempty "aosoa_nonempty"
+               OpName %aosoa_nonempty_with_expr "aosoa_nonempty_with_expr"
+               OpMemberDecorate %S1 0 Offset 0
+               OpMemberDecorate %S1 1 Offset 4
+               OpMemberDecorate %S1 2 Offset 8
+               OpMemberDecorate %S1 3 Offset 12
+               OpMemberDecorate %S3 0 Offset 0
+               OpMemberDecorate %S3 1 Offset 4
+               OpMemberDecorate %S2 0 Offset 0
+               OpMemberDecorate %S2 1 Offset 4
+               OpMemberDecorate %S3 2 Offset 20
+               OpDecorate %_arr_int_uint_2 ArrayStride 4
+               OpMemberDecorate %T 0 Offset 0
+               OpDecorate %_arr_T_uint_2 ArrayStride 8
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+          %x = OpConstant %int 42
+         %S1 = OpTypeStruct %int %int %int %int
+      %empty = OpConstantNull %S1
+      %int_1 = OpConstant %int 1
+%subexpr_nonempty = OpConstant %int 2
+      %int_3 = OpConstant %int 3
+      %int_4 = OpConstant %int 4
+   %nonempty = OpConstantComposite %S1 %int_1 %subexpr_nonempty %int_3 %int_4
+         %S2 = OpTypeStruct %int %S1
+         %S3 = OpTypeStruct %int %S1 %S2
+%nested_empty = OpConstantNull %S3
+      %int_5 = OpConstant %int 5
+%subexpr_nested_nonempty = OpConstantComposite %S1 %subexpr_nonempty %int_3 %int_4 %int_5
+      %int_6 = OpConstant %int 6
+      %int_7 = OpConstant %int 7
+      %int_8 = OpConstant %int 8
+      %int_9 = OpConstant %int 9
+     %int_10 = OpConstant %int 10
+         %25 = OpConstantComposite %S1 %int_7 %int_8 %int_9 %int_10
+         %23 = OpConstantComposite %S2 %int_6 %25
+%nested_nonempty = OpConstantComposite %S3 %int_1 %subexpr_nested_nonempty %23
+%subexpr_empty = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+%_arr_int_uint_2 = OpTypeArray %int %uint_2
+          %T = OpTypeStruct %_arr_int_uint_2
+%_arr_T_uint_2 = OpTypeArray %T %uint_2
+%aosoa_empty = OpConstantNull %_arr_T_uint_2
+         %53 = OpConstantComposite %_arr_int_uint_2 %int_1 %subexpr_nonempty
+         %52 = OpConstantComposite %T %53
+         %55 = OpConstantComposite %_arr_int_uint_2 %int_3 %int_4
+         %54 = OpConstantComposite %T %55
+%aosoa_nonempty = OpConstantComposite %_arr_T_uint_2 %52 %54
+       %main = OpFunction %void None %3
+          %4 = OpLabel
+         %14 = OpIAdd %int %x %int_1
+         %15 = OpCompositeExtract %int %nonempty 3
+%nonempty_with_expr = OpCompositeConstruct %S1 %int_1 %x %14 %15
+         %30 = OpIAdd %int %x %int_1
+         %31 = OpCompositeExtract %int %nested_nonempty 2 1 3
+         %32 = OpCompositeConstruct %S1 %subexpr_nonempty %x %30 %31
+         %33 = OpCompositeConstruct %S2 %int_6 %nonempty
+%nested_nonempty_with_expr = OpCompositeConstruct %S3 %int_1 %32 %33
+         %36 = OpIAdd %int %x %int_1
+         %37 = OpCompositeExtract %int %nonempty 3
+         %38 = OpCompositeConstruct %S1 %int_1 %x %36 %37
+%subexpr_nonempty_with_expr = OpCompositeExtract %int %38 2
+         %40 = OpIAdd %int %x %int_1
+         %41 = OpCompositeExtract %int %nested_nonempty 2 1 3
+         %42 = OpCompositeConstruct %S1 %subexpr_nonempty %x %40 %41
+         %43 = OpCompositeConstruct %S2 %int_1 %42
+%subexpr_nested_nonempty_with_expr = OpCompositeExtract %S1 %43 1
+         %56 = OpCompositeExtract %int %aosoa_nonempty 0 0 0
+         %57 = OpIAdd %int %56 %int_1
+         %58 = OpCompositeConstruct %_arr_int_uint_2 %int_1 %57
+         %59 = OpCompositeConstruct %T %58
+         %60 = OpCompositeExtract %T %aosoa_nonempty 1
+%aosoa_nonempty_with_expr = OpCompositeConstruct %_arr_T_uint_2 %59 %60
+               OpReturn
+               OpFunctionEnd

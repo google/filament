@@ -1,0 +1,51 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 28
+; Schema: 0
+               OpCapability Shader
+         %20 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f_1 "f_1"
+               OpName %v "v"
+               OpName %n "n"
+               OpName %offset_1 "offset_1"
+               OpName %count "count"
+               OpName %x_15 "x_15"
+               OpName %f "f"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+    %uint_32 = OpConstant %uint 32
+        %f_1 = OpFunction %void None %3
+          %4 = OpLabel
+          %v = OpVariable %_ptr_Function_int Function
+          %n = OpVariable %_ptr_Function_int Function
+   %offset_1 = OpVariable %_ptr_Function_uint Function
+      %count = OpVariable %_ptr_Function_uint Function
+               OpStore %v %int_0
+               OpStore %n %int_0
+               OpStore %offset_1 %uint_0
+               OpStore %count %uint_0
+         %15 = OpLoad %int %v None
+         %16 = OpLoad %int %n None
+         %17 = OpLoad %uint %offset_1 None
+         %18 = OpLoad %uint %count None
+         %19 = OpExtInst %uint %20 UMin %17 %uint_32
+         %22 = OpISub %uint %uint_32 %19
+         %23 = OpExtInst %uint %20 UMin %18 %22
+       %x_15 = OpBitFieldInsert %int %15 %16 %19 %23
+               OpReturn
+               OpFunctionEnd
+          %f = OpFunction %void None %3
+         %26 = OpLabel
+         %27 = OpFunctionCall %void %f_1
+               OpReturn
+               OpFunctionEnd

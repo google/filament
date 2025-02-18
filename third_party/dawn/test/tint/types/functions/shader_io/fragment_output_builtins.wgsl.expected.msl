@@ -1,0 +1,38 @@
+//
+// main1
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct main1_outputs {
+  float tint_symbol [[depth(any)]];
+};
+
+float main1_inner() {
+  return 1.0f;
+}
+
+fragment main1_outputs main1() {
+  main1_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main1_inner();
+  return tint_wrapper_result;
+}
+//
+// main2
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct main2_outputs {
+  uint tint_symbol [[sample_mask]];
+};
+
+uint main2_inner() {
+  return 1u;
+}
+
+fragment main2_outputs main2() {
+  main2_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main2_inner();
+  return tint_wrapper_result;
+}

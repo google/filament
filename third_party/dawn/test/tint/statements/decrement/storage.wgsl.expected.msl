@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint* i;
+};
+
+void v(tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.i) = ((*tint_module_vars.i) - 1u);
+}

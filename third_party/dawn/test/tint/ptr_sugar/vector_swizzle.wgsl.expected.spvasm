@@ -1,0 +1,55 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 27
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %buffer_block 0 "inner"
+               OpName %buffer_block "buffer_block"
+               OpName %deref "deref"
+               OpName %p "p"
+               OpName %no_deref "no_deref"
+               OpName %p_0 "p"
+               OpName %main "main"
+               OpMemberDecorate %buffer_block 0 Offset 0
+               OpDecorate %buffer_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+      %v4int = OpTypeVector %int 4
+%buffer_block = OpTypeStruct %v4int
+%_ptr_StorageBuffer_buffer_block = OpTypePointer StorageBuffer %buffer_block
+          %1 = OpVariable %_ptr_StorageBuffer_buffer_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4int = OpTypePointer StorageBuffer %v4int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+      %deref = OpFunction %void None %8
+          %9 = OpLabel
+          %p = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0
+         %14 = OpLoad %v4int %p None
+         %15 = OpVectorShuffle %v4int %14 %14 3 2 1 0
+         %16 = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0
+               OpStore %16 %15 None
+               OpReturn
+               OpFunctionEnd
+   %no_deref = OpFunction %void None %8
+         %18 = OpLabel
+        %p_0 = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0
+         %20 = OpLoad %v4int %p_0 None
+         %21 = OpVectorShuffle %v4int %20 %20 3 2 1 0
+         %22 = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0
+               OpStore %22 %21 None
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %8
+         %24 = OpLabel
+         %25 = OpFunctionCall %void %deref
+         %26 = OpFunctionCall %void %no_deref
+               OpReturn
+               OpFunctionEnd

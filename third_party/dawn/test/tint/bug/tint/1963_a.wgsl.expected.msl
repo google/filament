@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void X(float2 a, float2 b) {
+}
+
+float2 Y() {
+  return float2(0.0f);
+}
+
+void f() {
+  float2 v = 0.0f;
+  X(float2(0.0f), v);
+  X(float2(0.0f), Y());
+}

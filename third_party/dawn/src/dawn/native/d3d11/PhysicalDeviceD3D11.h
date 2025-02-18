@@ -1,0 +1,94 @@
+// Copyright 2023 The Dawn & Tint Authors
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#ifndef SRC_DAWN_NATIVE_D3D11_PHYSICALDEVICED3D11_H_
+#define SRC_DAWN_NATIVE_D3D11_PHYSICALDEVICED3D11_H_
+
+#include "dawn/native/d3d/PhysicalDeviceD3D.h"
+
+#include "dawn/native/d3d/d3d_platform.h"
+#include "dawn/native/d3d11/DeviceInfoD3D11.h"
+
+namespace dawn::native::d3d11 {
+
+class Backend;
+
+class PhysicalDevice : public d3d::PhysicalDevice {
+  public:
+    PhysicalDevice(Backend* backend,
+                   ComPtr<IDXGIAdapter4> hardwareAdapter,
+                   ComPtr<ID3D11Device> d3d11Device);
+    ~PhysicalDevice() override;
+
+    // PhysicalDeviceBase Implementation
+    bool SupportsExternalImages() const override;
+
+    bool SupportsFeatureLevel(wgpu::FeatureLevel featureLevel,
+                              InstanceBase* instance) const override;
+
+    const DeviceInfo& GetDeviceInfo() const;
+    ResultOrError<ComPtr<ID3D11Device>> CreateD3D11Device(bool enableDebugLayer);
+
+    uint32_t GetUAVSlotCount() const { return mUAVSlotCount; }
+    bool IsSharedD3D11Device() const { return mIsSharedD3D11Device; }
+
+  private:
+    using Base = d3d::PhysicalDevice;
+
+    void SetupBackendAdapterToggles(dawn::platform::Platform* platform,
+                                    TogglesState* adapterToggles) const override;
+    void SetupBackendDeviceToggles(dawn::platform::Platform* platform,
+                                   TogglesState* deviceToggles) const override;
+
+    ResultOrError<Ref<DeviceBase>> CreateDeviceImpl(
+        AdapterBase* adapter,
+        const UnpackedPtr<DeviceDescriptor>& descriptor,
+        const TogglesState& deviceToggles,
+        Ref<DeviceBase::DeviceLostEvent>&& lostEvent) override;
+
+    MaybeError ResetInternalDeviceForTestingImpl() override;
+
+    MaybeError InitializeImpl() override;
+    void InitializeSupportedFeaturesImpl() override;
+    MaybeError InitializeSupportedLimitsImpl(CombinedLimits* limits) override;
+
+    FeatureValidationResult ValidateFeatureSupportedWithTogglesImpl(
+        wgpu::FeatureName feature,
+        const TogglesState& toggles) const override;
+
+    void PopulateBackendProperties(UnpackedPtr<AdapterInfo>& info) const override;
+
+    const bool mIsSharedD3D11Device;
+    ComPtr<ID3D11Device> mD3D11Device;
+    D3D_FEATURE_LEVEL mFeatureLevel;
+    DeviceInfo mDeviceInfo = {};
+    uint32_t mUAVSlotCount;
+};
+
+}  // namespace dawn::native::d3d11
+
+#endif  // SRC_DAWN_NATIVE_D3D11_PHYSICALDEVICED3D11_H_

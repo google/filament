@@ -1,0 +1,10 @@
+#include <metal_stdlib>
+using namespace metal;
+
+int f(int a, int b, int c) {
+  return as_type<int>((as_type<uint>(as_type<int>((as_type<uint>(a) * as_type<uint>(b)))) + as_type<uint>(c)));
+}
+
+kernel void v() {
+  f(1, 2, 3);
+}

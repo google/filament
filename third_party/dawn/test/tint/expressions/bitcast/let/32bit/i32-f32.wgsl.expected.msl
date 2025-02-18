@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  int const a = 1073757184;
+  float const b = as_type<float>(a);
+}

@@ -1,0 +1,53 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %buf0 "buf0"
+               OpMemberName %buf0 0 "one"
+               OpName %_ ""
+               OpName %_GLF_color "_GLF_color"
+               OpMemberDecorate %buf0 0 Offset 0
+               OpDecorate %buf0 Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+          %7 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+       %buf0 = OpTypeStruct %int
+%_ptr_Uniform_buf0 = OpTypePointer Uniform %buf0
+          %_ = OpVariable %_ptr_Uniform_buf0 Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+       %bool = OpTypeBool
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %20 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %21 = OpConstantComposite %v4float %float_0 %float_0 %float_0 %float_0
+       %main = OpFunction %void None %7
+         %22 = OpLabel
+         %23 = OpAccessChain %_ptr_Uniform_int %_ %int_0
+         %24 = OpLoad %int %23
+         %25 = OpISub %int %int_3 %24
+         %26 = OpIAdd %int %int_1 %25
+         %27 = OpIEqual %bool %26 %int_3
+               OpSelectionMerge %28 None
+               OpBranchConditional %27 %29 %30
+         %29 = OpLabel
+               OpStore %_GLF_color %20
+               OpBranch %28
+         %30 = OpLabel
+               OpStore %_GLF_color %21
+               OpBranch %28
+         %28 = OpLabel
+               OpReturn
+               OpFunctionEnd

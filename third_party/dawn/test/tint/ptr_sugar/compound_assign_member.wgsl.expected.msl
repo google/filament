@@ -1,0 +1,19 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void deref() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  (*p).x = as_type<int>((as_type<uint>((*p).x) + as_type<uint>(42)));
+}
+
+void no_deref() {
+  int3 a = 0;
+  thread int3* const p = (&a);
+  (*p).x = as_type<int>((as_type<uint>((*p).x) + as_type<uint>(42)));
+}
+
+kernel void v() {
+  deref();
+  no_deref();
+}

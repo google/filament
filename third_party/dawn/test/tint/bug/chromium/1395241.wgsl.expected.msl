@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void fr6snorm() {
+  int bzbxttch = 2;
+}

@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct S {
+  /* 0x0000 */ int i;
+};
+
+struct tint_module_vars_struct {
+  const constant S* u;
+};
+
+kernel void v(const constant S* u [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.u=u};
+}

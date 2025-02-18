@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  uint2 v2 = uint2(1u);
+  uint3 v3 = uint3(1u);
+  uint4 v4 = uint4(1u);
+}

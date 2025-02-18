@@ -1,0 +1,48 @@
+# Copyright 2023 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# cmake_configure_file implements CMake's 'configure_file':
+# https://cmake.org/cmake/help/latest/command/configure_file.html
+#
+# Unlike CMake, that replaces variables defined in the input file with those
+# currently set in the CMake exceution environment, we must provide the
+# values for each variable explicitly via the 'values' array.
+template("cmake_configure_file") {
+  assert(defined(invoker.input), "must set 'input'")
+  assert(defined(invoker.output), "must set 'output'")
+  assert(defined(invoker.values), "must set 'values'")
+
+  action(target_name) {
+    script = "${invoker.dawn_dxc_gn_dir}/dxc/build/cmake_configure_file.py"
+    sources = [ invoker.input ]
+    outputs = [ invoker.output ]
+    args = [
+             rebase_path(invoker.input, root_build_dir),
+             rebase_path(invoker.output, root_build_dir),
+           ] + invoker.values
+  }
+}

@@ -1,0 +1,436 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %gl_FragCoord %_GLF_color
+               OpExecutionMode %main OriginUpperLeft
+               OpSource ESSL 320
+               OpName %main "main"
+               OpName %BST "BST"
+               OpMemberName %BST 0 "data"
+               OpMemberName %BST 1 "leftIndex"
+               OpMemberName %BST 2 "rightIndex"
+               OpName %makeTreeNode_struct_BST_i1_i1_i11_i1_ "makeTreeNode(struct-BST-i1-i1-i11;i1;"
+               OpName %tree "tree"
+               OpName %data "data"
+               OpName %insert_i1_i1_ "insert(i1;i1;"
+               OpName %treeIndex "treeIndex"
+               OpName %data_0 "data"
+               OpName %search_i1_ "search(i1;"
+               OpName %t "t"
+               OpName %baseIndex "baseIndex"
+               OpName %tree_0 "tree"
+               OpName %param "param"
+               OpName %param_0 "param"
+               OpName %param_1 "param"
+               OpName %param_2 "param"
+               OpName %index "index"
+               OpName %currentNode "currentNode"
+               OpName %treeIndex_0 "treeIndex"
+               OpName %param_3 "param"
+               OpName %param_4 "param"
+               OpName %param_5 "param"
+               OpName %param_6 "param"
+               OpName %param_7 "param"
+               OpName %param_8 "param"
+               OpName %param_9 "param"
+               OpName %param_10 "param"
+               OpName %param_11 "param"
+               OpName %param_12 "param"
+               OpName %param_13 "param"
+               OpName %param_14 "param"
+               OpName %param_15 "param"
+               OpName %param_16 "param"
+               OpName %param_17 "param"
+               OpName %param_18 "param"
+               OpName %param_19 "param"
+               OpName %param_20 "param"
+               OpName %param_21 "param"
+               OpName %param_22 "param"
+               OpName %count "count"
+               OpName %i "i"
+               OpName %result "result"
+               OpName %param_23 "param"
+               OpName %gl_FragCoord "gl_FragCoord"
+               OpName %_GLF_color "_GLF_color"
+               OpDecorate %gl_FragCoord BuiltIn FragCoord
+               OpDecorate %_GLF_color Location 0
+       %void = OpTypeVoid
+         %48 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+        %BST = OpTypeStruct %int %int %int
+%_ptr_Function_BST = OpTypePointer Function %BST
+%_ptr_Function_int = OpTypePointer Function %int
+         %52 = OpTypeFunction %void %_ptr_Function_BST %_ptr_Function_int
+         %53 = OpTypeFunction %void %_ptr_Function_int %_ptr_Function_int
+         %54 = OpTypeFunction %int %_ptr_Function_int
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+     %int_n1 = OpConstant %int -1
+      %int_2 = OpConstant %int 2
+       %bool = OpTypeBool
+       %uint = OpTypeInt 32 0
+    %uint_10 = OpConstant %uint 10
+%_arr_BST_uint_10 = OpTypeArray %BST %uint_10
+%_ptr_Private__arr_BST_uint_10 = OpTypePointer Private %_arr_BST_uint_10
+     %tree_0 = OpVariable %_ptr_Private__arr_BST_uint_10 Private
+%_ptr_Private_int = OpTypePointer Private %int
+%_ptr_Private_BST = OpTypePointer Private %BST
+      %int_9 = OpConstant %int 9
+      %int_5 = OpConstant %int 5
+     %int_12 = OpConstant %int 12
+     %int_15 = OpConstant %int 15
+      %int_7 = OpConstant %int 7
+      %int_8 = OpConstant %int 8
+      %int_6 = OpConstant %int 6
+     %int_17 = OpConstant %int 17
+     %int_13 = OpConstant %int 13
+     %int_20 = OpConstant %int 20
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_float = OpTypePointer Input %float
+    %float_0 = OpConstant %float 0
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+ %_GLF_color = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+         %84 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %85 = OpConstantComposite %v4float %float_0 %float_0 %float_1 %float_1
+       %main = OpFunction %void None %48
+         %86 = OpLabel
+%treeIndex_0 = OpVariable %_ptr_Function_int Function
+    %param_3 = OpVariable %_ptr_Function_BST Function
+    %param_4 = OpVariable %_ptr_Function_int Function
+    %param_5 = OpVariable %_ptr_Function_int Function
+    %param_6 = OpVariable %_ptr_Function_int Function
+    %param_7 = OpVariable %_ptr_Function_int Function
+    %param_8 = OpVariable %_ptr_Function_int Function
+    %param_9 = OpVariable %_ptr_Function_int Function
+   %param_10 = OpVariable %_ptr_Function_int Function
+   %param_11 = OpVariable %_ptr_Function_int Function
+   %param_12 = OpVariable %_ptr_Function_int Function
+   %param_13 = OpVariable %_ptr_Function_int Function
+   %param_14 = OpVariable %_ptr_Function_int Function
+   %param_15 = OpVariable %_ptr_Function_int Function
+   %param_16 = OpVariable %_ptr_Function_int Function
+   %param_17 = OpVariable %_ptr_Function_int Function
+   %param_18 = OpVariable %_ptr_Function_int Function
+   %param_19 = OpVariable %_ptr_Function_int Function
+   %param_20 = OpVariable %_ptr_Function_int Function
+   %param_21 = OpVariable %_ptr_Function_int Function
+   %param_22 = OpVariable %_ptr_Function_int Function
+      %count = OpVariable %_ptr_Function_int Function
+          %i = OpVariable %_ptr_Function_int Function
+     %result = OpVariable %_ptr_Function_int Function
+   %param_23 = OpVariable %_ptr_Function_int Function
+               OpStore %treeIndex_0 %int_0
+         %87 = OpAccessChain %_ptr_Private_BST %tree_0 %int_0
+         %88 = OpLoad %BST %87
+               OpStore %param_3 %88
+               OpStore %param_4 %int_9
+         %89 = OpFunctionCall %void %makeTreeNode_struct_BST_i1_i1_i11_i1_ %param_3 %param_4
+         %90 = OpLoad %BST %param_3
+         %91 = OpAccessChain %_ptr_Private_BST %tree_0 %int_0
+               OpStore %91 %90
+         %92 = OpLoad %int %treeIndex_0
+         %93 = OpIAdd %int %92 %int_1
+               OpStore %treeIndex_0 %93
+         %94 = OpLoad %int %treeIndex_0
+               OpStore %param_5 %94
+               OpStore %param_6 %int_5
+         %95 = OpFunctionCall %void %insert_i1_i1_ %param_5 %param_6
+         %96 = OpLoad %int %treeIndex_0
+         %97 = OpIAdd %int %96 %int_1
+               OpStore %treeIndex_0 %97
+         %98 = OpLoad %int %treeIndex_0
+               OpStore %param_7 %98
+               OpStore %param_8 %int_12
+         %99 = OpFunctionCall %void %insert_i1_i1_ %param_7 %param_8
+        %100 = OpLoad %int %treeIndex_0
+        %101 = OpIAdd %int %100 %int_1
+               OpStore %treeIndex_0 %101
+        %102 = OpLoad %int %treeIndex_0
+               OpStore %param_9 %102
+               OpStore %param_10 %int_15
+        %103 = OpFunctionCall %void %insert_i1_i1_ %param_9 %param_10
+        %104 = OpLoad %int %treeIndex_0
+        %105 = OpIAdd %int %104 %int_1
+               OpStore %treeIndex_0 %105
+        %106 = OpLoad %int %treeIndex_0
+               OpStore %param_11 %106
+               OpStore %param_12 %int_7
+        %107 = OpFunctionCall %void %insert_i1_i1_ %param_11 %param_12
+        %108 = OpLoad %int %treeIndex_0
+        %109 = OpIAdd %int %108 %int_1
+               OpStore %treeIndex_0 %109
+        %110 = OpLoad %int %treeIndex_0
+               OpStore %param_13 %110
+               OpStore %param_14 %int_8
+        %111 = OpFunctionCall %void %insert_i1_i1_ %param_13 %param_14
+        %112 = OpLoad %int %treeIndex_0
+        %113 = OpIAdd %int %112 %int_1
+               OpStore %treeIndex_0 %113
+        %114 = OpLoad %int %treeIndex_0
+               OpStore %param_15 %114
+               OpStore %param_16 %int_2
+        %115 = OpFunctionCall %void %insert_i1_i1_ %param_15 %param_16
+        %116 = OpLoad %int %treeIndex_0
+        %117 = OpIAdd %int %116 %int_1
+               OpStore %treeIndex_0 %117
+        %118 = OpLoad %int %treeIndex_0
+               OpStore %param_17 %118
+               OpStore %param_18 %int_6
+        %119 = OpFunctionCall %void %insert_i1_i1_ %param_17 %param_18
+        %120 = OpLoad %int %treeIndex_0
+        %121 = OpIAdd %int %120 %int_1
+               OpStore %treeIndex_0 %121
+        %122 = OpLoad %int %treeIndex_0
+               OpStore %param_19 %122
+               OpStore %param_20 %int_17
+        %123 = OpFunctionCall %void %insert_i1_i1_ %param_19 %param_20
+        %124 = OpLoad %int %treeIndex_0
+        %125 = OpIAdd %int %124 %int_1
+               OpStore %treeIndex_0 %125
+        %126 = OpLoad %int %treeIndex_0
+               OpStore %param_21 %126
+               OpStore %param_22 %int_13
+        %127 = OpFunctionCall %void %insert_i1_i1_ %param_21 %param_22
+               OpStore %count %int_0
+               OpStore %i %int_0
+               OpBranch %128
+        %128 = OpLabel
+               OpLoopMerge %129 %130 None
+               OpBranch %131
+        %131 = OpLabel
+        %132 = OpLoad %int %i
+        %133 = OpSLessThan %bool %132 %int_20
+               OpBranchConditional %133 %134 %129
+        %134 = OpLabel
+        %135 = OpLoad %int %i
+               OpStore %param_23 %135
+        %136 = OpFunctionCall %int %search_i1_ %param_23
+               OpStore %result %136
+        %137 = OpLoad %int %i
+               OpSelectionMerge %138 None
+               OpSwitch %137 %139 9 %140 5 %140 12 %140 15 %140 7 %140 8 %140 2 %140 6 %140 17 %140 13 %140
+        %139 = OpLabel
+        %141 = OpLoad %int %result
+        %142 = OpIEqual %bool %141 %int_n1
+               OpSelectionMerge %143 None
+               OpBranchConditional %142 %144 %143
+        %144 = OpLabel
+        %145 = OpLoad %int %count
+        %146 = OpIAdd %int %145 %int_1
+               OpStore %count %146
+               OpBranch %143
+        %143 = OpLabel
+               OpBranch %138
+        %140 = OpLabel
+        %147 = OpLoad %int %result
+        %148 = OpLoad %int %i
+        %149 = OpIEqual %bool %147 %148
+        %150 = OpLogicalNot %bool %149
+               OpSelectionMerge %151 None
+               OpBranchConditional %150 %152 %151
+        %152 = OpLabel
+        %153 = OpAccessChain %_ptr_Input_float %gl_FragCoord %uint_0
+        %154 = OpLoad %float %153
+        %155 = OpFOrdLessThan %bool %154 %float_0
+               OpBranch %151
+        %151 = OpLabel
+        %156 = OpPhi %bool %149 %140 %155 %152
+               OpSelectionMerge %157 None
+               OpBranchConditional %156 %158 %157
+        %158 = OpLabel
+        %159 = OpLoad %int %count
+        %160 = OpIAdd %int %159 %int_1
+               OpStore %count %160
+               OpBranch %157
+        %157 = OpLabel
+               OpBranch %138
+        %138 = OpLabel
+               OpBranch %130
+        %130 = OpLabel
+        %161 = OpLoad %int %i
+        %162 = OpIAdd %int %161 %int_1
+               OpStore %i %162
+               OpBranch %128
+        %129 = OpLabel
+        %163 = OpLoad %int %count
+        %164 = OpIEqual %bool %163 %int_20
+               OpSelectionMerge %165 None
+               OpBranchConditional %164 %166 %167
+        %166 = OpLabel
+               OpStore %_GLF_color %84
+               OpBranch %165
+        %167 = OpLabel
+               OpStore %_GLF_color %85
+               OpBranch %165
+        %165 = OpLabel
+               OpReturn
+               OpFunctionEnd
+%makeTreeNode_struct_BST_i1_i1_i11_i1_ = OpFunction %void None %52
+       %tree = OpFunctionParameter %_ptr_Function_BST
+       %data = OpFunctionParameter %_ptr_Function_int
+        %168 = OpLabel
+        %169 = OpLoad %int %data
+        %170 = OpAccessChain %_ptr_Function_int %tree %int_0
+               OpStore %170 %169
+        %171 = OpAccessChain %_ptr_Function_int %tree %int_1
+               OpStore %171 %int_n1
+        %172 = OpAccessChain %_ptr_Function_int %tree %int_2
+               OpStore %172 %int_n1
+               OpReturn
+               OpFunctionEnd
+%insert_i1_i1_ = OpFunction %void None %53
+  %treeIndex = OpFunctionParameter %_ptr_Function_int
+     %data_0 = OpFunctionParameter %_ptr_Function_int
+        %173 = OpLabel
+  %baseIndex = OpVariable %_ptr_Function_int Function
+      %param = OpVariable %_ptr_Function_BST Function
+    %param_0 = OpVariable %_ptr_Function_int Function
+    %param_1 = OpVariable %_ptr_Function_BST Function
+    %param_2 = OpVariable %_ptr_Function_int Function
+               OpStore %baseIndex %int_0
+               OpBranch %174
+        %174 = OpLabel
+               OpLoopMerge %175 %176 None
+               OpBranch %177
+        %177 = OpLabel
+        %178 = OpLoad %int %baseIndex
+        %179 = OpLoad %int %treeIndex
+        %180 = OpSLessThanEqual %bool %178 %179
+               OpBranchConditional %180 %181 %175
+        %181 = OpLabel
+        %182 = OpLoad %int %data_0
+        %183 = OpLoad %int %baseIndex
+        %184 = OpAccessChain %_ptr_Private_int %tree_0 %183 %int_0
+        %185 = OpLoad %int %184
+        %186 = OpSLessThanEqual %bool %182 %185
+               OpSelectionMerge %187 None
+               OpBranchConditional %186 %188 %189
+        %188 = OpLabel
+        %190 = OpLoad %int %baseIndex
+        %191 = OpAccessChain %_ptr_Private_int %tree_0 %190 %int_1
+        %192 = OpLoad %int %191
+        %193 = OpIEqual %bool %192 %int_n1
+               OpSelectionMerge %194 None
+               OpBranchConditional %193 %195 %196
+        %195 = OpLabel
+        %197 = OpLoad %int %baseIndex
+        %198 = OpLoad %int %treeIndex
+        %199 = OpAccessChain %_ptr_Private_int %tree_0 %197 %int_1
+               OpStore %199 %198
+        %200 = OpLoad %int %treeIndex
+        %201 = OpAccessChain %_ptr_Private_BST %tree_0 %200
+        %202 = OpLoad %BST %201
+               OpStore %param %202
+        %203 = OpLoad %int %data_0
+               OpStore %param_0 %203
+        %204 = OpFunctionCall %void %makeTreeNode_struct_BST_i1_i1_i11_i1_ %param %param_0
+        %205 = OpLoad %BST %param
+        %206 = OpAccessChain %_ptr_Private_BST %tree_0 %200
+               OpStore %206 %205
+               OpReturn
+        %196 = OpLabel
+        %207 = OpLoad %int %baseIndex
+        %208 = OpAccessChain %_ptr_Private_int %tree_0 %207 %int_1
+        %209 = OpLoad %int %208
+               OpStore %baseIndex %209
+               OpBranch %176
+        %194 = OpLabel
+               OpUnreachable
+        %189 = OpLabel
+        %210 = OpLoad %int %baseIndex
+        %211 = OpAccessChain %_ptr_Private_int %tree_0 %210 %int_2
+        %212 = OpLoad %int %211
+        %213 = OpIEqual %bool %212 %int_n1
+               OpSelectionMerge %214 None
+               OpBranchConditional %213 %215 %216
+        %215 = OpLabel
+        %217 = OpLoad %int %baseIndex
+        %218 = OpLoad %int %treeIndex
+        %219 = OpAccessChain %_ptr_Private_int %tree_0 %217 %int_2
+               OpStore %219 %218
+        %220 = OpLoad %int %treeIndex
+        %221 = OpAccessChain %_ptr_Private_BST %tree_0 %220
+        %222 = OpLoad %BST %221
+               OpStore %param_1 %222
+        %223 = OpLoad %int %data_0
+               OpStore %param_2 %223
+        %224 = OpFunctionCall %void %makeTreeNode_struct_BST_i1_i1_i11_i1_ %param_1 %param_2
+        %225 = OpLoad %BST %param_1
+        %226 = OpAccessChain %_ptr_Private_BST %tree_0 %220
+               OpStore %226 %225
+               OpReturn
+        %216 = OpLabel
+        %227 = OpLoad %int %baseIndex
+        %228 = OpAccessChain %_ptr_Private_int %tree_0 %227 %int_2
+        %229 = OpLoad %int %228
+               OpStore %baseIndex %229
+               OpBranch %176
+        %214 = OpLabel
+               OpUnreachable
+        %187 = OpLabel
+               OpUnreachable
+        %176 = OpLabel
+               OpBranch %174
+        %175 = OpLabel
+               OpReturn
+               OpFunctionEnd
+ %search_i1_ = OpFunction %int None %54
+     %t = OpFunctionParameter %_ptr_Function_int
+        %230 = OpLabel
+      %index = OpVariable %_ptr_Function_int Function
+%currentNode = OpVariable %_ptr_Function_BST Function
+        %231 = OpVariable %_ptr_Function_int Function
+               OpStore %index %int_0
+               OpBranch %232
+        %232 = OpLabel
+               OpLoopMerge %233 %234 None
+               OpBranch %235
+        %235 = OpLabel
+        %236 = OpLoad %int %index
+        %237 = OpINotEqual %bool %236 %int_n1
+               OpBranchConditional %237 %238 %233
+        %238 = OpLabel
+        %239 = OpLoad %int %index
+        %240 = OpAccessChain %_ptr_Private_BST %tree_0 %239
+        %241 = OpLoad %BST %240
+               OpStore %currentNode %241
+        %242 = OpAccessChain %_ptr_Function_int %currentNode %int_0
+        %243 = OpLoad %int %242
+        %244 = OpLoad %int %t
+        %245 = OpIEqual %bool %243 %244
+               OpSelectionMerge %246 None
+               OpBranchConditional %245 %247 %246
+        %247 = OpLabel
+        %248 = OpLoad %int %t
+               OpReturnValue %248
+        %246 = OpLabel
+        %249 = OpLoad %int %t
+        %250 = OpAccessChain %_ptr_Function_int %currentNode %int_0
+        %251 = OpLoad %int %250
+        %252 = OpSGreaterThan %bool %249 %251
+               OpSelectionMerge %253 None
+               OpBranchConditional %252 %254 %255
+        %254 = OpLabel
+        %256 = OpAccessChain %_ptr_Function_int %currentNode %int_2
+        %257 = OpLoad %int %256
+               OpStore %231 %257
+               OpBranch %253
+        %255 = OpLabel
+        %258 = OpAccessChain %_ptr_Function_int %currentNode %int_1
+        %259 = OpLoad %int %258
+               OpStore %231 %259
+               OpBranch %253
+        %253 = OpLabel
+        %260 = OpLoad %int %231
+               OpStore %index %260
+               OpBranch %234
+        %234 = OpLabel
+               OpBranch %232
+        %233 = OpLabel
+               OpReturnValue %int_n1
+               OpFunctionEnd

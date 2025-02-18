@@ -1,0 +1,94 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 42
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpCapability StorageInputOutput16
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %main_loc0_Input %main_loc1_Input %main_loc2_Input %main_loc3_Input %main_loc4_Input %main_loc5_Input
+               OpExecutionMode %main OriginUpperLeft
+               OpName %main_loc0_Input "main_loc0_Input"
+               OpName %main_loc1_Input "main_loc1_Input"
+               OpName %main_loc2_Input "main_loc2_Input"
+               OpName %main_loc3_Input "main_loc3_Input"
+               OpName %main_loc4_Input "main_loc4_Input"
+               OpName %main_loc5_Input "main_loc5_Input"
+               OpName %main_inner "main_inner"
+               OpMemberName %FragmentInputs 0 "loc0"
+               OpMemberName %FragmentInputs 1 "loc1"
+               OpMemberName %FragmentInputs 2 "loc2"
+               OpMemberName %FragmentInputs 3 "loc3"
+               OpMemberName %FragmentInputs 4 "loc4"
+               OpMemberName %FragmentInputs 5 "loc5"
+               OpName %FragmentInputs "FragmentInputs"
+               OpName %inputs "inputs"
+               OpName %i "i"
+               OpName %u "u"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %x "x"
+               OpName %y "y"
+               OpName %main "main"
+               OpDecorate %main_loc0_Input Location 0
+               OpDecorate %main_loc0_Input Flat
+               OpDecorate %main_loc1_Input Location 1
+               OpDecorate %main_loc1_Input Flat
+               OpDecorate %main_loc2_Input Location 2
+               OpDecorate %main_loc3_Input Location 3
+               OpDecorate %main_loc4_Input Location 4
+               OpDecorate %main_loc5_Input Location 5
+               OpMemberDecorate %FragmentInputs 0 Offset 0
+               OpMemberDecorate %FragmentInputs 1 Offset 4
+               OpMemberDecorate %FragmentInputs 2 Offset 8
+               OpMemberDecorate %FragmentInputs 3 Offset 16
+               OpMemberDecorate %FragmentInputs 4 Offset 32
+               OpMemberDecorate %FragmentInputs 5 Offset 40
+        %int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%main_loc0_Input = OpVariable %_ptr_Input_int Input
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_loc1_Input = OpVariable %_ptr_Input_uint Input
+      %float = OpTypeFloat 32
+%_ptr_Input_float = OpTypePointer Input %float
+%main_loc2_Input = OpVariable %_ptr_Input_float Input
+    %v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%main_loc3_Input = OpVariable %_ptr_Input_v4float Input
+       %half = OpTypeFloat 16
+%_ptr_Input_half = OpTypePointer Input %half
+%main_loc4_Input = OpVariable %_ptr_Input_half Input
+     %v3half = OpTypeVector %half 3
+%_ptr_Input_v3half = OpTypePointer Input %v3half
+%main_loc5_Input = OpVariable %_ptr_Input_v3half Input
+       %void = OpTypeVoid
+%FragmentInputs = OpTypeStruct %int %uint %float %v4float %half %v3half
+         %23 = OpTypeFunction %void %FragmentInputs
+         %32 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %23
+     %inputs = OpFunctionParameter %FragmentInputs
+         %24 = OpLabel
+          %i = OpCompositeExtract %int %inputs 0
+          %u = OpCompositeExtract %uint %inputs 1
+          %f = OpCompositeExtract %float %inputs 2
+          %v = OpCompositeExtract %v4float %inputs 3
+          %x = OpCompositeExtract %half %inputs 4
+          %y = OpCompositeExtract %v3half %inputs 5
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %32
+         %33 = OpLabel
+         %34 = OpLoad %int %main_loc0_Input None
+         %35 = OpLoad %uint %main_loc1_Input None
+         %36 = OpLoad %float %main_loc2_Input None
+         %37 = OpLoad %v4float %main_loc3_Input None
+         %38 = OpLoad %half %main_loc4_Input None
+         %39 = OpLoad %v3half %main_loc5_Input None
+         %40 = OpCompositeConstruct %FragmentInputs %34 %35 %36 %37 %38 %39
+         %41 = OpFunctionCall %void %main_inner %40
+               OpReturn
+               OpFunctionEnd

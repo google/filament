@@ -1,0 +1,37 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct SB_RO {
+  /* 0x0000 */ tint_array<float, 1> arg_0;
+};
+
+struct tint_module_vars_struct {
+  device tint_array<float, 1024>* prevent_dce;
+  const device SB_RO* sb_ro;
+};
+
+simdgroup_float8x8 subgroupMatrixLoad_f58623(tint_module_vars_struct tint_module_vars) {
+  uint arg_1 = 1u;
+  uint arg_3 = 1u;
+  simdgroup_float8x8 v = make_filled_simdgroup_matrix<float, 8, 8>(0.0f);
+  simdgroup_load(v, (&(*tint_module_vars.sb_ro).arg_0[arg_1]), ulong(arg_3), ulong2(0ul), true);
+  simdgroup_float8x8 res = v;
+  return res;
+}
+
+kernel void compute_main(device tint_array<float, 1024>* prevent_dce [[buffer(0)]], const device SB_RO* sb_ro [[buffer(1)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .sb_ro=sb_ro};
+  simdgroup_store(subgroupMatrixLoad_f58623(tint_module_vars), (&(*tint_module_vars.prevent_dce)[0u]), ulong(64u), ulong2(0ul), false);
+}

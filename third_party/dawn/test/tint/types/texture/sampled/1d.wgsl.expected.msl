@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  texture1d<float, access::sample> t_f;
+  texture1d<int, access::sample> t_i;
+  texture1d<uint, access::sample> t_u;
+};
+
+kernel void v(texture1d<float, access::sample> t_f [[texture(0)]], texture1d<int, access::sample> t_i [[texture(1)]], texture1d<uint, access::sample> t_u [[texture(2)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.t_f=t_f, .t_i=t_i, .t_u=t_u};
+  min(uint(1), (tint_module_vars.t_f.get_num_mip_levels() - 1u));
+  uint fdims = uint(tint_module_vars.t_f.get_width());
+  min(uint(1), (tint_module_vars.t_i.get_num_mip_levels() - 1u));
+  uint idims = uint(tint_module_vars.t_i.get_width());
+  min(uint(1), (tint_module_vars.t_u.get_num_mip_levels() - 1u));
+  uint udims = uint(tint_module_vars.t_u.get_width());
+}

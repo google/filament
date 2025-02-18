@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  half4x4 v = half4x4(half4(0.0h), half4(0.0h), half4(0.0h), half4(0.0h));
+}

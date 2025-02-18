@@ -1,0 +1,21 @@
+[package]
+name = "lsprotocol"
+version = "0.1.0-alpha.1"
+edition = "2021"
+description = "Rust types for Language Server Protocol generated from LSP specification."
+authors = ["Microsoft Corporation <lsprotocol-help@microsoft.com>"]
+license = "MIT"
+repository = "https://github.com/microsoft/lsprotocol"
+documentation = "https://microsoft.github.io/language-server-protocol"
+readme = "README.md"
+keywords = ["lsp"]
+
+[features]
+proposed=[]
+
+[dependencies]
+serde = {version ="1.0.152", features = ["derive"]}
+serde_json = "1.0.93"
+serde_repr = "0.1.10"
+url = "2.3.1"
+rust_decimal = "1.29.1"

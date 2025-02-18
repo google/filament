@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FragmentOutput {
+  float4 color;
+};
+
+struct FragmentInput {
+  float2 vUv;
+};
+
+struct tint_module_vars_struct {
+  depth2d<float, access::sample> depthMap;
+  sampler texSampler;
+};
+
+struct main_outputs {
+  float4 FragmentOutput_color [[color(0)]];
+};
+
+struct main_inputs {
+  float2 FragmentInput_vUv [[user(locn2)]];
+};
+
+FragmentOutput main_inner(FragmentInput fIn, tint_module_vars_struct tint_module_vars) {
+  float const sample = tint_module_vars.depthMap.sample(tint_module_vars.texSampler, fIn.vUv);
+  float3 const color = float3(sample, sample, sample);
+  FragmentOutput fOut = {};
+  fOut.color = float4(color, 1.0f);
+  return fOut;
+}
+
+fragment main_outputs v(main_inputs inputs [[stage_in]], depth2d<float, access::sample> depthMap [[texture(0)]], sampler texSampler [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.depthMap=depthMap, .texSampler=texSampler};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.FragmentOutput_color = main_inner(FragmentInput{.vUv=inputs.FragmentInput_vUv}, tint_module_vars).color;
+  return tint_wrapper_result;
+}

@@ -1,0 +1,66 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 36
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %main_local_invocation_id_Input %main_local_invocation_index_Input %main_global_invocation_id_Input %main_workgroup_id_Input %main_num_workgroups_Input
+               OpExecutionMode %main LocalSize 1 1 1
+               OpName %main_local_invocation_id_Input "main_local_invocation_id_Input"
+               OpName %main_local_invocation_index_Input "main_local_invocation_index_Input"
+               OpName %main_global_invocation_id_Input "main_global_invocation_id_Input"
+               OpName %main_workgroup_id_Input "main_workgroup_id_Input"
+               OpName %main_num_workgroups_Input "main_num_workgroups_Input"
+               OpName %main_inner "main_inner"
+               OpName %local_invocation_id "local_invocation_id"
+               OpName %local_invocation_index "local_invocation_index"
+               OpName %global_invocation_id "global_invocation_id"
+               OpName %workgroup_id "workgroup_id"
+               OpName %num_workgroups "num_workgroups"
+               OpName %foo "foo"
+               OpName %main "main"
+               OpDecorate %main_local_invocation_id_Input BuiltIn LocalInvocationId
+               OpDecorate %main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+               OpDecorate %main_global_invocation_id_Input BuiltIn GlobalInvocationId
+               OpDecorate %main_workgroup_id_Input BuiltIn WorkgroupId
+               OpDecorate %main_num_workgroups_Input BuiltIn NumWorkgroups
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%main_local_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+%_ptr_Input_uint = OpTypePointer Input %uint
+%main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+%main_global_invocation_id_Input = OpVariable %_ptr_Input_v3uint Input
+%main_workgroup_id_Input = OpVariable %_ptr_Input_v3uint Input
+%main_num_workgroups_Input = OpVariable %_ptr_Input_v3uint Input
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void %v3uint %uint %v3uint %v3uint %v3uint
+         %28 = OpTypeFunction %void
+ %main_inner = OpFunction %void None %17
+%local_invocation_id = OpFunctionParameter %v3uint
+%local_invocation_index = OpFunctionParameter %uint
+%global_invocation_id = OpFunctionParameter %v3uint
+%workgroup_id = OpFunctionParameter %v3uint
+%num_workgroups = OpFunctionParameter %v3uint
+         %18 = OpLabel
+         %19 = OpCompositeExtract %uint %local_invocation_id 0
+         %20 = OpIAdd %uint %19 %local_invocation_index
+         %21 = OpCompositeExtract %uint %global_invocation_id 0
+         %22 = OpIAdd %uint %20 %21
+         %23 = OpCompositeExtract %uint %workgroup_id 0
+         %24 = OpIAdd %uint %22 %23
+         %25 = OpCompositeExtract %uint %num_workgroups 0
+        %foo = OpIAdd %uint %24 %25
+               OpReturn
+               OpFunctionEnd
+       %main = OpFunction %void None %28
+         %29 = OpLabel
+         %30 = OpLoad %v3uint %main_local_invocation_id_Input None
+         %31 = OpLoad %uint %main_local_invocation_index_Input None
+         %32 = OpLoad %v3uint %main_global_invocation_id_Input None
+         %33 = OpLoad %v3uint %main_workgroup_id_Input None
+         %34 = OpLoad %v3uint %main_num_workgroups_Input None
+         %35 = OpFunctionCall %void %main_inner %30 %31 %32 %33 %34
+               OpReturn
+               OpFunctionEnd

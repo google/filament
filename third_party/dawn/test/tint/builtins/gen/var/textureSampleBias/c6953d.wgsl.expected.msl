@@ -1,0 +1,23 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device float4* prevent_dce;
+  texturecube_array<float, access::sample> arg_0;
+  sampler arg_1;
+};
+
+float4 textureSampleBias_c6953d(tint_module_vars_struct tint_module_vars) {
+  float3 arg_2 = float3(1.0f);
+  uint arg_3 = 1u;
+  float arg_4 = 1.0f;
+  float3 const v = arg_2;
+  uint const v_1 = arg_3;
+  float4 res = tint_module_vars.arg_0.sample(tint_module_vars.arg_1, v, v_1, bias(clamp(arg_4, -16.0f, 15.9899997711181640625f)));
+  return res;
+}
+
+fragment void fragment_main(device float4* prevent_dce [[buffer(0)]], texturecube_array<float, access::sample> arg_0 [[texture(0)]], sampler arg_1 [[sampler(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=arg_0, .arg_1=arg_1};
+  (*tint_module_vars.prevent_dce) = textureSampleBias_c6953d(tint_module_vars);
+}

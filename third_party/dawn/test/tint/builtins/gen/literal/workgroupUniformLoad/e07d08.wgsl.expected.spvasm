@@ -1,0 +1,80 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 42
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main" %compute_main_local_invocation_index_Input
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %arg_0 "arg_0"
+               OpName %compute_main_local_invocation_index_Input "compute_main_local_invocation_index_Input"
+               OpName %workgroupUniformLoad_e07d08 "workgroupUniformLoad_e07d08"
+               OpName %res "res"
+               OpName %compute_main_inner "compute_main_inner"
+               OpName %tint_local_index "tint_local_index"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+               OpDecorate %compute_main_local_invocation_index_Input BuiltIn LocalInvocationIndex
+       %half = OpTypeFloat 16
+%prevent_dce_block = OpTypeStruct %half
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+%_ptr_Workgroup_half = OpTypePointer Workgroup %half
+      %arg_0 = OpVariable %_ptr_Workgroup_half Workgroup
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%compute_main_local_invocation_index_Input = OpVariable %_ptr_Input_uint Input
+         %11 = OpTypeFunction %half
+       %void = OpTypeVoid
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+%_ptr_Function_half = OpTypePointer Function %half
+         %24 = OpTypeFunction %void %uint
+     %uint_1 = OpConstant %uint 1
+       %bool = OpTypeBool
+%half_0x0p_0 = OpConstant %half 0x0p+0
+%_ptr_StorageBuffer_half = OpTypePointer StorageBuffer %half
+     %uint_0 = OpConstant %uint 0
+         %38 = OpTypeFunction %void
+%workgroupUniformLoad_e07d08 = OpFunction %half None %11
+         %12 = OpLabel
+        %res = OpVariable %_ptr_Function_half Function
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %17 = OpLoad %half %arg_0 None
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+               OpStore %res %17
+         %21 = OpLoad %half %res None
+               OpReturnValue %21
+               OpFunctionEnd
+%compute_main_inner = OpFunction %void None %24
+%tint_local_index = OpFunctionParameter %uint
+         %25 = OpLabel
+         %26 = OpULessThan %bool %tint_local_index %uint_1
+               OpSelectionMerge %29 None
+               OpBranchConditional %26 %30 %29
+         %30 = OpLabel
+               OpStore %arg_0 %half_0x0p_0 None
+               OpBranch %29
+         %29 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %33 = OpFunctionCall %half %workgroupUniformLoad_e07d08
+         %34 = OpAccessChain %_ptr_StorageBuffer_half %1 %uint_0
+               OpStore %34 %33 None
+               OpReturn
+               OpFunctionEnd
+%compute_main = OpFunction %void None %38
+         %39 = OpLabel
+         %40 = OpLoad %uint %compute_main_local_invocation_index_Input None
+         %41 = OpFunctionCall %void %compute_main_inner %40
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,76 @@
+//
+// main0
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct main0_outputs {
+  int tint_symbol [[color(0)]];
+};
+
+int main0_inner() {
+  return 1;
+}
+
+fragment main0_outputs main0() {
+  main0_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main0_inner();
+  return tint_wrapper_result;
+}
+//
+// main1
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct main1_outputs {
+  uint tint_symbol [[color(1)]];
+};
+
+uint main1_inner() {
+  return 1u;
+}
+
+fragment main1_outputs main1() {
+  main1_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main1_inner();
+  return tint_wrapper_result;
+}
+//
+// main2
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct main2_outputs {
+  float tint_symbol [[color(2)]];
+};
+
+float main2_inner() {
+  return 1.0f;
+}
+
+fragment main2_outputs main2() {
+  main2_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main2_inner();
+  return tint_wrapper_result;
+}
+//
+// main3
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct main3_outputs {
+  float4 tint_symbol [[color(3)]];
+};
+
+float4 main3_inner() {
+  return float4(1.0f, 2.0f, 3.0f, 4.0f);
+}
+
+fragment main3_outputs main3() {
+  main3_outputs tint_wrapper_result = {};
+  tint_wrapper_result.tint_symbol = main3_inner();
+  return tint_wrapper_result;
+}

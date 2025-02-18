@@ -1,0 +1,55 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_module_vars_struct {
+  device tint_array<half, 1024>* prevent_dce;
+  threadgroup tint_array<half, 64>* arg_0;
+};
+
+struct tint_symbol_1 {
+  tint_array<half, 64> tint_symbol;
+};
+
+simdgroup_half8x8 subgroupMatrixLoad_fd7bd9(tint_module_vars_struct tint_module_vars) {
+  simdgroup_half8x8 v = make_filled_simdgroup_matrix<half, 8, 8>(0.0h);
+  simdgroup_load(v, (&(*tint_module_vars.arg_0)[1u]), ulong(1u), ulong2(0ul), true);
+  simdgroup_half8x8 res = v;
+  return res;
+}
+
+void compute_main_inner(uint tint_local_index, tint_module_vars_struct tint_module_vars) {
+  {
+    uint v_1 = 0u;
+    v_1 = tint_local_index;
+    while(true) {
+      uint const v_2 = v_1;
+      if ((v_2 >= 64u)) {
+        break;
+      }
+      (*tint_module_vars.arg_0)[v_2] = 0.0h;
+      {
+        v_1 = (v_2 + 1u);
+      }
+      continue;
+    }
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  simdgroup_store(subgroupMatrixLoad_fd7bd9(tint_module_vars), (&(*tint_module_vars.prevent_dce)[0u]), ulong(64u), ulong2(0ul), false);
+}
+
+kernel void compute_main(uint tint_local_index [[thread_index_in_threadgroup]], device tint_array<half, 1024>* prevent_dce [[buffer(0)]], threadgroup tint_symbol_1* v_3 [[threadgroup(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce, .arg_0=(&(*v_3).tint_symbol)};
+  compute_main_inner(tint_local_index, tint_module_vars);
+}

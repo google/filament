@@ -1,0 +1,102 @@
+;
+; fragment_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 23
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %fragment_main "fragment_main"
+               OpExecutionMode %fragment_main OriginUpperLeft
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupMax_6c913e "subgroupMax_6c913e"
+               OpName %res "res"
+               OpName %fragment_main "fragment_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+%prevent_dce_block = OpTypeStruct %int
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %int
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %int_1 = OpConstant %int 1
+%_ptr_Function_int = OpTypePointer Function %int
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+     %uint_0 = OpConstant %uint 0
+%subgroupMax_6c913e = OpFunction %int None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_int Function
+          %8 = OpGroupNonUniformSMax %int %uint_3 Reduce %int_1
+               OpStore %res %8
+         %14 = OpLoad %int %res None
+               OpReturnValue %14
+               OpFunctionEnd
+%fragment_main = OpFunction %void None %17
+         %18 = OpLabel
+         %19 = OpFunctionCall %int %subgroupMax_6c913e
+         %20 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+               OpStore %20 %19 None
+               OpReturn
+               OpFunctionEnd
+;
+; compute_main
+;
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 23
+; Schema: 0
+               OpCapability Shader
+               OpCapability GroupNonUniformArithmetic
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpName %subgroupMax_6c913e "subgroupMax_6c913e"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+%prevent_dce_block = OpTypeStruct %int
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+          %6 = OpTypeFunction %int
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+      %int_1 = OpConstant %int 1
+%_ptr_Function_int = OpTypePointer Function %int
+       %void = OpTypeVoid
+         %17 = OpTypeFunction %void
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+     %uint_0 = OpConstant %uint 0
+%subgroupMax_6c913e = OpFunction %int None %6
+          %7 = OpLabel
+        %res = OpVariable %_ptr_Function_int Function
+          %8 = OpGroupNonUniformSMax %int %uint_3 Reduce %int_1
+               OpStore %res %8
+         %14 = OpLoad %int %res None
+               OpReturnValue %14
+               OpFunctionEnd
+%compute_main = OpFunction %void None %17
+         %18 = OpLabel
+         %19 = OpFunctionCall %int %subgroupMax_6c913e
+         %20 = OpAccessChain %_ptr_StorageBuffer_int %1 %uint_0
+               OpStore %20 %19 None
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,45 @@
+LIBDRM_FILES := \
+	xf86drm.c \
+	xf86drmHash.c \
+	xf86drmHash.h \
+	xf86drmRandom.c \
+	xf86drmRandom.h \
+	xf86drmSL.c \
+	xf86drmMode.c \
+	xf86atomic.h \
+	libdrm_macros.h \
+	libdrm_lists.h \
+	util_double_list.h \
+	util_math.h
+
+LIBDRM_H_FILES := \
+	libsync.h \
+	xf86drm.h \
+	xf86drmMode.h
+
+LIBDRM_INCLUDE_H_FILES := \
+	include/drm/drm.h \
+	include/drm/drm_fourcc.h \
+	include/drm/drm_mode.h \
+	include/drm/drm_sarea.h \
+	include/drm/i915_drm.h \
+	include/drm/mach64_drm.h \
+	include/drm/mga_drm.h \
+	include/drm/msm_drm.h \
+	include/drm/nouveau_drm.h \
+	include/drm/qxl_drm.h \
+	include/drm/r128_drm.h \
+	include/drm/radeon_drm.h \
+	include/drm/amdgpu_drm.h \
+	include/drm/savage_drm.h \
+	include/drm/sis_drm.h \
+	include/drm/tegra_drm.h \
+	include/drm/vc4_drm.h \
+	include/drm/via_drm.h \
+	include/drm/virtgpu_drm.h
+
+LIBDRM_INCLUDE_ANDROID_H_FILES := \
+	android/gralloc_handle.h
+
+LIBDRM_INCLUDE_VMWGFX_H_FILES := \
+	include/drm/vmwgfx_drm.h

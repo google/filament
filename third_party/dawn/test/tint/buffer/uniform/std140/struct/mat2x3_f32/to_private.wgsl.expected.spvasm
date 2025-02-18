@@ -1,0 +1,137 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 79
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpMemberName %S_std140 0 "before"
+               OpMemberName %S_std140 1 "m_col0"
+               OpMemberName %S_std140 2 "m_col1"
+               OpMemberName %S_std140 3 "after"
+               OpName %S_std140 "S_std140"
+               OpMemberName %u_block_std140 0 "inner"
+               OpName %u_block_std140 "u_block_std140"
+               OpMemberName %S 0 "before"
+               OpMemberName %S 1 "m"
+               OpMemberName %S 2 "after"
+               OpName %S "S"
+               OpName %p "p"
+               OpName %f "f"
+               OpName %tint_convert_S "tint_convert_S"
+               OpName %tint_input "tint_input"
+               OpMemberDecorate %S_std140 0 Offset 0
+               OpMemberDecorate %S_std140 1 Offset 16
+               OpMemberDecorate %S_std140 2 Offset 32
+               OpMemberDecorate %S_std140 3 Offset 64
+               OpDecorate %_arr_S_std140_uint_4 ArrayStride 128
+               OpMemberDecorate %u_block_std140 0 Offset 0
+               OpDecorate %u_block_std140 Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 NonWritable
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %S 1 Offset 16
+               OpMemberDecorate %S 1 ColMajor
+               OpMemberDecorate %S 1 MatrixStride 16
+               OpMemberDecorate %S 2 Offset 64
+               OpDecorate %_arr_S_uint_4 ArrayStride 128
+        %int = OpTypeInt 32 1
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+   %S_std140 = OpTypeStruct %int %v3float %v3float %int
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_S_std140_uint_4 = OpTypeArray %S_std140 %uint_4
+%u_block_std140 = OpTypeStruct %_arr_S_std140_uint_4
+%_ptr_Uniform_u_block_std140 = OpTypePointer Uniform %u_block_std140
+          %1 = OpVariable %_ptr_Uniform_u_block_std140 Uniform
+%mat2v3float = OpTypeMatrix %v3float 2
+          %S = OpTypeStruct %int %mat2v3float %int
+%_arr_S_uint_4 = OpTypeArray %S %uint_4
+%_ptr_Private__arr_S_uint_4 = OpTypePointer Private %_arr_S_uint_4
+         %16 = OpConstantNull %_arr_S_uint_4
+          %p = OpVariable %_ptr_Private__arr_S_uint_4 Private %16
+       %void = OpTypeVoid
+         %19 = OpTypeFunction %void
+%_ptr_Uniform__arr_S_std140_uint_4 = OpTypePointer Uniform %_arr_S_std140_uint_4
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function__arr_S_std140_uint_4 = OpTypePointer Function %_arr_S_std140_uint_4
+%_ptr_Function__arr_S_uint_4 = OpTypePointer Function %_arr_S_uint_4
+       %bool = OpTypeBool
+%_ptr_Function_S = OpTypePointer Function %S
+%_ptr_Function_S_std140 = OpTypePointer Function %S_std140
+     %uint_1 = OpConstant %uint 1
+%_ptr_Private_S = OpTypePointer Private %S
+%_ptr_Uniform_S_std140 = OpTypePointer Uniform %S_std140
+     %uint_2 = OpConstant %uint 2
+%_ptr_Private_mat2v3float = OpTypePointer Private %mat2v3float
+     %uint_3 = OpConstant %uint 3
+%_ptr_Uniform_v3float = OpTypePointer Uniform %v3float
+%_ptr_Private_v3float = OpTypePointer Private %v3float
+         %71 = OpTypeFunction %S %S_std140
+          %f = OpFunction %void None %19
+         %20 = OpLabel
+         %25 = OpVariable %_ptr_Function__arr_S_std140_uint_4 Function
+         %27 = OpVariable %_ptr_Function__arr_S_uint_4 Function %16
+         %21 = OpAccessChain %_ptr_Uniform__arr_S_std140_uint_4 %1 %uint_0
+         %24 = OpLoad %_arr_S_std140_uint_4 %21 None
+               OpStore %25 %24
+               OpBranch %29
+         %29 = OpLabel
+               OpBranch %32
+         %32 = OpLabel
+         %34 = OpPhi %uint %uint_0 %29 %35 %31
+               OpLoopMerge %33 %31 None
+               OpBranch %30
+         %30 = OpLabel
+         %36 = OpUGreaterThanEqual %bool %34 %uint_4
+               OpSelectionMerge %38 None
+               OpBranchConditional %36 %39 %38
+         %39 = OpLabel
+               OpBranch %33
+         %38 = OpLabel
+         %40 = OpAccessChain %_ptr_Function_S %27 %34
+         %42 = OpAccessChain %_ptr_Function_S_std140 %25 %34
+         %44 = OpLoad %S_std140 %42 None
+         %45 = OpFunctionCall %S %tint_convert_S %44
+               OpStore %40 %45 None
+               OpBranch %31
+         %31 = OpLabel
+         %35 = OpIAdd %uint %34 %uint_1
+               OpBranch %32
+         %33 = OpLabel
+         %48 = OpLoad %_arr_S_uint_4 %27 None
+               OpStore %p %48 None
+         %49 = OpAccessChain %_ptr_Private_S %p %uint_1
+         %51 = OpAccessChain %_ptr_Uniform_S_std140 %1 %uint_0 %uint_2
+         %54 = OpLoad %S_std140 %51 None
+         %55 = OpFunctionCall %S %tint_convert_S %54
+               OpStore %49 %55 None
+         %56 = OpAccessChain %_ptr_Private_mat2v3float %p %uint_3 %uint_1
+         %59 = OpAccessChain %_ptr_Uniform_v3float %1 %uint_0 %uint_2 %uint_1
+         %61 = OpLoad %v3float %59 None
+         %62 = OpAccessChain %_ptr_Uniform_v3float %1 %uint_0 %uint_2 %uint_2
+         %63 = OpLoad %v3float %62 None
+         %64 = OpCompositeConstruct %mat2v3float %61 %63
+               OpStore %56 %64 None
+         %65 = OpAccessChain %_ptr_Private_v3float %p %uint_1 %uint_1 %uint_0
+         %67 = OpAccessChain %_ptr_Uniform_v3float %1 %uint_0 %uint_0 %uint_2
+         %68 = OpLoad %v3float %67 None
+         %69 = OpVectorShuffle %v3float %68 %68 2 0 1
+               OpStore %65 %69 None
+               OpReturn
+               OpFunctionEnd
+%tint_convert_S = OpFunction %S None %71
+ %tint_input = OpFunctionParameter %S_std140
+         %72 = OpLabel
+         %73 = OpCompositeExtract %int %tint_input 0
+         %74 = OpCompositeExtract %v3float %tint_input 1
+         %75 = OpCompositeExtract %v3float %tint_input 2
+         %76 = OpCompositeConstruct %mat2v3float %74 %75
+         %77 = OpCompositeExtract %int %tint_input 3
+         %78 = OpCompositeConstruct %S %73 %76 %77
+               OpReturnValue %78
+               OpFunctionEnd

@@ -1,0 +1,42 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint2* prevent_dce;
+};
+
+uint2 subgroupShuffle_5ef5a2() {
+  uint2 arg_0 = uint2(1u);
+  uint arg_1 = 1u;
+  uint2 res = simd_shuffle(arg_0, arg_1);
+  return res;
+}
+
+fragment void fragment_main(device uint2* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupShuffle_5ef5a2();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device uint2* prevent_dce;
+};
+
+uint2 subgroupShuffle_5ef5a2() {
+  uint2 arg_0 = uint2(1u);
+  uint arg_1 = 1u;
+  uint2 res = simd_shuffle(arg_0, arg_1);
+  return res;
+}
+
+kernel void compute_main(device uint2* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupShuffle_5ef5a2();
+}

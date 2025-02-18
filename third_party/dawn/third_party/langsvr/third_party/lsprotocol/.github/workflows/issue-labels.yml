@@ -1,0 +1,39 @@
+name: Issue labels
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  # From https://github.com/marketplace/actions/github-script#apply-a-label-to-an-issue.
+  add-triage-label:
+    name: "Add 'triage-needed'"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const result = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const labels = result.data.map((label) => label.name)
+            const hasNeeds = labels.some((label) => label.startsWith('needs'))
+
+            if (!hasNeeds) {
+              console.log('This issue is not labeled with a "needs __" label, add the "triage-needed" label.')
+
+              github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['triage-needed']
+              })
+            } else {
+              console.log('This issue already has a "needs __" label, do not add the "triage-needed" label.')
+            }

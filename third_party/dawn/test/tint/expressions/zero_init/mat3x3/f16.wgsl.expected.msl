@@ -1,0 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void f() {
+  half3x3 v = half3x3(half3(0.0h), half3(0.0h), half3(0.0h));
+}

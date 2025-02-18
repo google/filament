@@ -1,0 +1,68 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 48
+; Schema: 0
+               OpCapability Shader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpName %u "u"
+               OpName %f "f"
+               OpName %v "v"
+               OpName %unused_entry_point "unused_entry_point"
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%mat4v4float = OpTypeMatrix %v4float 4
+%_ptr_Private_mat4v4float = OpTypePointer Private %mat4v4float
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+    %float_4 = OpConstant %float 4
+          %7 = OpConstantComposite %v4float %float_1 %float_2 %float_3 %float_4
+    %float_5 = OpConstant %float 5
+    %float_6 = OpConstant %float 6
+    %float_7 = OpConstant %float 7
+    %float_8 = OpConstant %float 8
+         %12 = OpConstantComposite %v4float %float_5 %float_6 %float_7 %float_8
+    %float_9 = OpConstant %float 9
+   %float_10 = OpConstant %float 10
+   %float_11 = OpConstant %float 11
+   %float_12 = OpConstant %float 12
+         %17 = OpConstantComposite %v4float %float_9 %float_10 %float_11 %float_12
+   %float_13 = OpConstant %float 13
+   %float_14 = OpConstant %float 14
+   %float_15 = OpConstant %float 15
+   %float_16 = OpConstant %float 16
+         %22 = OpConstantComposite %v4float %float_13 %float_14 %float_15 %float_16
+          %6 = OpConstantComposite %mat4v4float %7 %12 %17 %22
+          %u = OpVariable %_ptr_Private_mat4v4float Private %6
+       %void = OpTypeVoid
+         %29 = OpTypeFunction %void
+       %half = OpTypeFloat 16
+     %v4half = OpTypeVector %half 4
+ %mat4v4half = OpTypeMatrix %v4half 4
+%_ptr_Function_mat4v4half = OpTypePointer Function %mat4v4half
+          %f = OpFunction %void None %29
+         %30 = OpLabel
+          %v = OpVariable %_ptr_Function_mat4v4half Function
+         %31 = OpLoad %mat4v4float %u None
+         %32 = OpCompositeExtract %v4float %31 0
+         %35 = OpFConvert %v4half %32
+         %36 = OpCompositeExtract %v4float %31 1
+         %37 = OpFConvert %v4half %36
+         %38 = OpCompositeExtract %v4float %31 2
+         %39 = OpFConvert %v4half %38
+         %40 = OpCompositeExtract %v4float %31 3
+         %41 = OpFConvert %v4half %40
+         %43 = OpCompositeConstruct %mat4v4half %35 %37 %39 %41
+               OpStore %v %43
+               OpReturn
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %29
+         %47 = OpLabel
+               OpReturn
+               OpFunctionEnd

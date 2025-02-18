@@ -1,0 +1,58 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 44
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %f "f"
+               OpExecutionMode %f LocalSize 1 1 1
+               OpName %f "f"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %r "r"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+%mat3v3float = OpTypeMatrix %v3float 3
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+          %9 = OpConstantComposite %v3float %float_1 %float_2 %float_3
+    %float_4 = OpConstant %float 4
+    %float_5 = OpConstant %float 5
+    %float_6 = OpConstant %float 6
+         %13 = OpConstantComposite %v3float %float_4 %float_5 %float_6
+    %float_7 = OpConstant %float 7
+    %float_8 = OpConstant %float 8
+    %float_9 = OpConstant %float 9
+         %17 = OpConstantComposite %v3float %float_7 %float_8 %float_9
+          %a = OpConstantComposite %mat3v3float %9 %13 %17
+   %float_n1 = OpConstant %float -1
+   %float_n2 = OpConstant %float -2
+   %float_n3 = OpConstant %float -3
+         %22 = OpConstantComposite %v3float %float_n1 %float_n2 %float_n3
+   %float_n4 = OpConstant %float -4
+   %float_n5 = OpConstant %float -5
+   %float_n6 = OpConstant %float -6
+         %26 = OpConstantComposite %v3float %float_n4 %float_n5 %float_n6
+   %float_n7 = OpConstant %float -7
+   %float_n8 = OpConstant %float -8
+   %float_n9 = OpConstant %float -9
+         %30 = OpConstantComposite %v3float %float_n7 %float_n8 %float_n9
+          %b = OpConstantComposite %mat3v3float %22 %26 %30
+          %f = OpFunction %void None %3
+          %4 = OpLabel
+         %34 = OpCompositeExtract %v3float %a 0
+         %35 = OpCompositeExtract %v3float %b 0
+         %36 = OpFAdd %v3float %34 %35
+         %37 = OpCompositeExtract %v3float %a 1
+         %38 = OpCompositeExtract %v3float %b 1
+         %39 = OpFAdd %v3float %37 %38
+         %40 = OpCompositeExtract %v3float %a 2
+         %41 = OpCompositeExtract %v3float %b 2
+         %42 = OpFAdd %v3float %40 %41
+          %r = OpCompositeConstruct %mat3v3float %36 %39 %42
+               OpReturn
+               OpFunctionEnd

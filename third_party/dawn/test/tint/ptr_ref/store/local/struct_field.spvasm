@@ -1,0 +1,30 @@
+                     OpCapability Shader
+                %1 = OpExtInstImport "GLSL.std.450"
+                     OpMemoryModel Logical GLSL450
+                     OpEntryPoint GLCompute %main "main"
+                     OpExecutionMode %main LocalSize 1 1 1
+                     OpSource GLSL 450
+                     OpName %main "main"
+                     OpName %S "S"
+                     OpMemberName %S 0 "i"
+                     OpName %V "V"
+                     OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+             %void = OpTypeVoid
+                %3 = OpTypeFunction %void
+              %int = OpTypeInt 32 1
+                %S = OpTypeStruct %int
+  %_ptr_Function_S = OpTypePointer Function %S
+            %int_0 = OpConstant %int 0
+            %int_5 = OpConstant %int 5
+%_ptr_Function_int = OpTypePointer Function %int
+             %uint = OpTypeInt 32 0
+           %v3uint = OpTypeVector %uint 3
+           %uint_1 = OpConstant %uint 1
+ %gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+             %main = OpFunction %void None %3
+                %5 = OpLabel
+                %V = OpVariable %_ptr_Function_S Function
+               %13 = OpAccessChain %_ptr_Function_int %V %int_0
+                     OpStore %13 %int_5
+                     OpReturn
+                     OpFunctionEnd

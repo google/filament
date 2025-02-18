@@ -1,0 +1,84 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate builtin_fn.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/msl/msl.def" -}}
+#include "src/tint/lang/msl/builtin_fn.h"
+
+namespace tint::msl {
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
+    switch (fn) {
+        case BuiltinFn::kAtomicCompareExchangeWeakExplicit:
+        case BuiltinFn::kAtomicExchangeExplicit:
+        case BuiltinFn::kAtomicFetchAddExplicit:
+        case BuiltinFn::kAtomicFetchAndExplicit:
+        case BuiltinFn::kAtomicFetchMaxExplicit:
+        case BuiltinFn::kAtomicFetchMinExplicit:
+        case BuiltinFn::kAtomicFetchOrExplicit:
+        case BuiltinFn::kAtomicFetchSubExplicit:
+        case BuiltinFn::kAtomicFetchXorExplicit:
+        case BuiltinFn::kAtomicStoreExplicit:
+        case BuiltinFn::kFence:
+        case BuiltinFn::kThreadgroupBarrier:
+        case BuiltinFn::kSimdBallot:
+        case BuiltinFn::kQuadShuffleXor:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad, core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kAtomicLoadExplicit:
+        case BuiltinFn::kGather:
+        case BuiltinFn::kGatherCompare:
+        case BuiltinFn::kRead:
+        case BuiltinFn::kSample:
+        case BuiltinFn::kSampleCompare:
+        case BuiltinFn::kSimdgroupLoad:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
+
+        case BuiltinFn::kWrite:
+        case BuiltinFn::kSimdgroupStore:
+            return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kStore};
+
+        case BuiltinFn::kDistance:
+        case BuiltinFn::kDot:
+        case BuiltinFn::kFmod:
+        case BuiltinFn::kFrexp:
+        case BuiltinFn::kGetWidth:
+        case BuiltinFn::kGetHeight:
+        case BuiltinFn::kGetDepth:
+        case BuiltinFn::kGetArraySize:
+        case BuiltinFn::kGetNumMipLevels:
+        case BuiltinFn::kGetNumSamples:
+        case BuiltinFn::kLength:
+        case BuiltinFn::kModf:
+        case BuiltinFn::kSign:
+        case BuiltinFn::kNone:
+        case BuiltinFn::kConvert:
+        case BuiltinFn::kSimdgroupMultiply:
+        case BuiltinFn::kSimdgroupMultiplyAccumulate:
+            break;
+    }
+    return core::ir::Instruction::Accesses{};
+}
+
+}  // namespace tint::msl

@@ -1,0 +1,38 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int4* prevent_dce;
+};
+
+int4 subgroupAdd_28db2c() {
+  int4 res = simd_sum(int4(1));
+  return res;
+}
+
+fragment void fragment_main(device int4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupAdd_28db2c();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  device int4* prevent_dce;
+};
+
+int4 subgroupAdd_28db2c() {
+  int4 res = simd_sum(int4(1));
+  return res;
+}
+
+kernel void compute_main(device int4* prevent_dce [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.prevent_dce=prevent_dce};
+  (*tint_module_vars.prevent_dce) = subgroupAdd_28db2c();
+}

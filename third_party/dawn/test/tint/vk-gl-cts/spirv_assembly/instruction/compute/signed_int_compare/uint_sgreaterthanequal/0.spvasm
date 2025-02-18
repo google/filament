@@ -1,0 +1,46 @@
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %gl_GlobalInvocationID
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpSource OpenCL_C 120
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %_struct_4 BufferBlock
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 0
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 1
+               OpDecorate %7 DescriptorSet 0
+               OpDecorate %7 Binding 2
+       %uint = OpTypeInt 32 0
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+  %_struct_4 = OpTypeStruct %_runtimearr_uint
+%_ptr_Uniform__struct_4 = OpTypePointer Uniform %_struct_4
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%_ptr_Input_uint = OpTypePointer Input %uint
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+       %bool = OpTypeBool
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+          %5 = OpVariable %_ptr_Uniform__struct_4 Uniform
+          %6 = OpVariable %_ptr_Uniform__struct_4 Uniform
+          %7 = OpVariable %_ptr_Uniform__struct_4 Uniform
+          %1 = OpFunction %void None %11
+         %19 = OpLabel
+         %20 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %21 = OpLoad %uint %20
+         %22 = OpAccessChain %_ptr_Uniform_uint %5 %uint_0 %21
+         %23 = OpLoad %uint %22
+         %24 = OpAccessChain %_ptr_Uniform_uint %6 %uint_0 %21
+         %25 = OpLoad %uint %24
+         %26 = OpSGreaterThanEqual %bool %23 %25
+         %27 = OpSelect %uint %26 %uint_1 %uint_0
+         %28 = OpAccessChain %_ptr_Uniform_uint %7 %uint_0 %21
+               OpStore %28 %27
+               OpReturn
+               OpFunctionEnd

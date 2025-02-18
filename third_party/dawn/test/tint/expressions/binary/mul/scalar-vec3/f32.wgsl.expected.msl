@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  float const a = 4.0f;
+  float3 const b = float3(1.0f, 2.0f, 3.0f);
+  float3 const r = (a * b);
+}

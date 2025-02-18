@@ -1,0 +1,71 @@
+//
+// fragment_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_vec4_f16 {
+  half4 fract;
+  half4 whole;
+};
+
+void modf_995934() {
+  modf_result_vec4_f16 res = modf_result_vec4_f16{.fract=half4(-0.5h), .whole=half4(-1.0h)};
+}
+
+fragment void fragment_main() {
+  modf_995934();
+}
+//
+// compute_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_vec4_f16 {
+  half4 fract;
+  half4 whole;
+};
+
+void modf_995934() {
+  modf_result_vec4_f16 res = modf_result_vec4_f16{.fract=half4(-0.5h), .whole=half4(-1.0h)};
+}
+
+kernel void compute_main() {
+  modf_995934();
+}
+//
+// vertex_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_vec4_f16 {
+  half4 fract;
+  half4 whole;
+};
+
+struct VertexOutput {
+  float4 pos;
+};
+
+struct vertex_main_outputs {
+  float4 VertexOutput_pos [[position]];
+};
+
+void modf_995934() {
+  modf_result_vec4_f16 res = modf_result_vec4_f16{.fract=half4(-0.5h), .whole=half4(-1.0h)};
+}
+
+VertexOutput vertex_main_inner() {
+  VertexOutput out = {};
+  out.pos = float4(0.0f);
+  modf_995934();
+  return out;
+}
+
+vertex vertex_main_outputs vertex_main() {
+  vertex_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutput_pos = vertex_main_inner().pos;
+  return tint_wrapper_result;
+}

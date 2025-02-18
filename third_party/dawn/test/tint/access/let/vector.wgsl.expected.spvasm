@@ -1,0 +1,49 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpMemberName %s_block 0 "inner"
+               OpName %s_block "s_block"
+               OpName %main "main"
+               OpName %v "v"
+               OpName %scalar "scalar"
+               OpName %swizzle2 "swizzle2"
+               OpName %swizzle3 "swizzle3"
+               OpMemberDecorate %s_block 0 Offset 0
+               OpDecorate %s_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+    %s_block = OpTypeStruct %v3float
+%_ptr_StorageBuffer_s_block = OpTypePointer StorageBuffer %s_block
+          %1 = OpVariable %_ptr_StorageBuffer_s_block StorageBuffer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+    %float_1 = OpConstant %float 1
+    %float_2 = OpConstant %float 2
+    %float_3 = OpConstant %float 3
+          %v = OpConstantComposite %v3float %float_1 %float_2 %float_3
+    %v2float = OpTypeVector %float 2
+%_ptr_StorageBuffer_v3float = OpTypePointer StorageBuffer %v3float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+       %main = OpFunction %void None %8
+          %9 = OpLabel
+     %scalar = OpCompositeExtract %float %v 1
+   %swizzle2 = OpVectorShuffle %v2float %v %v 0 2
+   %swizzle3 = OpVectorShuffle %v3float %v %v 0 2 1
+         %18 = OpCompositeConstruct %v3float %scalar %scalar %scalar
+         %19 = OpCompositeConstruct %v3float %swizzle2 %float_1
+         %20 = OpFAdd %v3float %18 %19
+         %21 = OpFAdd %v3float %20 %swizzle3
+         %22 = OpAccessChain %_ptr_StorageBuffer_v3float %1 %uint_0
+               OpStore %22 %21 None
+               OpReturn
+               OpFunctionEnd

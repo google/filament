@@ -1,0 +1,50 @@
+; Test: SpvModuleScopeVarParserTest_BindingDecoration_Valid.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 31
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+OpDecorate %1 DescriptorSet 0
+OpDecorate %1 Binding 3
+OpDecorate %_struct_3 Block
+OpMemberDecorate %_struct_3 0 Offset 0
+OpMemberDecorate %_struct_3 1 Offset 4
+OpMemberDecorate %_struct_3 2 Offset 8
+OpDecorate %_arr_uint_uint_2 ArrayStride 4
+%void = OpTypeVoid
+%6 = OpTypeFunction %void
+%bool = OpTypeBool
+%float = OpTypeFloat 32
+%uint = OpTypeInt 32 0
+%int = OpTypeInt 32 1
+%_ptr_Private_bool = OpTypePointer Private %bool
+%_ptr_Private_float = OpTypePointer Private %float
+%_ptr_Private_uint = OpTypePointer Private %uint
+%_ptr_Private_int = OpTypePointer Private %int
+%true = OpConstantTrue %bool
+%false = OpConstantFalse %bool
+%float_0 = OpConstant %float 0
+%float_1_5 = OpConstant %float 1.5
+%uint_1 = OpConstant %uint 1
+%int_n1 = OpConstant %int -1
+%int_14 = OpConstant %int 14
+%uint_2 = OpConstant %uint 2
+%v2bool = OpTypeVector %bool 2
+%v2uint = OpTypeVector %uint 2
+%v2int = OpTypeVector %int 2
+%v2float = OpTypeVector %float 2
+%v4float = OpTypeVector %float 4
+%mat3v2float = OpTypeMatrix %v2float 3
+%_arr_uint_uint_2 = OpTypeArray %uint %uint_2
+%_struct_3 = OpTypeStruct %uint %float %_arr_uint_uint_2
+%_ptr_StorageBuffer__struct_3 = OpTypePointer StorageBuffer %_struct_3
+%1 = OpVariable %_ptr_StorageBuffer__struct_3 StorageBuffer
+%2 = OpFunction %void None %6
+%30 = OpLabel
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,17 @@
+[package]
+name = "lsprotocol-test"
+version = "0.1.0"
+edition = "2021"
+description = "Tests for generated Rust types for Language Server Protocol."
+authors = ["Microsoft Corporation <lsprotocol-help@microsoft.com>"]
+license = "MIT"
+repository = "https://github.com/microsoft/lsprotocol"
+
+[dependencies]
+glob = "0.3.1"
+serde = {version ="1.0.152", features = ["derive"]}
+serde_json = "1.0.93"
+serde_repr = "0.1.10"
+url = "2.3.1"
+rust_decimal = "1.29.1"
+lsprotocol = { path = "../../packages/rust/lsprotocol", features = ["proposed"]}

@@ -1,0 +1,8 @@
+#include <metal_stdlib>
+using namespace metal;
+
+kernel void f() {
+  half a = 1.0h;
+  half b = 0.0h;
+  half const r = (a / b);
+}

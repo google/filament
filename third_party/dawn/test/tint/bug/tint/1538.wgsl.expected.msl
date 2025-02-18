@@ -1,0 +1,61 @@
+#include <metal_stdlib>
+using namespace metal;
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct tint_module_vars_struct {
+  device tint_array<uint, 1>* buf;
+};
+
+int g() {
+  return 0;
+}
+
+int f() {
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      g();
+      break;
+    }
+  }
+  int const o = g();
+  return 0;
+}
+
+kernel void v(device tint_array<uint, 1>* buf [[buffer(0)]]) {
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{.buf=buf};
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      if (((*tint_module_vars.buf)[0u] == 0u)) {
+        break;
+      }
+      int s = f();
+      (*tint_module_vars.buf)[0u] = 0u;
+      {
+        uint const tint_low_inc_1 = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc_1;
+        uint const tint_carry_1 = uint((tint_low_inc_1 == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry_1);
+      }
+      continue;
+    }
+  }
+}

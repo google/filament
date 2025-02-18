@@ -1,0 +1,12 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void c(int z) {
+  int a = as_type<int>((as_type<uint>(1) + as_type<uint>(z)));
+  a = as_type<int>((as_type<uint>(a) + as_type<uint>(2)));
+}
+
+void b() {
+  c(2);
+  c(3);
+}

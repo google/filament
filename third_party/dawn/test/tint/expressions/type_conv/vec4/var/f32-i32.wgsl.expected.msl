@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct tint_module_vars_struct {
+  thread float4* u;
+};
+
+int4 tint_v4f32_to_v4i32(float4 value) {
+  return select(int4(2147483647), select(int4((-2147483647 - 1)), int4(value), (value >= float4(-2147483648.0f))), (value <= float4(2147483520.0f)));
+}
+
+void f(tint_module_vars_struct tint_module_vars) {
+  int4 const v = tint_v4f32_to_v4i32((*tint_module_vars.u));
+}

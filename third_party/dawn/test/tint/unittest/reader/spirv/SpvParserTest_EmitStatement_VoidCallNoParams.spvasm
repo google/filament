@@ -1,0 +1,22 @@
+; Test: SpvParserTest_EmitStatement_VoidCallNoParams.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "x_100"
+OpExecutionMode %100 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%50 = OpFunction %void None %3
+%4 = OpLabel
+OpReturn
+OpFunctionEnd
+%100 = OpFunction %void None %3
+%5 = OpLabel
+%1 = OpFunctionCall %void %50
+OpReturn
+OpFunctionEnd
+

@@ -1,0 +1,32 @@
+; Test: SpvParserMemoryTest_RemapStorageBuffer_TypesAndVarDeclarations.spvasm
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 101
+; Schema: 0
+OpCapability Shader
+OpMemoryModel Logical Simple
+OpEntryPoint Fragment %100 "main"
+OpExecutionMode %100 OriginUpperLeft
+OpName %myvar "myvar"
+OpDecorate %myvar DescriptorSet 0
+OpDecorate %myvar Binding 0
+OpDecorate %_struct_2 BufferBlock
+OpMemberDecorate %_struct_2 0 Offset 0
+OpMemberDecorate %_struct_2 1 Offset 4
+OpDecorate %_runtimearr_uint ArrayStride 4
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+%_struct_2 = OpTypeStruct %uint %_runtimearr_uint
+%_ptr_Uniform__struct_2 = OpTypePointer Uniform %_struct_2
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+%myvar = OpVariable %_ptr_Uniform__struct_2 Uniform
+%100 = OpFunction %void None %5
+%11 = OpLabel
+OpReturn
+OpFunctionEnd
+

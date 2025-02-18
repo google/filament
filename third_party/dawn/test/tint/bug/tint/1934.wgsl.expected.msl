@@ -1,0 +1,7 @@
+#include <metal_stdlib>
+using namespace metal;
+
+void v() {
+  int const i = 1;
+  int b = int2(1)[min(uint(i), 1u)];
+}

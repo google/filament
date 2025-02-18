@@ -1,0 +1,21 @@
+name: "PR labels"
+on:
+  pull_request:
+    types:
+      - "opened"
+      - "reopened"
+      - "labeled"
+      - "unlabeled"
+      - "synchronize"
+
+jobs:
+  add-pr-label:
+    name: "Ensure Required Labels"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "PR impact specified"
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: exactly
+          count: 1
+          labels: "bug, debt, feature-request, no-changelog"

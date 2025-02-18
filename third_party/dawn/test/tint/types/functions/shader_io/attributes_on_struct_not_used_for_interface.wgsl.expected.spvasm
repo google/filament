@@ -1,0 +1,65 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 33
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %frag_main "frag_main"
+               OpExecutionMode %frag_main OriginUpperLeft
+               OpMemberName %S 0 "f"
+               OpMemberName %S 1 "u"
+               OpMemberName %S 2 "v"
+               OpName %S "S"
+               OpMemberName %output_block 0 "inner"
+               OpName %output_block "output_block"
+               OpName %frag_main "frag_main"
+               OpName %tint_store_and_preserve_padding "tint_store_and_preserve_padding"
+               OpName %value_param "value_param"
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %S 1 Offset 4
+               OpMemberDecorate %S 2 Offset 128
+               OpMemberDecorate %output_block 0 Offset 0
+               OpDecorate %output_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+    %v4float = OpTypeVector %float 4
+          %S = OpTypeStruct %float %uint %v4float
+%output_block = OpTypeStruct %S
+%_ptr_StorageBuffer_output_block = OpTypePointer StorageBuffer %output_block
+          %1 = OpVariable %_ptr_StorageBuffer_output_block StorageBuffer
+       %void = OpTypeVoid
+         %10 = OpTypeFunction %void
+    %float_1 = OpConstant %float 1
+     %uint_2 = OpConstant %uint 2
+    %float_3 = OpConstant %float 3
+         %17 = OpConstantComposite %v4float %float_3 %float_3 %float_3 %float_3
+         %14 = OpConstantComposite %S %float_1 %uint_2 %17
+         %20 = OpTypeFunction %void %S
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+     %uint_1 = OpConstant %uint 1
+%_ptr_StorageBuffer_v4float = OpTypePointer StorageBuffer %v4float
+  %frag_main = OpFunction %void None %10
+         %11 = OpLabel
+         %12 = OpFunctionCall %void %tint_store_and_preserve_padding %14
+               OpReturn
+               OpFunctionEnd
+%tint_store_and_preserve_padding = OpFunction %void None %20
+%value_param = OpFunctionParameter %S
+         %21 = OpLabel
+         %22 = OpAccessChain %_ptr_StorageBuffer_float %1 %uint_0 %uint_0
+         %25 = OpCompositeExtract %float %value_param 0
+               OpStore %22 %25 None
+         %26 = OpAccessChain %_ptr_StorageBuffer_uint %1 %uint_0 %uint_1
+         %29 = OpCompositeExtract %uint %value_param 1
+               OpStore %26 %29 None
+         %30 = OpAccessChain %_ptr_StorageBuffer_v4float %1 %uint_0 %uint_2
+         %32 = OpCompositeExtract %v4float %value_param 2
+               OpStore %30 %32 None
+               OpReturn
+               OpFunctionEnd

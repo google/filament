@@ -1,0 +1,55 @@
+//
+// vert_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct Interface {
+  float col1;
+  float col2;
+  float4 pos;
+};
+
+struct vert_main_outputs {
+  float Interface_col1 [[user(locn1)]];
+  float Interface_col2 [[user(locn2)]];
+  float4 Interface_pos [[position]];
+};
+
+Interface vert_main_inner() {
+  return Interface{.col1=0.40000000596046447754f, .col2=0.60000002384185791016f, .pos=float4(0.0f)};
+}
+
+vertex vert_main_outputs vert_main() {
+  Interface const v = vert_main_inner();
+  vert_main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.Interface_col1 = v.col1;
+  tint_wrapper_result.Interface_col2 = v.col2;
+  tint_wrapper_result.Interface_pos = v.pos;
+  return tint_wrapper_result;
+}
+//
+// frag_main
+//
+#include <metal_stdlib>
+using namespace metal;
+
+struct Interface {
+  float col1;
+  float col2;
+  float4 pos;
+};
+
+struct frag_main_inputs {
+  float Interface_col1 [[user(locn1)]];
+  float Interface_col2 [[user(locn2)]];
+};
+
+void frag_main_inner(Interface colors) {
+  float const r = colors.col1;
+  float const g = colors.col2;
+}
+
+fragment void frag_main(frag_main_inputs inputs [[stage_in]], float4 Interface_pos [[position]]) {
+  frag_main_inner(Interface{.col1=inputs.Interface_col1, .col2=inputs.Interface_col2, .pos=Interface_pos});
+}

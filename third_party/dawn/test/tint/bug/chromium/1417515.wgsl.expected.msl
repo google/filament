@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct modf_result_f32 {
+  float fract;
+  float whole;
+};
+
+void foo() {
+  modf_result_f32 const s1 = modf_result_f32{};
+}

@@ -1,0 +1,85 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 44
+; Schema: 0
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpCapability VulkanMemoryModelDeviceScope
+               OpCapability CooperativeMatrixKHR
+               OpExtension "SPV_KHR_vulkan_memory_model"
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %compute_main "compute_main"
+               OpExecutionMode %compute_main LocalSize 1 1 1
+               OpMemberName %prevent_dce_block 0 "inner"
+               OpName %prevent_dce_block "prevent_dce_block"
+               OpMemberName %SB_RO 0 "arg_0"
+               OpName %SB_RO "SB_RO"
+               OpName %sb_ro "sb_ro"
+               OpName %subgroupMatrixLoad_da5d2c "subgroupMatrixLoad_da5d2c"
+               OpName %arg_1 "arg_1"
+               OpName %arg_3 "arg_3"
+               OpName %res "res"
+               OpName %compute_main "compute_main"
+               OpDecorate %_arr_int_uint_1024 ArrayStride 4
+               OpMemberDecorate %prevent_dce_block 0 Offset 0
+               OpDecorate %prevent_dce_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %_runtimearr_int ArrayStride 4
+               OpMemberDecorate %SB_RO 0 Offset 0
+               OpDecorate %SB_RO Block
+               OpDecorate %sb_ro DescriptorSet 0
+               OpDecorate %sb_ro Binding 1
+               OpDecorate %sb_ro NonWritable
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+  %uint_1024 = OpConstant %uint 1024
+%_arr_int_uint_1024 = OpTypeArray %int %uint_1024
+%prevent_dce_block = OpTypeStruct %_arr_int_uint_1024
+%_ptr_StorageBuffer_prevent_dce_block = OpTypePointer StorageBuffer %prevent_dce_block
+          %1 = OpVariable %_ptr_StorageBuffer_prevent_dce_block StorageBuffer
+%_runtimearr_int = OpTypeRuntimeArray %int
+      %SB_RO = OpTypeStruct %_runtimearr_int
+%_ptr_StorageBuffer_SB_RO = OpTypePointer StorageBuffer %SB_RO
+      %sb_ro = OpVariable %_ptr_StorageBuffer_SB_RO StorageBuffer
+     %uint_3 = OpConstant %uint 3
+     %uint_8 = OpConstant %uint 8
+     %uint_1 = OpConstant %uint 1
+         %13 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_8 %uint_1
+         %17 = OpTypeFunction %13
+%_ptr_Function_uint = OpTypePointer Function %uint
+%_ptr_StorageBuffer__runtimearr_int = OpTypePointer StorageBuffer %_runtimearr_int
+     %uint_0 = OpConstant %uint 0
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+%_ptr_Function_13 = OpTypePointer Function %13
+       %void = OpTypeVoid
+         %35 = OpTypeFunction %void
+%_ptr_StorageBuffer__arr_int_uint_1024 = OpTypePointer StorageBuffer %_arr_int_uint_1024
+%_ptr_StorageBuffer_int_0 = OpTypePointer StorageBuffer %int
+    %uint_64 = OpConstant %uint 64
+%subgroupMatrixLoad_da5d2c = OpFunction %13 None %17
+         %18 = OpLabel
+      %arg_1 = OpVariable %_ptr_Function_uint Function
+      %arg_3 = OpVariable %_ptr_Function_uint Function
+        %res = OpVariable %_ptr_Function_13 Function
+               OpStore %arg_1 %uint_1
+               OpStore %arg_3 %uint_1
+         %22 = OpAccessChain %_ptr_StorageBuffer__runtimearr_int %sb_ro %uint_0
+         %25 = OpLoad %uint %arg_1 None
+         %26 = OpLoad %uint %arg_3 None
+         %27 = OpAccessChain %_ptr_StorageBuffer_int %22 %25
+         %29 = OpCooperativeMatrixLoadKHR %13 %27 %uint_1 %26 NonPrivatePointer
+               OpStore %res %29
+         %32 = OpLoad %13 %res None
+               OpReturnValue %32
+               OpFunctionEnd
+%compute_main = OpFunction %void None %35
+         %36 = OpLabel
+         %37 = OpFunctionCall %13 %subgroupMatrixLoad_da5d2c
+         %38 = OpAccessChain %_ptr_StorageBuffer__arr_int_uint_1024 %1 %uint_0
+         %40 = OpAccessChain %_ptr_StorageBuffer_int_0 %38 %uint_0
+               OpCooperativeMatrixStoreKHR %40 %37 %uint_0 %uint_64 NonPrivatePointer
+               OpReturn
+               OpFunctionEnd

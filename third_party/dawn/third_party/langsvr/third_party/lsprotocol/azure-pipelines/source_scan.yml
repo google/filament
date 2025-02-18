@@ -1,0 +1,11 @@
+trigger:
+  - main
+
+variables:
+  Codeql.Enabled: true
+
+stages:
+  - stage: pre_build
+    displayName: Pre-build validation
+    jobs:
+      - template: template/static_analysis.yml

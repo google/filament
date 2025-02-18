@@ -1,0 +1,72 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Google Tint Compiler; 1
+; Bound: 42
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+               OpMemberName %S 0 "a"
+               OpName %S "S"
+               OpMemberName %v_block 0 "inner"
+               OpName %v_block "v_block"
+               OpName %foo "foo"
+               OpName %tint_div_v4i32 "tint_div_v4i32"
+               OpName %lhs "lhs"
+               OpName %rhs "rhs"
+               OpName %unused_entry_point "unused_entry_point"
+               OpMemberDecorate %S 0 Offset 0
+               OpMemberDecorate %v_block 0 Offset 0
+               OpDecorate %v_block Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+        %int = OpTypeInt 32 1
+      %v4int = OpTypeVector %int 4
+          %S = OpTypeStruct %v4int
+    %v_block = OpTypeStruct %S
+%_ptr_StorageBuffer_v_block = OpTypePointer StorageBuffer %v_block
+          %1 = OpVariable %_ptr_StorageBuffer_v_block StorageBuffer
+       %void = OpTypeVoid
+          %9 = OpTypeFunction %void
+%_ptr_StorageBuffer_v4int = OpTypePointer StorageBuffer %v4int
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+      %int_2 = OpConstant %int 2
+         %18 = OpConstantComposite %v4int %int_2 %int_2 %int_2 %int_2
+         %22 = OpTypeFunction %v4int %v4int %v4int
+         %25 = OpConstantNull %v4int
+       %bool = OpTypeBool
+     %v4bool = OpTypeVector %bool 4
+%int_n2147483648 = OpConstant %int -2147483648
+         %29 = OpConstantComposite %v4int %int_n2147483648 %int_n2147483648 %int_n2147483648 %int_n2147483648
+     %int_n1 = OpConstant %int -1
+         %32 = OpConstantComposite %v4int %int_n1 %int_n1 %int_n1 %int_n1
+      %int_1 = OpConstant %int 1
+         %37 = OpConstantComposite %v4int %int_1 %int_1 %int_1 %int_1
+        %foo = OpFunction %void None %9
+         %10 = OpLabel
+         %11 = OpAccessChain %_ptr_StorageBuffer_v4int %1 %uint_0 %uint_0
+         %15 = OpLoad %v4int %11 None
+         %16 = OpFunctionCall %v4int %tint_div_v4i32 %15 %18
+               OpStore %11 %16 None
+               OpReturn
+               OpFunctionEnd
+%tint_div_v4i32 = OpFunction %v4int None %22
+        %lhs = OpFunctionParameter %v4int
+        %rhs = OpFunctionParameter %v4int
+         %23 = OpLabel
+         %24 = OpIEqual %v4bool %rhs %25
+         %28 = OpIEqual %v4bool %lhs %29
+         %31 = OpIEqual %v4bool %rhs %32
+         %34 = OpLogicalAnd %v4bool %28 %31
+         %35 = OpLogicalOr %v4bool %24 %34
+         %36 = OpSelect %v4int %35 %37 %rhs
+         %39 = OpSDiv %v4int %lhs %36
+               OpReturnValue %39
+               OpFunctionEnd
+%unused_entry_point = OpFunction %void None %9
+         %41 = OpLabel
+               OpReturn
+               OpFunctionEnd

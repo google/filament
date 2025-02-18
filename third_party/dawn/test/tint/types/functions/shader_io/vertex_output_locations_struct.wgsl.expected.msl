@@ -1,0 +1,33 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct VertexOutputs {
+  int loc0;
+  uint loc1;
+  float loc2;
+  float4 loc3;
+  float4 position;
+};
+
+struct main_outputs {
+  int VertexOutputs_loc0 [[user(locn0)]] [[flat]];
+  uint VertexOutputs_loc1 [[user(locn1)]] [[flat]];
+  float VertexOutputs_loc2 [[user(locn2)]];
+  float4 VertexOutputs_loc3 [[user(locn3)]];
+  float4 VertexOutputs_position [[position]];
+};
+
+VertexOutputs main_inner() {
+  return VertexOutputs{.loc0=1, .loc1=1u, .loc2=1.0f, .loc3=float4(1.0f, 2.0f, 3.0f, 4.0f), .position=float4(0.0f)};
+}
+
+vertex main_outputs v() {
+  VertexOutputs const v_1 = main_inner();
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.VertexOutputs_loc0 = v_1.loc0;
+  tint_wrapper_result.VertexOutputs_loc1 = v_1.loc1;
+  tint_wrapper_result.VertexOutputs_loc2 = v_1.loc2;
+  tint_wrapper_result.VertexOutputs_loc3 = v_1.loc3;
+  tint_wrapper_result.VertexOutputs_position = v_1.position;
+  return tint_wrapper_result;
+}

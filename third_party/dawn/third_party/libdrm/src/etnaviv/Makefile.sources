@@ -1,0 +1,13 @@
+LIBDRM_ETNAVIV_FILES := \
+	etnaviv_device.c \
+	etnaviv_gpu.c \
+	etnaviv_bo.c \
+	etnaviv_bo_cache.c \
+	etnaviv_perfmon.c \
+	etnaviv_pipe.c \
+	etnaviv_cmd_stream.c \
+	etnaviv_drm.h \
+	etnaviv_priv.h
+
+LIBDRM_ETNAVIV_H_FILES := \
+	etnaviv_drmif.h

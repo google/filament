@@ -1,0 +1,31 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color_out %gl_FragDepth
+               OpExecutionMode %main OriginUpperLeft
+               OpExecutionMode %main EarlyFragmentTests
+               OpExecutionMode %main DepthReplacing
+               OpSource GLSL 430
+               OpName %main "main"
+               OpName %color_out "color_out"
+               OpName %gl_FragDepth "gl_FragDepth"
+               OpDecorate %color_out Location 0
+               OpDecorate %gl_FragDepth BuiltIn FragDepth
+       %void = OpTypeVoid
+          %6 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+  %color_out = OpVariable %_ptr_Output_v4float Output
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %12 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+%_ptr_Output_float = OpTypePointer Output %float
+%gl_FragDepth = OpVariable %_ptr_Output_float Output
+%float_0_699999988 = OpConstant %float 0.699999988
+       %main = OpFunction %void None %6
+         %15 = OpLabel
+               OpStore %color_out %12
+               OpStore %gl_FragDepth %float_0_699999988
+               OpReturn
+               OpFunctionEnd

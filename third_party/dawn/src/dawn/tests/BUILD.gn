@@ -1,0 +1,934 @@
+# Copyright 2012 The Dawn & Tint Authors
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import("../../../scripts/dawn_overrides_with_defaults.gni")
+
+import("//testing/test.gni")
+import("${dawn_root}/generator/dawn_generator.gni")
+import("${dawn_root}/scripts/dawn_features.gni")
+
+# When embedded by Chrome, partition_alloc and the dangling pointer detector
+# are already initialized. Dawn shouldn't attempt to initialize them again. This
+# variable is useful to avoid double initialization of the library.
+dawn_enable_partition_alloc = false
+if (dawn_standalone && defined(dawn_partition_alloc_dir)) {
+  import("//build_overrides/partition_alloc.gni")
+  dawn_enable_partition_alloc = enable_dangling_raw_ptr_checks_default
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":dawn_end2end_tests",
+    ":dawn_perf_tests",
+    ":dawn_unittests",
+    "${dawn_root}/src/dawn/tests/benchmarks:dawn_benchmarks",
+    "${dawn_root}/src/utils",
+  ]
+}
+
+###############################################################################
+# Gtest Gmock - Handle building inside and outside of Chromium.
+###############################################################################
+
+# When building outside of Chromium we need to define our own targets for GTest
+# and GMock. However when compiling inside of Chromium we need to reuse the
+# existing targets, both because Chromium has a special harness for swarming
+# and because otherwise the "gn check" fails.
+
+if (!build_with_chromium) {
+  # When we aren't in Chromium we define out own targets based on the location
+  # of the googletest repo.
+  googletest_dir = dawn_googletest_dir
+
+  config("gtest_config") {
+    include_dirs = [
+      "${googletest_dir}/googletest",
+      "${googletest_dir}/googletest/include",
+    ]
+  }
+
+  static_library("gtest") {
+    testonly = true
+    sources = [ "${googletest_dir}/googletest/src/gtest-all.cc" ]
+    public_configs = [ ":gtest_config" ]
+  }
+
+  config("gmock_config") {
+    include_dirs = [
+      "${googletest_dir}/googlemock",
+      "${googletest_dir}/googlemock/include",
+      "${googletest_dir}/googletest/include",
+    ]
+  }
+
+  static_library("gmock") {
+    testonly = true
+    sources = [ "${googletest_dir}/googlemock/src/gmock-all.cc" ]
+    public_configs = [ ":gmock_config" ]
+  }
+
+  group("gmock_and_gtest") {
+    testonly = true
+    public_deps = [
+      ":gmock",
+      ":gtest",
+    ]
+  }
+} else {
+  # When we are in Chromium we reuse its targets, and also add some deps that
+  # are needed to launch the test in swarming mode.
+  group("gmock_and_gtest") {
+    testonly = true
+    public_deps = [
+      "//base",
+      "//base/test:test_support",
+      "//testing/gmock",
+      "//testing/gtest",
+    ]
+  }
+}
+
+###############################################################################
+# Wrapping of Chromium targets
+###############################################################################
+
+# These targets are separated because they are Chromium sources files that
+# can't use the dawn_internal config, otherwise Dawn's warning flags get
+# applied while compiling a bunch of Chromium's //base (via header inclusion)
+if (build_with_chromium) {
+  source_set("unittests_main") {
+    testonly = true
+    deps = [ ":gmock_and_gtest" ]
+    sources = [ "//gpu/dawn_unittests_main.cc" ]
+  }
+  source_set("end2end_tests_main") {
+    testonly = true
+    deps = [ ":gmock_and_gtest" ]
+    sources = [ "//gpu/dawn_end2end_tests_main.cc" ]
+  }
+  source_set("perf_tests_main") {
+    testonly = true
+    deps = [ ":gmock_and_gtest" ]
+    sources = [ "//gpu/dawn_perf_tests_main.cc" ]
+  }
+}
+
+###############################################################################
+# Copy target for DXC
+###############################################################################
+
+# When building with chromium under Windows, we need to copy the DXC from
+# Windows SDK into build folder, in order to ensure a DXC of version 1.6 is
+# available when running end-to-end tests in Chromium. Note that currently DXC
+# only provided for x86 and x64 in Windows SDK 20348.
+if (!dawn_use_built_dxc && build_with_chromium && is_win &&
+    (target_cpu == "x64" || target_cpu == "x86")) {
+  # The windows_sdk_path is acquired in visual_studio_version.gni.
+  import("//build/config/win/visual_studio_version.gni")
+
+  # Windows 10 SDK version 10.0.20348.0 provides DXC compiler and validator both
+  # of v1.6 and Chromium builds require this SDK version or higher.
+  assert(defined(windows_sdk_path))
+  assert(defined(windows_sdk_version))
+  assert(windows_sdk_path != "")
+  assert(windows_sdk_version != "")
+
+  # Declare a copy target to copy DXC binary from Windows SDK for running Dawn
+  # end-to-end test in Chromium.
+  copy("copy_dxc_binary") {
+    sources = [
+      "$windows_sdk_path/bin/$windows_sdk_version/$target_cpu/dxc.exe",
+      "$windows_sdk_path/bin/$windows_sdk_version/$target_cpu/dxcompiler.dll",
+      "$windows_sdk_path/bin/$windows_sdk_version/$target_cpu/dxil.dll",
+    ]
+
+    outputs = [ "$root_out_dir/{{source_file_part}}" ]
+  }
+}
+
+###############################################################################
+# Dawn test template
+###############################################################################
+template("dawn_test") {
+  test(target_name) {
+    # Copy all variables except "configs", which has a default value
+    forward_variables_from(invoker, "*", [ "configs" ])
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+
+    configs += [ "${dawn_root}/src/dawn/common:internal_config" ]
+
+    if (dawn_tests_use_angle && defined(dawn_angle_dir)) {
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+      data_deps += [
+        "${dawn_angle_dir}:libEGL",
+        "${dawn_angle_dir}:libGLESv2",
+      ]
+    }
+
+    # Running Dawn tests within Chromium in Windows may require DXC, copy DXC
+    # binary from Windows SDK.
+    if (build_with_chromium && is_win &&
+        (target_cpu == "x64" || target_cpu == "x86")) {
+      if (dawn_use_built_dxc) {
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += [
+          "$dawn_root/third_party/gn/dxc:copy_dxil_dll",
+          "$dawn_root/third_party/gn/dxc:dxc",
+          "$dawn_root/third_party/gn/dxc:dxcompiler",
+        ]
+      } else {
+        if (!defined(data_deps)) {
+          data_deps = []
+        }
+        data_deps += [ ":copy_dxc_binary" ]
+      }
+    }
+  }
+}
+
+###############################################################################
+# Dawn unittests
+###############################################################################
+
+dawn_json_generator("mock_webgpu_gen") {
+  target = "mock_api"
+  outputs = [
+    "src/dawn/mock_webgpu.h",
+    "src/dawn/mock_webgpu.cpp",
+  ]
+}
+
+# Source code for mocks used for unit testing are separated from the rest of
+# sources so that they aren't included in non-test builds.
+source_set("native_mocks_sources") {
+  testonly = true
+
+  deps = [
+    ":gmock_and_gtest",
+    ":test_infra_sources",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/native:sources",
+    "${dawn_root}/src/dawn/native:static",
+    "${dawn_root}/src/dawn/utils",
+  ]
+
+  # Add internal dawn native config for internal unittests.
+  configs += [ "${dawn_root}/src/dawn/native:internal" ]
+
+  sources = [
+    "unittests/native/mocks/BindGroupLayoutMock.cpp",
+    "unittests/native/mocks/BindGroupLayoutMock.h",
+    "unittests/native/mocks/BindGroupMock.cpp",
+    "unittests/native/mocks/BindGroupMock.h",
+    "unittests/native/mocks/BufferMock.cpp",
+    "unittests/native/mocks/BufferMock.h",
+    "unittests/native/mocks/CommandBufferMock.cpp",
+    "unittests/native/mocks/CommandBufferMock.h",
+    "unittests/native/mocks/ComputePipelineMock.cpp",
+    "unittests/native/mocks/ComputePipelineMock.h",
+    "unittests/native/mocks/DawnMockTest.cpp",
+    "unittests/native/mocks/DawnMockTest.h",
+    "unittests/native/mocks/DeviceMock.cpp",
+    "unittests/native/mocks/DeviceMock.h",
+    "unittests/native/mocks/ExternalTextureMock.cpp",
+    "unittests/native/mocks/ExternalTextureMock.h",
+    "unittests/native/mocks/PipelineLayoutMock.cpp",
+    "unittests/native/mocks/PipelineLayoutMock.h",
+    "unittests/native/mocks/QuerySetMock.cpp",
+    "unittests/native/mocks/QuerySetMock.h",
+    "unittests/native/mocks/QueueMock.cpp",
+    "unittests/native/mocks/QueueMock.h",
+    "unittests/native/mocks/RenderPipelineMock.cpp",
+    "unittests/native/mocks/RenderPipelineMock.h",
+    "unittests/native/mocks/SamplerMock.cpp",
+    "unittests/native/mocks/SamplerMock.h",
+    "unittests/native/mocks/ShaderModuleMock.cpp",
+    "unittests/native/mocks/ShaderModuleMock.h",
+    "unittests/native/mocks/TextureMock.cpp",
+    "unittests/native/mocks/TextureMock.h",
+  ]
+}
+
+dawn_test("dawn_unittests") {
+  deps = [
+    ":gmock_and_gtest",
+    ":mock_webgpu_gen",
+    ":native_mocks_sources",
+    ":partition_alloc_support",
+    ":platform_mocks_sources",
+    ":test_infra_sources",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:sources",
+    "${dawn_root}/src/dawn/native:static",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/wire",
+  ]
+
+  # Add internal dawn native config for internal unittests.
+  configs = [ "${dawn_root}/src/dawn/native:internal" ]
+
+  # Add Tint public+common configs so <tint/tint.h> can be included to test
+  # the Dawn/Tint boundary.
+  configs += [
+    "${dawn_root}/src/tint:tint_public_config",
+    "${dawn_root}/src/tint:tint_common_config",
+  ]
+
+  sources = get_target_outputs(":mock_webgpu_gen")
+  sources += [
+    "${dawn_root}/src/dawn/wire/client/ClientMemoryTransferService_mock.cpp",
+    "${dawn_root}/src/dawn/wire/client/ClientMemoryTransferService_mock.h",
+    "${dawn_root}/src/dawn/wire/server/ServerMemoryTransferService_mock.cpp",
+    "${dawn_root}/src/dawn/wire/server/ServerMemoryTransferService_mock.h",
+    "DawnNativeTest.cpp",
+    "DawnNativeTest.h",
+    "unittests/AsyncTaskTests.cpp",
+    "unittests/BitSetIteratorTests.cpp",
+    "unittests/BuddyAllocatorTests.cpp",
+    "unittests/BuddyMemoryAllocatorTests.cpp",
+    "unittests/ChainUtilsTests.cpp",
+    "unittests/CommandAllocatorTests.cpp",
+    "unittests/CommandLineParserTests.cpp",
+    "unittests/ContentLessObjectCacheTests.cpp",
+    "unittests/CppAPITests.cpp",
+    "unittests/DefaultTests.cpp",
+    "unittests/EnumClassBitmasksTests.cpp",
+    "unittests/EnumMaskIteratorTests.cpp",
+    "unittests/EnumeratorTests.cpp",
+    "unittests/ErrorTests.cpp",
+    "unittests/FeatureTests.cpp",
+    "unittests/GPUInfoTests.cpp",
+    "unittests/GetProcAddressTests.cpp",
+    "unittests/ITypArrayTests.cpp",
+    "unittests/ITypBitsetTests.cpp",
+    "unittests/ITypSpanTests.cpp",
+    "unittests/ITypVectorTests.cpp",
+    "unittests/LinkedListTests.cpp",
+    "unittests/MathTests.cpp",
+    "unittests/MutexProtectedTests.cpp",
+    "unittests/MutexTests.cpp",
+    "unittests/NumericTests.cpp",
+    "unittests/ObjectBaseTests.cpp",
+    "unittests/PerStageTests.cpp",
+    "unittests/PerThreadProcTests.cpp",
+    "unittests/PlacementAllocatedTests.cpp",
+    "unittests/RangeTests.cpp",
+    "unittests/RefBaseTests.cpp",
+    "unittests/RefCountedTests.cpp",
+    "unittests/ResultTests.cpp",
+    "unittests/RingBufferAllocatorTests.cpp",
+    "unittests/SerialMapTests.cpp",
+    "unittests/SerialQueueTests.cpp",
+    "unittests/SlabAllocatorTests.cpp",
+    "unittests/SubresourceStorageTests.cpp",
+    "unittests/SystemUtilsTests.cpp",
+    "unittests/ToBackendTests.cpp",
+    "unittests/ToggleTests.cpp",
+    "unittests/TypedIntegerTests.cpp",
+    "unittests/UnicodeTests.cpp",
+    "unittests/WeakRefTests.cpp",
+    "unittests/native/AllowedErrorTests.cpp",
+    "unittests/native/BlobTests.cpp",
+    "unittests/native/CacheRequestTests.cpp",
+    "unittests/native/CommandBufferEncodingTests.cpp",
+    "unittests/native/CreatePipelineAsyncEventTests.cpp",
+    "unittests/native/DestroyObjectTests.cpp",
+    "unittests/native/DeviceAsyncTaskTests.cpp",
+    "unittests/native/DeviceCreationTests.cpp",
+    "unittests/native/ImmediateConstantsTrackerTests.cpp",
+    "unittests/native/LimitsTests.cpp",
+    "unittests/native/MemoryInstrumentationTests.cpp",
+    "unittests/native/ObjectContentHasherTests.cpp",
+    "unittests/native/StreamTests.cpp",
+    "unittests/validation/BindGroupValidationTests.cpp",
+    "unittests/validation/BufferValidationTests.cpp",
+    "unittests/validation/CommandBufferValidationTests.cpp",
+    "unittests/validation/CompatValidationTests.cpp",
+    "unittests/validation/ComputeIndirectValidationTests.cpp",
+    "unittests/validation/ComputeValidationTests.cpp",
+    "unittests/validation/CopyCommandsValidationTests.cpp",
+    "unittests/validation/CopyTextureForBrowserTests.cpp",
+    "unittests/validation/DebugMarkerValidationTests.cpp",
+    "unittests/validation/DeviceValidationTests.cpp",
+    "unittests/validation/DrawIndirectValidationTests.cpp",
+    "unittests/validation/DrawVertexAndIndexBufferOOBValidationTests.cpp",
+    "unittests/validation/DynamicStateCommandValidationTests.cpp",
+    "unittests/validation/ErrorScopeValidationTests.cpp",
+    "unittests/validation/ExternalTextureTests.cpp",
+    "unittests/validation/GetBindGroupLayoutValidationTests.cpp",
+    "unittests/validation/ImmediateDataTests.cpp",
+    "unittests/validation/IndexBufferValidationTests.cpp",
+    "unittests/validation/InternalUsageValidationTests.cpp",
+    "unittests/validation/LabelTests.cpp",
+    "unittests/validation/MinimumBufferSizeValidationTests.cpp",
+    "unittests/validation/MultiDrawIndirectValidationTests.cpp",
+    "unittests/validation/MultipleDeviceTests.cpp",
+    "unittests/validation/ObjectCachingTests.cpp",
+    "unittests/validation/OverridableConstantsValidationTests.cpp",
+    "unittests/validation/PipelineAndPassCompatibilityTests.cpp",
+    "unittests/validation/PixelLocalStorageTests.cpp",
+    "unittests/validation/QueryValidationTests.cpp",
+    "unittests/validation/QueueOnSubmittedWorkDoneValidationTests.cpp",
+    "unittests/validation/QueueSubmitValidationTests.cpp",
+    "unittests/validation/QueueWriteBufferValidationTests.cpp",
+    "unittests/validation/QueueWriteTextureValidationTests.cpp",
+    "unittests/validation/RenderBundleValidationTests.cpp",
+    "unittests/validation/RenderPassDescriptorValidationTests.cpp",
+    "unittests/validation/RenderPipelineValidationTests.cpp",
+    "unittests/validation/ResourceUsageTrackingTests.cpp",
+    "unittests/validation/SamplerValidationTests.cpp",
+    "unittests/validation/ShaderModuleValidationTests.cpp",
+    "unittests/validation/StorageTextureValidationTests.cpp",
+    "unittests/validation/TextureSubresourceTests.cpp",
+    "unittests/validation/TextureValidationTests.cpp",
+    "unittests/validation/TextureViewValidationTests.cpp",
+    "unittests/validation/ToggleValidationTests.cpp",
+    "unittests/validation/UnsafeAPIValidationTests.cpp",
+    "unittests/validation/ValidationTest.cpp",
+    "unittests/validation/ValidationTest.h",
+    "unittests/validation/VertexBufferValidationTests.cpp",
+    "unittests/validation/VertexStateValidationTests.cpp",
+    "unittests/validation/WGSLFeatureValidationTests.cpp",
+    "unittests/validation/WritableBufferBindingAliasingValidationTests.cpp",
+    "unittests/validation/WritableTextureBindingAliasingValidationTests.cpp",
+    "unittests/validation/WriteBufferTests.cpp",
+    "unittests/wire/WireAdapterTests.cpp",
+    "unittests/wire/WireArgumentTests.cpp",
+    "unittests/wire/WireBasicTests.cpp",
+    "unittests/wire/WireBufferMappingTests.cpp",
+    "unittests/wire/WireCreatePipelineAsyncTests.cpp",
+    "unittests/wire/WireDeviceLifetimeTests.cpp",
+    "unittests/wire/WireDisconnectTests.cpp",
+    "unittests/wire/WireErrorCallbackTests.cpp",
+    "unittests/wire/WireExtensionTests.cpp",
+    "unittests/wire/WireFutureTest.cpp",
+    "unittests/wire/WireFutureTest.h",
+    "unittests/wire/WireInjectBufferTests.cpp",
+    "unittests/wire/WireInjectInstanceTests.cpp",
+    "unittests/wire/WireInjectSurfaceTests.cpp",
+    "unittests/wire/WireInjectTextureTests.cpp",
+    "unittests/wire/WireInstanceTests.cpp",
+    "unittests/wire/WireMemoryTransferServiceTests.cpp",
+    "unittests/wire/WireOptionalTests.cpp",
+    "unittests/wire/WireQueueTests.cpp",
+    "unittests/wire/WireShaderModuleTests.cpp",
+    "unittests/wire/WireTest.cpp",
+    "unittests/wire/WireTest.h",
+  ]
+
+  # `dawn_unittests` are known to run for both Dawn standalone and Chrome. This
+  # file is testing specifically the Dawn's standalone configuration of
+  # partition_alloc.
+  if (dawn_enable_partition_alloc) {
+    sources += [ "unittests/RawPtrTests.cpp" ]
+  }
+
+  if (is_win) {
+    sources += [ "unittests/WindowsUtilsTests.cpp" ]
+  }
+
+  if (dawn_enable_d3d12) {
+    sources += [ "unittests/d3d12/CopySplitTests.cpp" ]
+  }
+
+  if (dawn_enable_vulkan) {
+    sources += [ "unittests/validation/YCbCrInfoValidationTests.cpp" ]
+  }
+
+  # When building inside Chromium, use their gtest main function because it is
+  # needed to run in swarming correctly.
+  if (build_with_chromium) {
+    deps += [ ":unittests_main" ]
+  } else {
+    sources += [ "UnittestsMain.cpp" ]
+  }
+}
+
+###############################################################################
+# Dawn PartitionAlloc support for tests
+###############################################################################
+source_set("partition_alloc_support") {
+  testonly = true
+
+  deps = [ "${dawn_root}/src/dawn/common" ]
+  public = [ "PartitionAllocSupport.h" ]
+  sources = [ "PartitionAllocSupport.cpp" ]
+
+  if (dawn_enable_partition_alloc) {
+    defines = [ "DAWN_ENABLE_PARTITION_ALLOC" ]
+    deps += [ "${dawn_root}/src/dawn/partition_alloc" ]
+  }
+}
+
+###############################################################################
+# Dawn test infrastructure targets
+###############################################################################
+
+source_set("test_infra_sources") {
+  configs += [ "${dawn_root}/src/dawn/native:internal" ]
+  testonly = true
+
+  deps = [
+    ":partition_alloc_support",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:sources",
+    "${dawn_root}/src/dawn/native:static",
+    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/wire",
+  ]
+
+  public = [
+    "AdapterTestConfig.h",
+    "DawnTest.h",
+    "MockCallback.h",
+    "ParamGenerator.h",
+    "StringViewMatchers.h",
+    "ToggleParser.h",
+  ]
+  public_deps = [
+    ":gmock_and_gtest",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+  ]
+
+  if (dawn_supports_glfw_for_windowing) {
+    public_deps += [ "${dawn_root}/src/dawn/glfw" ]
+  }
+
+  sources = [
+    "AdapterTestConfig.cpp",
+    "DawnTest.cpp",
+    "ToggleParser.cpp",
+  ]
+}
+
+###############################################################################
+# Dawn end2end tests targets
+###############################################################################
+
+# Source code for mocks used for platform testing are separated from the rest of
+# sources so that they aren't included in non-test builds.
+source_set("platform_mocks_sources") {
+  configs += [ "${dawn_root}/src/dawn/native:internal" ]
+  testonly = true
+
+  deps = [
+    ":gmock_and_gtest",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/platform",
+  ]
+  public_deps = [ "${dawn_root}/src/dawn/partition_alloc:raw_ptr" ]
+
+  sources = [
+    "mocks/platform/CachingInterfaceMock.cpp",
+    "mocks/platform/CachingInterfaceMock.h",
+  ]
+}
+
+source_set("end2end_tests_sources") {
+  testonly = true
+
+  deps = [
+    ":platform_mocks_sources",
+    ":test_infra_sources",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/native:headers",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+    "${dawn_root}/src/dawn/platform",
+    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/wire",
+  ]
+
+  sources = [
+    "end2end/AdapterCreationTests.cpp",
+    "end2end/AdapterEnumerationTests.cpp",
+    "end2end/AdapterFormatCapabilitiesVkTests.cpp",
+    "end2end/AdapterPropertiesD3DTests.cpp",
+    "end2end/AdapterPropertiesVkTests.cpp",
+    "end2end/BasicTests.cpp",
+    "end2end/BindGroupTests.cpp",
+    "end2end/BufferHostMappedPointerTests.cpp",
+    "end2end/BufferHostMappedPointerTests.h",
+    "end2end/BufferTests.cpp",
+    "end2end/BufferZeroInitTests.cpp",
+    "end2end/ClipDistancesTests.cpp",
+    "end2end/ClipSpaceTests.cpp",
+    "end2end/ColorStateTests.cpp",
+    "end2end/CommandEncoderTests.cpp",
+    "end2end/CompressedTextureFormatTests.cpp",
+    "end2end/ComputeCopyStorageBufferTests.cpp",
+    "end2end/ComputeDispatchTests.cpp",
+    "end2end/ComputeFlowControlTests.cpp",
+    "end2end/ComputeLayoutMemoryBufferTests.cpp",
+    "end2end/ComputeSharedMemoryTests.cpp",
+    "end2end/ComputeStorageBufferBarrierTests.cpp",
+    "end2end/CopyExternalTextureForBrowserTests.cpp",
+    "end2end/CopyTests.cpp",
+    "end2end/CopyTextureForBrowserTests.cpp",
+    "end2end/CreatePipelineAsyncTests.cpp",
+    "end2end/CullingTests.cpp",
+    "end2end/DebugMarkerTests.cpp",
+    "end2end/DepthBiasTests.cpp",
+    "end2end/DepthStencilCopyTests.cpp",
+    "end2end/DepthStencilLoadOpTests.cpp",
+    "end2end/DepthStencilSamplingTests.cpp",
+    "end2end/DepthStencilStateTests.cpp",
+    "end2end/DestroyTests.cpp",
+    "end2end/DeviceInitializationTests.cpp",
+    "end2end/DeviceLifetimeTests.cpp",
+    "end2end/DeviceLostTests.cpp",
+    "end2end/DiscardBasicTests.cpp",
+    "end2end/DrawIndexedIndirectTests.cpp",
+    "end2end/DrawIndexedTests.cpp",
+    "end2end/DrawIndirectTests.cpp",
+    "end2end/DrawTests.cpp",
+    "end2end/DualSourceBlendTests.cpp",
+    "end2end/DynamicBufferOffsetTests.cpp",
+    "end2end/EntryPointTests.cpp",
+    "end2end/EventTests.cpp",
+    "end2end/ExternalTextureTests.cpp",
+    "end2end/FirstIndexOffsetTests.cpp",
+    "end2end/FragDepthTests.cpp",
+    "end2end/FramebufferFetchTests.cpp",
+    "end2end/GpuMemorySynchronizationTests.cpp",
+    "end2end/HistogramTests.cpp",
+    "end2end/IndexFormatTests.cpp",
+    "end2end/InfiniteLoopTests.cpp",
+    "end2end/MaxLimitTests.cpp",
+    "end2end/MemoryAllocationStressTests.cpp",
+    "end2end/MemoryHeapPropertiesTests.cpp",
+    "end2end/MultiDrawIndexedIndirectTests.cpp",
+    "end2end/MultiDrawIndirectTests.cpp",
+    "end2end/MultisampledRenderingTests.cpp",
+    "end2end/MultisampledSamplingTests.cpp",
+    "end2end/MultithreadTests.cpp",
+    "end2end/NonzeroBufferCreationTests.cpp",
+    "end2end/NonzeroTextureCreationTests.cpp",
+    "end2end/OpArrayLengthTests.cpp",
+    "end2end/PackUnpack4x8NormTests.cpp",
+    "end2end/Packed4x8IntegerDotProductTests.cpp",
+    "end2end/PipelineCachingTests.cpp",
+    "end2end/PipelineLayoutTests.cpp",
+    "end2end/PixelLocalStorageTests.cpp",
+    "end2end/PrimitiveStateTests.cpp",
+    "end2end/PrimitiveTopologyTests.cpp",
+    "end2end/QueryTests.cpp",
+    "end2end/QueueTests.cpp",
+    "end2end/QueueTimelineTests.cpp",
+    "end2end/ReadOnlyDepthStencilAttachmentTests.cpp",
+    "end2end/RenderAttachmentTests.cpp",
+    "end2end/RenderBundleTests.cpp",
+    "end2end/RenderPassLoadOpTests.cpp",
+    "end2end/RenderPassTests.cpp",
+    "end2end/RequiredBufferSizeInCopyTests.cpp",
+    "end2end/SamplerFilterAnisotropicTests.cpp",
+    "end2end/SamplerTests.cpp",
+    "end2end/ScissorTests.cpp",
+    "end2end/ShaderAtomicTests.cpp",
+    "end2end/ShaderBuiltinPartialConstArgsErrorTests.cpp",
+    "end2end/ShaderF16Tests.cpp",
+    "end2end/ShaderTests.cpp",
+    "end2end/ShaderValidationTests.cpp",
+    "end2end/StorageTextureTests.cpp",
+    "end2end/SubgroupsTests.cpp",
+    "end2end/SubresourceRenderAttachmentTests.cpp",
+    "end2end/Texture3DTests.cpp",
+    "end2end/TextureCorruptionTests.cpp",
+    "end2end/TextureFormatTests.cpp",
+    "end2end/TextureShaderBuiltinTests.cpp",
+    "end2end/TextureSubresourceTests.cpp",
+    "end2end/TextureViewTests.cpp",
+    "end2end/TextureZeroInitTests.cpp",
+    "end2end/VertexFormatTests.cpp",
+    "end2end/VertexOnlyRenderPipelineTests.cpp",
+    "end2end/VertexStateTests.cpp",
+    "end2end/ViewportOrientationTests.cpp",
+    "end2end/ViewportTests.cpp",
+  ]
+
+  libs = []
+
+  if (dawn_enable_d3d11 || dawn_enable_d3d12) {
+    libs += [
+      "d3d11.lib",
+      "d3d12.lib",
+      "dxgi.lib",
+    ]
+
+    sources += [ "end2end/VideoViewsTests_win.cpp" ]
+  }
+
+  if (dawn_enable_d3d12) {
+    sources += [ "end2end/D3D12CachingTests.cpp" ]
+  }
+
+  if (is_mac || is_ios) {
+    if (dawn_enable_metal) {
+      sources += [ "end2end/VideoViewsTests_mac.cpp" ]
+    }
+    sources += [ "end2end/BufferHostMappedPointerTests_apple.mm" ]
+
+    frameworks = [ "IOSurface.framework" ]
+
+    if (filter_include(configs, [ "//build/config/compiler:enable_arc" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:enable_arc" ]
+    }
+  }
+
+  if (is_mac || is_ios || is_linux) {
+    sources += [ "end2end/BufferHostMappedPointerTests_posix.cpp" ]
+  }
+  if (is_win) {
+    sources += [ "end2end/BufferHostMappedPointerTests_win.cpp" ]
+  }
+
+  if (dawn_supports_glfw_for_windowing) {
+    sources += [
+      "end2end/SurfaceConfigurationValidationTests.cpp",
+      "end2end/SurfaceTests.cpp",
+      "end2end/WindowSurfaceTests.cpp",
+    ]
+  }
+
+  if (dawn_enable_vulkan) {
+    sources += [ "end2end/YCbCrInfoTests.cpp" ]
+  }
+
+  if (dawn_enable_d3d11 || dawn_enable_d3d12 ||
+      (dawn_enable_vulkan && is_chromeos) || dawn_enable_metal) {
+    sources += [
+      "end2end/VideoViewsTests.cpp",
+      "end2end/VideoViewsTests.h",
+    ]
+  }
+
+  if (dawn_enable_vulkan && is_chromeos) {
+    sources += [ "end2end/VideoViewsTests_gbm.cpp" ]
+  }
+
+  if (dawn_enable_opengles) {
+    sources += [ "end2end/GLExplicitExtensionsTests.cpp" ]
+  }
+}
+
+source_set("white_box_tests_sources") {
+  configs += [ "${dawn_root}/src/dawn/native:internal" ]
+  testonly = true
+
+  deps = [
+    ":test_infra_sources",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+
+    # Statically linked and with sources because the end2end white_box tests use Dawn internals.
+    "${dawn_root}/src/dawn/native:sources",
+    "${dawn_root}/src/dawn/native:static",
+    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/wire",
+  ]
+
+  sources = [
+    "white_box/ImmediateConstantOffsetTests.cpp",
+    "white_box/ShaderModuleTests.cpp",
+    "white_box/SharedBufferMemoryTests.cpp",
+    "white_box/SharedBufferMemoryTests.h",
+    "white_box/SharedTextureMemoryTests.cpp",
+    "white_box/SharedTextureMemoryTests.h",
+  ]
+  libs = []
+
+  if (is_mac || is_ios) {
+    sources += [ "white_box/SharedTextureMemoryTests_apple.mm" ]
+  }
+
+  if (is_win) {
+    sources += [
+      "white_box/SharedBufferMemoryTests_win.cpp",
+      "white_box/SharedTextureMemoryTests_win.cpp",
+    ]
+  }
+
+  if (dawn_enable_vulkan) {
+    deps += [ "${dawn_vulkan_headers_dir}:vulkan_headers" ]
+
+    if (is_chromeos || is_linux) {
+      sources += [
+        "white_box/VulkanImageWrappingTests.cpp",
+        "white_box/VulkanImageWrappingTests.h",
+        "white_box/VulkanImageWrappingTests_DmaBuf.cpp",
+        "white_box/VulkanImageWrappingTests_DmaBuf.h",
+        "white_box/VulkanImageWrappingTests_OpaqueFD.cpp",
+        "white_box/VulkanImageWrappingTests_OpaqueFD.h",
+      ]
+
+      sources += [
+        "white_box/SharedTextureMemoryTests_dmabuf.cpp",
+        "white_box/SharedTextureMemoryTests_opaquefd.cpp",
+      ]
+    }
+
+    if (is_android) {
+      sources += [ "white_box/SharedTextureMemoryTests_android.cpp" ]
+    }
+
+    if (dawn_enable_error_injection) {
+      sources += [ "white_box/VulkanErrorInjectorTests.cpp" ]
+    }
+  }
+
+  sources += [
+    "white_box/BufferAllocatedSizeTests.cpp",
+    "white_box/InternalResolveAttachmentSampleTypeTests.cpp",
+    "white_box/InternalResourceUsageTests.cpp",
+    "white_box/InternalStorageBufferBindingTests.cpp",
+    "white_box/QueryInternalShaderTests.cpp",
+  ]
+
+  if (dawn_enable_d3d11) {
+    sources += [ "white_box/D3D11BufferTests.cpp" ]
+  }
+
+  if (dawn_enable_d3d12) {
+    sources += [
+      "white_box/D3D12DescriptorHeapTests.cpp",
+      "white_box/D3D12ResidencyTests.cpp",
+      "white_box/D3D12ResourceHeapTests.cpp",
+      "white_box/GPUTimestampCalibrationTests.cpp",
+      "white_box/GPUTimestampCalibrationTests.h",
+      "white_box/GPUTimestampCalibrationTests_D3D12.cpp",
+    ]
+  }
+
+  if (dawn_enable_metal) {
+    sources += [
+      "white_box/GPUTimestampCalibrationTests.cpp",
+      "white_box/GPUTimestampCalibrationTests.h",
+      "white_box/GPUTimestampCalibrationTests_Metal.mm",
+      "white_box/MetalAutoreleasePoolTests.mm",
+      "white_box/MetalBackendTests.cpp",
+    ]
+
+    # If a "build with ARC" config is present, remove it.
+    if (filter_include(configs, [ "//build/config/compiler:enable_arc" ]) !=
+        []) {
+      configs -= [ "//build/config/compiler:enable_arc" ]
+    }
+  }
+
+  if (dawn_enable_opengles) {
+    sources += [
+      "white_box/EGLImageWrappingTests.cpp",
+      "white_box/GLTextureWrappingTests.cpp",
+    ]
+    include_dirs = [ "//third_party/khronos" ]
+  }
+}
+
+dawn_test("dawn_end2end_tests") {
+  deps = [
+    ":end2end_tests_sources",
+    ":test_infra_sources",
+    ":white_box_tests_sources",
+  ]
+
+  sources = []
+  libs = []
+
+  # When building inside Chromium, use their gtest main function because it is
+  # needed to run in swarming correctly.
+  if (build_with_chromium) {
+    deps += [ ":end2end_tests_main" ]
+  } else {
+    sources += [ "End2EndTestsMain.cpp" ]
+  }
+
+  if (is_chromeos || is_linux) {
+    libs += [ "gbm" ]
+  }
+}
+
+###############################################################################
+# Dawn perf tests
+###############################################################################
+
+dawn_test("dawn_perf_tests") {
+  deps = [
+    ":test_infra_sources",
+    "${dawn_root}/include/dawn:cpp_headers",
+    "${dawn_root}/src/dawn:proc",
+    "${dawn_root}/src/dawn/common",
+    "${dawn_root}/src/dawn/partition_alloc:raw_ptr",
+    "${dawn_root}/src/dawn/platform",
+    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/wire",
+  ]
+
+  sources = [
+    "perf_tests/BufferUploadPerf.cpp",
+    "perf_tests/DawnPerfTest.cpp",
+    "perf_tests/DawnPerfTest.h",
+    "perf_tests/DawnPerfTestPlatform.cpp",
+    "perf_tests/DawnPerfTestPlatform.h",
+    "perf_tests/DrawCallPerf.cpp",
+    "perf_tests/MatrixVectorMultiplyPerf.cpp",
+    "perf_tests/ShaderRobustnessPerf.cpp",
+    "perf_tests/SubresourceTrackingPerf.cpp",
+    "perf_tests/UniformBufferUpdatePerf.cpp",
+    "perf_tests/VulkanZeroInitializeWorkgroupMemoryPerf.cpp",
+  ]
+
+  libs = []
+
+  # When building inside Chromium, use their gtest main function and the
+  # other perf test scaffolding in order to run in swarming correctly.
+  if (build_with_chromium) {
+    deps += [ ":perf_tests_main" ]
+    data_deps = [ "//testing:run_perf_test" ]
+  } else {
+    sources += [ "PerfTestsMain.cpp" ]
+  }
+
+  if (dawn_enable_metal) {
+    frameworks = [ "IOSurface.framework" ]
+  }
+}

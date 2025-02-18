@@ -1,0 +1,252 @@
+#include <metal_stdlib>
+using namespace metal;
+
+struct FSIn {
+  uint2 ssboIndicesVar;
+  float2 localCoordsVar;
+};
+
+struct FSOut {
+  float4 sk_FragColor;
+};
+
+template<typename T, size_t N>
+struct tint_array {
+  const constant T& operator[](size_t i) const constant { return elements[i]; }
+  device T& operator[](size_t i) device { return elements[i]; }
+  const device T& operator[](size_t i) const device { return elements[i]; }
+  thread T& operator[](size_t i) thread { return elements[i]; }
+  const thread T& operator[](size_t i) const thread { return elements[i]; }
+  threadgroup T& operator[](size_t i) threadgroup { return elements[i]; }
+  const threadgroup T& operator[](size_t i) const threadgroup { return elements[i]; }
+  T elements[N];
+};
+
+struct FSUniformData {
+  /* 0x0000 */ float2 baseFrequency_1;
+  /* 0x0008 */ float2 stitchData_1;
+  /* 0x0010 */ int noiseType_1;
+  /* 0x0014 */ int numOctaves_1;
+  /* 0x0018 */ int stitching_1;
+  /* 0x001c */ tint_array<int8_t, 4> tint_pad;
+  /* 0x0020 */ float4x4 matrix_4;
+  /* 0x0060 */ float4 translate_4;
+  /* 0x0070 */ int inHSL_4;
+  /* 0x0074 */ int clampRGB_4;
+  /* 0x0078 */ tint_array<int8_t, 8> tint_pad_1;
+};
+
+struct FSUniforms {
+  /* 0x0000 */ tint_array<FSUniformData, 1> fsUniformData;
+};
+
+struct tint_module_vars_struct {
+  const device FSUniforms* _storage1;
+  thread uint* shadingSsboIndex;
+  sampler permutationsSampler_1_Sampler;
+  texture2d<float, access::sample> permutationsSampler_1_Texture;
+  sampler noiseSampler_1_Sampler;
+  texture2d<float, access::sample> noiseSampler_1_Texture;
+  const constant tint_array<uint4, 1>* tint_storage_buffer_sizes;
+};
+
+struct main_outputs {
+  float4 FSOut_sk_FragColor [[color(0)]];
+};
+
+struct main_inputs {
+  uint2 FSIn_ssboIndicesVar [[user(locn0)]] [[flat]];
+  float2 FSIn_localCoordsVar [[user(locn1)]];
+};
+
+void _skslMain(FSIn _stageIn, thread FSOut* const _stageOut, tint_module_vars_struct tint_module_vars) {
+  (*tint_module_vars.shadingSsboIndex) = _stageIn.ssboIndicesVar.y;
+  int const _56_d = (*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].noiseType_1;
+  float2 _57_k = float2(((_stageIn.localCoordsVar + 0.5f) * (*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].baseFrequency_1));
+  float4 _58_l = float4(0.0f);
+  float2 _59_m = float2((*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].stitchData_1);
+  float _60_n = 1.0f;
+  int _61_o = 0;
+  {
+    uint2 tint_loop_idx = 0u;
+    while(true) {
+      if (all((tint_loop_idx == uint2(4294967295u)))) {
+        break;
+      }
+      if ((_61_o < (*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].numOctaves_1)) {
+        float4 _62_f = 0.0f;
+        float2 const _skTemp2 = floor(_57_k);
+        _62_f = float4(_skTemp2, _62_f.zw);
+        _62_f = float4(_62_f.xy, (_62_f.xy + float2(1.0f)));
+        if (bool((*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].stitching_1)) {
+          float4 const _skTemp3 = step(_59_m.xyxy, _62_f);
+          _62_f = (_62_f - (_skTemp3 * _59_m.xyxy));
+        }
+        float2 const v = float2(float2(((_62_f.x + 0.5f) * 0.00390625f), 0.5f));
+        float const _63_g = tint_module_vars.permutationsSampler_1_Texture.sample(tint_module_vars.permutationsSampler_1_Sampler, v, bias(clamp(-0.47499999403953552246f, -16.0f, 15.9899997711181640625f))).x;
+        float2 const v_1 = float2(float2(((_62_f.z + 0.5f) * 0.00390625f), 0.5f));
+        float const _64_h = tint_module_vars.permutationsSampler_1_Texture.sample(tint_module_vars.permutationsSampler_1_Sampler, v_1, bias(clamp(-0.47499999403953552246f, -16.0f, 15.9899997711181640625f))).x;
+        float2 _65_i = float2(_63_g, _64_h);
+        if (false) {
+          float2 const _skTemp4 = floor(((_65_i * float2(255.0f)) + float2(0.5f)));
+          _65_i = (_skTemp4 * float2(0.0039215688593685627f));
+        }
+        float4 _66_j = ((256.0f * _65_i.xyxy) + _62_f.yyww);
+        _66_j = (_66_j * float4(0.00390625f));
+        float4 const _67_p = _66_j;
+        float2 const _skTemp5 = fract(_57_k);
+        float2 const _68_d = _skTemp5;
+        float2 const _skTemp6 = (clamp(((_68_d - float2(0.0f)) / (float2(1.0f) - float2(0.0f))), float2(0.0f), float2(1.0f)) * (clamp(((_68_d - float2(0.0f)) / (float2(1.0f) - float2(0.0f))), float2(0.0f), float2(1.0f)) * (float2(3.0f) - (float2(2.0f) * clamp(((_68_d - float2(0.0f)) / (float2(1.0f) - float2(0.0f))), float2(0.0f), float2(1.0f))))));
+        float2 const _69_e = _skTemp6;
+        float4 _71_g = 0.0f;
+        int _72_h = 0;
+        {
+          uint2 tint_loop_idx_1 = 0u;
+          while(true) {
+            if (all((tint_loop_idx_1 == uint2(4294967295u)))) {
+              break;
+            }
+            float const _73_i = ((float(_72_h) + 0.5f) * 0.25f);
+            float const v_2 = float(_67_p.x);
+            float2 const v_3 = float2(v_2, float(_73_i));
+            float4 const _74_j = tint_module_vars.noiseSampler_1_Texture.sample(tint_module_vars.noiseSampler_1_Sampler, v_3, bias(clamp(-0.47499999403953552246f, -16.0f, 15.9899997711181640625f)));
+            float const v_4 = float(_67_p.y);
+            float2 const v_5 = float2(v_4, float(_73_i));
+            float4 const _75_k = tint_module_vars.noiseSampler_1_Texture.sample(tint_module_vars.noiseSampler_1_Sampler, v_5, bias(clamp(-0.47499999403953552246f, -16.0f, 15.9899997711181640625f)));
+            float const v_6 = float(_67_p.w);
+            float2 const v_7 = float2(v_6, float(_73_i));
+            float4 const _76_l = tint_module_vars.noiseSampler_1_Texture.sample(tint_module_vars.noiseSampler_1_Sampler, v_7, bias(clamp(-0.47499999403953552246f, -16.0f, 15.9899997711181640625f)));
+            float const v_8 = float(_67_p.z);
+            float2 const v_9 = float2(v_8, float(_73_i));
+            float4 const _77_m = tint_module_vars.noiseSampler_1_Texture.sample(tint_module_vars.noiseSampler_1_Sampler, v_9, bias(clamp(-0.47499999403953552246f, -16.0f, 15.9899997711181640625f)));
+            float2 _78_n = _68_d;
+            float const _skTemp7 = dot((((_74_j.yw + (_74_j.xz * 0.00390625f)) * 2.0f) - 1.0f), _78_n);
+            float _79_o = _skTemp7;
+            _78_n.x = (_78_n.x - 1.0f);
+            float const _skTemp8 = dot((((_75_k.yw + (_75_k.xz * 0.00390625f)) * 2.0f) - 1.0f), _78_n);
+            float _80_p = _skTemp8;
+            float const _skTemp9 = mix(_79_o, _80_p, _69_e.x);
+            float const _81_q = _skTemp9;
+            _78_n.y = (_78_n.y - 1.0f);
+            float const _skTemp10 = dot((((_76_l.yw + (_76_l.xz * 0.00390625f)) * 2.0f) - 1.0f), _78_n);
+            _80_p = _skTemp10;
+            _78_n.x = (_78_n.x + 1.0f);
+            float const _skTemp11 = dot((((_77_m.yw + (_77_m.xz * 0.00390625f)) * 2.0f) - 1.0f), _78_n);
+            _79_o = _skTemp11;
+            float const _skTemp12 = mix(_79_o, _80_p, _69_e.x);
+            float const _82_r = _skTemp12;
+            float const _skTemp13 = mix(_81_q, _82_r, _69_e.y);
+            _71_g[min(uint(_72_h), 3u)] = _skTemp13;
+            {
+              uint const tint_low_inc_1 = (tint_loop_idx_1.x + 1u);
+              tint_loop_idx_1.x = tint_low_inc_1;
+              uint const tint_carry_1 = uint((tint_low_inc_1 == 0u));
+              tint_loop_idx_1.y = (tint_loop_idx_1.y + tint_carry_1);
+              _72_h = as_type<int>((as_type<uint>(_72_h) + as_type<uint>(1)));
+              if ((_72_h >= 4)) { break; }
+            }
+            continue;
+          }
+        }
+        float4 _83_q = _71_g;
+        if ((_56_d != 0)) {
+          float4 const _skTemp14 = abs(_83_q);
+          _83_q = _skTemp14;
+        }
+        _58_l = (_58_l + (_83_q * _60_n));
+        _57_k = (_57_k * float2(2.0f));
+        _60_n = (_60_n * 0.5f);
+        _59_m = (_59_m * float2(2.0f));
+      } else {
+        break;
+      }
+      {
+        uint const tint_low_inc = (tint_loop_idx.x + 1u);
+        tint_loop_idx.x = tint_low_inc;
+        uint const tint_carry = uint((tint_low_inc == 0u));
+        tint_loop_idx.y = (tint_loop_idx.y + tint_carry);
+        _61_o = as_type<int>((as_type<uint>(_61_o) + as_type<uint>(1)));
+      }
+      continue;
+    }
+  }
+  if ((_56_d == 0)) {
+    _58_l = ((_58_l * float4(0.5f)) + float4(0.5f));
+  }
+  float4 const _skTemp15 = saturate(_58_l);
+  _58_l = _skTemp15;
+  float3 const v_10 = float3(_58_l.xyz);
+  float3 const v_11 = float3((v_10 * float(_58_l.w)));
+  float const _skTemp16 = dot(float3(0.21259999275207519531f, 0.71520000696182250977f, 0.07220000028610229492f), float4(v_11, float(float(_58_l.w))).xyz);
+  float const _skTemp17 = saturate(_skTemp16);
+  float4 _84_a = float4(0.0f, 0.0f, 0.0f, _skTemp17);
+  int const _85_d = (*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].inHSL_4;
+  if (bool(_85_d)) {
+    float4 _skTemp18 = 0.0f;
+    if ((_84_a.y < _84_a.z)) {
+      _skTemp18 = float4(_84_a.zy, -1.0f, 0.6666666865348815918f);
+    } else {
+      _skTemp18 = float4(_84_a.yz, 0.0f, -0.3333333432674407959f);
+    }
+    float4 const _86_e = _skTemp18;
+    float4 _skTemp19 = 0.0f;
+    if ((_84_a.x < _86_e.x)) {
+      _skTemp19 = float4(_86_e.x, _84_a.x, _86_e.yw);
+    } else {
+      _skTemp19 = float4(_84_a.x, _86_e.x, _86_e.yz);
+    }
+    float4 const _87_f = _skTemp19;
+    float const _88_h = _87_f.x;
+    float const _skTemp20 = min(_87_f.y, _87_f.z);
+    float const _89_i = (_88_h - _skTemp20);
+    float const _90_j = (_88_h - (_89_i * 0.5f));
+    float const _skTemp21 = abs((_87_f.w + ((_87_f.y - _87_f.z) / ((_89_i * 6.0f) + 0.00009999999747378752f))));
+    float const _91_k = _skTemp21;
+    float const _skTemp22 = abs(((_90_j * 2.0f) - _84_a.w));
+    float const _92_l = (_89_i / ((_84_a.w + 0.00009999999747378752f) - _skTemp22));
+    float const _93_m = (_90_j / (_84_a.w + 0.00009999999747378752f));
+    _84_a = float4(_91_k, _92_l, _93_m, _84_a.w);
+  } else {
+    float const _skTemp23 = max(_84_a.w, 0.00009999999747378752f);
+    _84_a = float4((_84_a.xyz / _skTemp23), _84_a.w);
+  }
+  float4x4 const v_12 = (*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].matrix_4;
+  float4 const v_13 = (v_12 * float4(_84_a));
+  float4 _94_f = float4((v_13 + (*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].translate_4));
+  if (bool(_85_d)) {
+    float const _skTemp24 = abs(((2.0f * _94_f.z) - 1.0f));
+    float const _95_b = ((1.0f - _skTemp24) * _94_f.y);
+    float3 const _96_c = (_94_f.xxx + float3(0.0f, 0.6666666865348815918f, 0.3333333432674407959f));
+    float3 const _skTemp25 = fract(_96_c);
+    float3 const _skTemp26 = abs(((_skTemp25 * 6.0f) - 3.0f));
+    float3 const _skTemp27 = saturate((_skTemp26 - 1.0f));
+    float3 const _97_d = _skTemp27;
+    float4 const _skTemp28 = saturate(float4(((((_97_d - 0.5f) * _95_b) + _94_f.z) * _94_f.w), _94_f.w));
+    _94_f = _skTemp28;
+  } else {
+    if (bool((*tint_module_vars._storage1).fsUniformData[min((*tint_module_vars.shadingSsboIndex), ((((*tint_module_vars.tint_storage_buffer_sizes)[0u].x - 0u) / 128u) - 1u))].clampRGB_4)) {
+      float4 const _skTemp29 = saturate(_94_f);
+      _94_f = _skTemp29;
+    } else {
+      float const _skTemp30 = saturate(_94_f.w);
+      _94_f.w = _skTemp30;
+    }
+    _94_f = float4((_94_f.xyz * _94_f.w), _94_f.w);
+  }
+  float4 const outColor_0 = _94_f;
+  (*_stageOut).sk_FragColor = outColor_0;
+}
+
+FSOut main_inner(FSIn _stageIn, tint_module_vars_struct tint_module_vars) {
+  FSOut _stageOut = {};
+  _skslMain(_stageIn, (&_stageOut), tint_module_vars);
+  return _stageOut;
+}
+
+fragment main_outputs v_14(main_inputs inputs [[stage_in]], const device FSUniforms* _storage1 [[buffer(0)]], sampler permutationsSampler_1_Sampler [[sampler(0)]], texture2d<float, access::sample> permutationsSampler_1_Texture [[texture(0)]], sampler noiseSampler_1_Sampler [[sampler(1)]], texture2d<float, access::sample> noiseSampler_1_Texture [[texture(1)]], const constant tint_array<uint4, 1>* tint_storage_buffer_sizes [[buffer(30)]]) {
+  thread uint shadingSsboIndex = 0u;
+  tint_module_vars_struct const tint_module_vars = tint_module_vars_struct{._storage1=_storage1, .shadingSsboIndex=(&shadingSsboIndex), .permutationsSampler_1_Sampler=permutationsSampler_1_Sampler, .permutationsSampler_1_Texture=permutationsSampler_1_Texture, .noiseSampler_1_Sampler=noiseSampler_1_Sampler, .noiseSampler_1_Texture=noiseSampler_1_Texture, .tint_storage_buffer_sizes=tint_storage_buffer_sizes};
+  main_outputs tint_wrapper_result = {};
+  tint_wrapper_result.FSOut_sk_FragColor = main_inner(FSIn{.ssboIndicesVar=inputs.FSIn_ssboIndicesVar, .localCoordsVar=inputs.FSIn_localCoordsVar}, tint_module_vars).sk_FragColor;
+  return tint_wrapper_result;
+}
