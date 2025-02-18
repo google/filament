@@ -68,6 +68,16 @@ Java_com_google_android_filament_Texture_nIsTextureSwizzleSupported(JNIEnv*, jcl
     return (jboolean) Texture::isTextureSwizzleSupported(*engine);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Texture_nValidatePixelFormatAndType(JNIEnv*, jclass,
+        jint internalFormat, jint pixelDataFormat, jint pixelDataType) {
+    return (jboolean) Texture::validatePixelFormatAndType(
+        (Texture::InternalFormat) internalFormat,
+        (Texture::Format) pixelDataFormat,
+        (Texture::Type) pixelDataType
+    );
+}
+
 // Texture::Builder...
 
 extern "C" JNIEXPORT jlong JNICALL

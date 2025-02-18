@@ -1454,6 +1454,7 @@ class_<TextureSampler>("TextureSampler")
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
     .class_function("isTextureFormatMipmappable", &Texture::isTextureFormatMipmappable)
+    .class_function("validatePixelFormatAndType", &Texture::validatePixelFormatAndType)
     .function("generateMipmaps", &Texture::generateMipmaps)
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {

@@ -103,6 +103,8 @@ public:
     static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
+    /** @return Whether a combination of texture format, pixel format and type is valid. */
+    static bool validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept;
 
     /**
      * Options for environment prefiltering into reflection map
