@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#include "absl/random/internal/randen.h"
+
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -19,7 +21,6 @@
 #include "absl/base/internal/raw_logging.h"
 #include "absl/random/internal/nanobenchmark.h"
 #include "absl/random/internal/platform.h"
-#include "absl/random/internal/randen.h"
 #include "absl/random/internal/randen_engine.h"
 #include "absl/random/internal/randen_hwaes.h"
 #include "absl/random/internal/randen_slow.h"

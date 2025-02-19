@@ -111,8 +111,8 @@ cc_test(
         ":crc32c",
         "//absl/strings",
         "//absl/strings:str_format",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -158,8 +158,8 @@ cc_test(
         "//absl/random",
         "//absl/random:distributions",
         "//absl/strings",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -171,8 +171,8 @@ cc_test(
     visibility = ["//visibility:private"],
     deps = [
         ":non_temporal_memcpy",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -200,8 +200,8 @@ cc_test(
     deps = [
         ":crc32c",
         ":crc_cord_state",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -219,6 +219,6 @@ cc_binary(
         ":crc32c",
         "//absl/memory",
         "//absl/strings",
-        "@google_benchmark//:benchmark_main",
+        "@com_github_google_benchmark//:benchmark_main",
     ],
 )
