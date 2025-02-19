@@ -18,20 +18,20 @@ fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> uImage [[tex
     main0_out out = {};
     int i = 0;
     float phi;
-    float4 _36;
+    float4 _45;
     phi = 1.0;
-    _36 = float4(1.0, 2.0, 1.0, 2.0);
+    _45 = float4(1.0, 2.0, 1.0, 2.0);
     for (;;)
     {
-        out.FragColor = _36;
+        out.FragColor = _45;
         if (i < 4)
         {
             if (in.v0[i] > 0.0)
             {
-                float2 _48 = float2(phi);
+                float2 _43 = float2(phi);
                 i++;
                 phi += 2.0;
-                _36 = uImage.sample(uImageSmplr, _48, level(0.0));
+                _45 = uImage.sample(uImageSmplr, _43, level(0.0));
                 continue;
             }
             else

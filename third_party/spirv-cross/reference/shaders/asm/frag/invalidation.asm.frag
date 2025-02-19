@@ -8,8 +8,8 @@ void main()
 {
     float a = v0;
     float b = v1;
-    float _17 = a;
+    float _16 = a;
     a = v1;
-    FragColor = (_17 + b) * b;
+    FragColor = (_16 + b) * b;
 }
 

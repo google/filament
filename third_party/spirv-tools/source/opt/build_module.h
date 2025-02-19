@@ -24,7 +24,7 @@
 
 namespace spvtools {
 
-// Builds an Module returns the owning IRContext from the given SPIR-V
+// Builds a Module and returns the owning IRContext from the given SPIR-V
 // |binary|. |size| specifies number of words in |binary|. The |binary| will be
 // decoded according to the given target |env|. Returns nullptr if errors occur
 // and sends the errors to |consumer|.  When |extra_line_tracking| is true,
@@ -41,7 +41,7 @@ std::unique_ptr<opt::IRContext> BuildModule(spv_target_env env,
                                             const uint32_t* binary,
                                             size_t size);
 
-// Builds an Module and returns the owning IRContext from the given
+// Builds a Module and returns the owning IRContext from the given
 // SPIR-V assembly |text|.  The |text| will be encoded according to the given
 // target |env|. Returns nullptr if errors occur and sends the errors to
 // |consumer|.

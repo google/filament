@@ -126,7 +126,7 @@ public:
 		// By default, a readonly storage buffer will be declared as ByteAddressBuffer (SRV) instead.
 		// Alternatively, use set_hlsl_force_storage_buffer_as_uav to specify individually.
 		bool force_storage_buffer_as_uav = false;
-
+	
 		// Forces any storage image type marked as NonWritable to be considered an SRV instead.
 		// For this to work with function call parameters, NonWritable must be considered to be part of the type system
 		// so that NonWritable image arguments are also translated to Texture rather than RWTexture.
@@ -290,6 +290,8 @@ private:
 	const char *to_storage_qualifiers_glsl(const SPIRVariable &var) override;
 	void replace_illegal_names() override;
 
+	SPIRType::BaseType get_builtin_basetype(spv::BuiltIn builtin, SPIRType::BaseType default_type) override;
+
 	bool is_hlsl_force_storage_buffer_as_uav(ID id) const;
 
 	Options hlsl_options;
@@ -399,9 +401,6 @@ private:
 		bool explicit_binding = false;
 		bool used = false;
 	} base_vertex_info;
-
-	// Returns true for BuiltInSampleMask because gl_SampleMask[] is an array in SPIR-V, but SV_Coverage is a scalar in HLSL.
-	bool builtin_translates_to_nonarray(spv::BuiltIn builtin) const override;
 
 	// Returns true if the specified ID has a UserTypeGOOGLE decoration for StructuredBuffer or RWStructuredBuffer resources.
 	bool is_user_type_structured(uint32_t id) const override;

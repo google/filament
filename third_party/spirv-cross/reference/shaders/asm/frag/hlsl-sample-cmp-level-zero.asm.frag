@@ -9,8 +9,8 @@ layout(location = 0) out vec4 _entryPointOutput;
 
 vec4 _main(vec2 texCoords_1, float cascadeIndex_1, float fragDepth_1)
 {
-    vec4 _60 = vec4(vec3(texCoords_1, cascadeIndex_1), fragDepth_1);
-    float c = textureGrad(SPIRV_Cross_CombinedShadowMapShadowSamplerPCF, vec4(_60.xyz, _60.w), vec2(0.0), vec2(0.0));
+    vec4 _39 = vec4(vec3(texCoords_1, cascadeIndex_1), fragDepth_1);
+    float c = textureGrad(SPIRV_Cross_CombinedShadowMapShadowSamplerPCF, vec4(_39.xyz, _39.w), vec2(0.0), vec2(0.0));
     return vec4(c, c, c, c);
 }
 

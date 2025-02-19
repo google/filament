@@ -130,9 +130,10 @@ TEST_P(ExtensionRoundTripTest, Samples) {
   EXPECT_THAT(CompiledInstructions(ac.input, env), Eq(ac.expected));
 
   // Check round trip through the disassembler.
-  EXPECT_THAT(EncodeAndDecodeSuccessfully(ac.input,
-                                          SPV_BINARY_TO_TEXT_OPTION_NONE, env),
-              Eq(ac.input))
+  EXPECT_THAT(
+      EncodeAndDecodeSuccessfully(ac.input, SPV_BINARY_TO_TEXT_OPTION_NONE,
+                                  SPV_TEXT_TO_BINARY_OPTION_NONE, env),
+      Eq(ac.input))
       << "target env: " << spvTargetEnvDescription(env) << "\n";
 }
 
@@ -1197,6 +1198,183 @@ INSTANTIATE_TEST_SUITE_P(
                  MakeInstruction(spv::Op::OpGroupNonUniformRotateKHR,
                                  {1, 2, 3, 4, 5, 6})},
             })));
+
+// SPV_EXT_shader_tile_image
+
+INSTANTIATE_TEST_SUITE_P(
+    SPV_EXT_shader_tile_image, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_5, SPV_ENV_VULKAN_1_0,
+               SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2, SPV_ENV_VULKAN_1_3),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_EXT_shader_tile_image\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_EXT_shader_tile_image"))},
+            {"OpCapability TileImageColorReadAccessEXT\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)spv::Capability::TileImageColorReadAccessEXT})},
+            {"OpCapability TileImageDepthReadAccessEXT\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)spv::Capability::TileImageDepthReadAccessEXT})},
+            {"OpCapability TileImageStencilReadAccessEXT\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)spv::Capability::TileImageStencilReadAccessEXT})},
+            {"OpExecutionMode %1 NonCoherentColorAttachmentReadEXT\n",
+             MakeInstruction(spv::Op::OpExecutionMode,
+                             {1, (uint32_t)spv::ExecutionMode::
+                                     NonCoherentColorAttachmentReadEXT})},
+            {"OpExecutionMode %1 NonCoherentDepthAttachmentReadEXT\n",
+             MakeInstruction(spv::Op::OpExecutionMode,
+                             {1, (uint32_t)spv::ExecutionMode::
+                                     NonCoherentDepthAttachmentReadEXT})},
+            {"OpExecutionMode %1 NonCoherentStencilAttachmentReadEXT\n",
+             MakeInstruction(spv::Op::OpExecutionMode,
+                             {1, (uint32_t)spv::ExecutionMode::
+                                     NonCoherentStencilAttachmentReadEXT})},
+            {"%2 = OpColorAttachmentReadEXT %1 %3\n",
+             MakeInstruction(spv::Op::OpColorAttachmentReadEXT, {1, 2, 3})},
+            {"%2 = OpColorAttachmentReadEXT %1 %3 %4\n",
+             MakeInstruction(spv::Op::OpColorAttachmentReadEXT, {1, 2, 3, 4})},
+            {"%2 = OpDepthAttachmentReadEXT %1\n",
+             MakeInstruction(spv::Op::OpDepthAttachmentReadEXT, {1, 2})},
+            {"%2 = OpDepthAttachmentReadEXT %1 %3\n",
+             MakeInstruction(spv::Op::OpDepthAttachmentReadEXT, {1, 2, 3})},
+            {"%2 = OpStencilAttachmentReadEXT %1\n",
+             MakeInstruction(spv::Op::OpStencilAttachmentReadEXT, {1, 2})},
+            {"%2 = OpStencilAttachmentReadEXT %1 %3\n",
+             MakeInstruction(spv::Op::OpStencilAttachmentReadEXT, {1, 2, 3})},
+        })));
+
+// SPV_KHR_maximal_reconvergence
+
+INSTANTIATE_TEST_SUITE_P(
+    SPV_KHR_maximal_reconvergence, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_5, SPV_ENV_VULKAN_1_0,
+               SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2, SPV_ENV_VULKAN_1_3),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_KHR_maximal_reconvergence\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_KHR_maximal_reconvergence"))},
+            {"OpExecutionMode %1 MaximallyReconvergesKHR\n",
+             MakeInstruction(
+                 spv::Op::OpExecutionMode,
+                 {1, (uint32_t)spv::ExecutionMode::MaximallyReconvergesKHR})},
+        })));
+
+// SPV_KHR_float_controls2
+
+INSTANTIATE_TEST_SUITE_P(
+    SPV_KHR_float_controls2, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_5, SPV_ENV_VULKAN_1_0,
+               SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2, SPV_ENV_VULKAN_1_3),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_KHR_float_controls2\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_KHR_float_controls2"))},
+            {"OpCapability FloatControls2\n",
+             MakeInstruction(spv::Op::OpCapability,
+                             {(uint32_t)spv::Capability::FloatControls2})},
+            {"OpExecutionMode %1 FPFastMathDefault %2 %3\n",
+             // The operands are: target type, flags constant
+             MakeInstruction(
+                 spv::Op::OpExecutionMode,
+                 {1, (uint32_t)spv::ExecutionMode::FPFastMathDefault, 2, 3})},
+            {"OpDecorate %1 FPFastMathMode AllowContract\n",
+             MakeInstruction(
+                 spv::Op::OpDecorate,
+                 {1, (uint32_t)spv::Decoration::FPFastMathMode,
+                  (uint32_t)spv::FPFastMathModeMask::AllowContract})},
+            {"OpDecorate %1 FPFastMathMode AllowReassoc\n",
+             MakeInstruction(
+                 spv::Op::OpDecorate,
+                 {1, (uint32_t)spv::Decoration::FPFastMathMode,
+                  (uint32_t)spv::FPFastMathModeMask::AllowReassoc})},
+            {"OpDecorate %1 FPFastMathMode AllowTransform\n",
+             MakeInstruction(
+                 spv::Op::OpDecorate,
+                 {1, (uint32_t)spv::Decoration::FPFastMathMode,
+                  (uint32_t)spv::FPFastMathModeMask::AllowTransform})},
+        })));
+
+// SPV_EXT_replicated_composites
+
+INSTANTIATE_TEST_SUITE_P(
+    SPV_EXT_replicated_composites, ExtensionRoundTripTest,
+    Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_6,
+                   SPV_ENV_VULKAN_1_0, SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2,
+                   SPV_ENV_VULKAN_1_3, SPV_ENV_OPENCL_2_1),
+            ValuesIn(std::vector<AssemblyCase>{
+                {"OpExtension \"SPV_EXT_replicated_composites\"\n",
+                 MakeInstruction(spv::Op::OpExtension,
+                                 MakeVector("SPV_EXT_replicated_composites"))},
+                {"OpCapability ReplicatedCompositesEXT\n",
+                 MakeInstruction(
+                     spv::Op::OpCapability,
+                     {(uint32_t)spv::Capability::ReplicatedCompositesEXT})},
+                {"%2 = OpConstantCompositeReplicateEXT %1 %3\n",
+                 MakeInstruction(spv::Op::OpConstantCompositeReplicateEXT,
+                                 {1, 2, 3})},
+                {"%2 = OpSpecConstantCompositeReplicateEXT %1 %3\n",
+                 MakeInstruction(spv::Op::OpSpecConstantCompositeReplicateEXT,
+                                 {1, 2, 3})},
+                {"%2 = OpCompositeConstructReplicateEXT %1 %3\n",
+                 MakeInstruction(spv::Op::OpCompositeConstructReplicateEXT,
+                                 {1, 2, 3})},
+            })));
+
+// SPV_KHR_untyped_pointers
+INSTANTIATE_TEST_SUITE_P(
+    SPV_KHR_untyped_pointers, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_3, SPV_ENV_VULKAN_1_0,
+               SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_KHR_untyped_pointers\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_KHR_untyped_pointers"))},
+            {"OpCapability UntypedPointersKHR\n",
+             MakeInstruction(spv::Op::OpCapability,
+                             {(int)spv::Capability::UntypedPointersKHR})},
+            {"OpCapability UntypedPointersKHR\n",
+             MakeInstruction(spv::Op::OpCapability, {4473})},
+            {"%1 = OpTypeUntypedPointerKHR Workgroup\n",
+             MakeInstruction(spv::Op::OpTypeUntypedPointerKHR,
+                             {1, int(spv::StorageClass::Workgroup)})},
+            {"%2 = OpUntypedVariableKHR %1 Workgroup %3\n",
+             MakeInstruction(spv::Op::OpUntypedVariableKHR,
+                             {1, 2, int(spv::StorageClass::Workgroup), 3})},
+            {"%2 = OpUntypedVariableKHR %1 Workgroup %3 %4\n",
+             MakeInstruction(spv::Op::OpUntypedVariableKHR,
+                             {1, 2, int(spv::StorageClass::Workgroup), 3, 4})},
+            {"%2 = OpUntypedAccessChainKHR %1 %3 %4\n",
+             MakeInstruction(spv::Op::OpUntypedAccessChainKHR, {1, 2, 3, 4})},
+            {"%2 = OpUntypedAccessChainKHR %1 %3 %4 %5 %6 %7\n",
+             MakeInstruction(spv::Op::OpUntypedAccessChainKHR,
+                             {1, 2, 3, 4, 5, 6, 7})},
+            {"%2 = OpUntypedInBoundsAccessChainKHR %1 %3 %4\n",
+             MakeInstruction(spv::Op::OpUntypedInBoundsAccessChainKHR,
+                             {1, 2, 3, 4})},
+            {"%2 = OpUntypedInBoundsAccessChainKHR %1 %3 %4 %5 %6 %7\n",
+             MakeInstruction(spv::Op::OpUntypedInBoundsAccessChainKHR,
+                             {1, 2, 3, 4, 5, 6, 7})},
+            {"%2 = OpUntypedPtrAccessChainKHR %1 %3 %4 %5\n",
+             MakeInstruction(spv::Op::OpUntypedPtrAccessChainKHR,
+                             {1, 2, 3, 4, 5})},
+            {"%2 = OpUntypedPtrAccessChainKHR %1 %3 %4 %5 %6 %7\n",
+             MakeInstruction(spv::Op::OpUntypedPtrAccessChainKHR,
+                             {1, 2, 3, 4, 5, 6, 7})},
+            {"%2 = OpUntypedInBoundsPtrAccessChainKHR %1 %3 %4 %5\n",
+             MakeInstruction(spv::Op::OpUntypedInBoundsPtrAccessChainKHR,
+                             {1, 2, 3, 4, 5})},
+            {"%2 = OpUntypedInBoundsPtrAccessChainKHR %1 %3 %4 %5 %6 %7\n",
+             MakeInstruction(spv::Op::OpUntypedInBoundsPtrAccessChainKHR,
+                             {1, 2, 3, 4, 5, 6, 7})},
+        })));
 
 }  // namespace
 }  // namespace spvtools

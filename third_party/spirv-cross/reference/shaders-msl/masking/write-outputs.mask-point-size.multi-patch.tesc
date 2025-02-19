@@ -65,7 +65,7 @@ struct main0_patchOut
 };
 
 static inline __attribute__((always_inline))
-void write_in_func(device main0_out* thread & gl_out, thread uint& gl_InvocationID, device spvUnsafeArray<float4, 2>& v1, device float4& v3, threadgroup gl_PerVertex (&gl_out_masked)[4])
+void write_in_func(device main0_out* thread & gl_out, thread uint& gl_InvocationID, device spvUnsafeArray<float4, 2>& v1, device float4& v3, threadgroup spvUnsafeArray<gl_PerVertex, 4>& gl_out_masked)
 {
     gl_out[gl_InvocationID].v0 = float4(1.0);
     gl_out[gl_InvocationID].v0.z = 3.0;
@@ -85,8 +85,8 @@ void write_in_func(device main0_out* thread & gl_out, thread uint& gl_Invocation
 kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
     device main0_out* gl_out = &spvOut[gl_GlobalInvocationID.x - gl_GlobalInvocationID.x % 4];
-    threadgroup gl_PerVertex spvStoragegl_out_masked[8][4];
-    threadgroup gl_PerVertex (&gl_out_masked)[4] = spvStoragegl_out_masked[(gl_GlobalInvocationID.x / 4) % 8];
+    threadgroup spvUnsafeArray<gl_PerVertex, 4> spvStoragegl_out_masked[8];
+    threadgroup auto &gl_out_masked = spvStoragegl_out_masked[(gl_GlobalInvocationID.x / 4) % 8];
     device main0_patchOut& patchOut = spvPatchOut[gl_GlobalInvocationID.x / 4];
     uint gl_InvocationID = gl_GlobalInvocationID.x % 4;
     uint gl_PrimitiveID = min(gl_GlobalInvocationID.x / 4, spvIndirectParams[1] - 1);

@@ -214,6 +214,40 @@ class BinaryParseTest : public spvtest::TextToBinaryTestBase<::testing::Test> {
   MockParseClient client_;
 };
 
+class CxxBinaryParseTest
+    : public spvtest::TextToBinaryTestBase<::testing::Test> {
+ protected:
+  CxxBinaryParseTest() {
+    header_parser_ = [this](const spv_endianness_t endianness,
+                            const spv_parsed_header_t& header) {
+      return this->client_.Header(endianness, header.magic, header.version,
+                                  header.generator, header.bound,
+                                  header.reserved);
+    };
+
+    instruction_parser_ = [this](const spv_parsed_instruction_t& instruction) {
+      return this->client_.Instruction(ParsedInstruction(instruction));
+    };
+  }
+
+  ~CxxBinaryParseTest() override { spvDiagnosticDestroy(diagnostic_); }
+
+  void Parse(const SpirvVector& words, bool expected_result,
+             bool flip_words = false,
+             spv_target_env env = SPV_ENV_UNIVERSAL_1_0) {
+    SpirvVector flipped_words(words);
+    MaybeFlipWords(flip_words, flipped_words.begin(), flipped_words.end());
+    spvtools::SpirvTools tools(env);
+    EXPECT_EQ(expected_result, tools.Parse(flipped_words, header_parser_,
+                                           instruction_parser_, &diagnostic_));
+  }
+
+  spv_diagnostic diagnostic_ = nullptr;
+  MockParseClient client_;
+  HeaderParser header_parser_;
+  InstructionParser instruction_parser_;
+};
+
 // Adds an EXPECT_CALL to client_->Header() with appropriate parameters,
 // including bound.  Returns the EXPECT_CALL result.
 #define EXPECT_HEADER(bound)                                                 \
@@ -235,6 +269,16 @@ TEST_F(BinaryParseTest, EmptyModuleHasValidHeaderAndNoInstructionCallbacks) {
   }
 }
 
+TEST_F(CxxBinaryParseTest, EmptyModuleHasValidHeaderAndNoInstructionCallbacks) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully("");
+    EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+    Parse(words, true, endian_swap);
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
 TEST_F(BinaryParseTest, NullDiagnosticsIsOkForGoodParse) {
   const auto words = CompileSuccessfully("");
   EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
@@ -243,6 +287,15 @@ TEST_F(BinaryParseTest, NullDiagnosticsIsOkForGoodParse) {
       SPV_SUCCESS,
       spvBinaryParse(ScopedContext().context, &client_, words.data(),
                      words.size(), invoke_header, invoke_instruction, nullptr));
+}
+
+TEST_F(CxxBinaryParseTest, NullDiagnosticsIsOkForGoodParse) {
+  const auto words = CompileSuccessfully("");
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_0);
+  EXPECT_EQ(true,
+            tools.Parse(words, header_parser_, instruction_parser_, nullptr));
 }
 
 TEST_F(BinaryParseTest, NullDiagnosticsIsOkForBadParse) {
@@ -254,6 +307,16 @@ TEST_F(BinaryParseTest, NullDiagnosticsIsOkForBadParse) {
       SPV_ERROR_INVALID_BINARY,
       spvBinaryParse(ScopedContext().context, &client_, words.data(),
                      words.size(), invoke_header, invoke_instruction, nullptr));
+}
+
+TEST_F(CxxBinaryParseTest, NullDiagnosticsIsOkForBadParse) {
+  auto words = CompileSuccessfully("");
+  words.push_back(0xffffffff);  // Certainly invalid instruction header.
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_0);
+  EXPECT_EQ(false,
+            tools.Parse(words, header_parser_, instruction_parser_, nullptr));
 }
 
 // Make sure that we don't blow up when both the consumer and the diagnostic are
@@ -272,6 +335,18 @@ TEST_F(BinaryParseTest, NullConsumerNullDiagnosticsForBadParse) {
                            invoke_header, invoke_instruction, nullptr));
 }
 
+TEST_F(CxxBinaryParseTest, NullConsumerNullDiagnosticsForBadParse) {
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  tools.SetMessageConsumer(nullptr);
+
+  auto words = CompileSuccessfully("");
+  words.push_back(0xffffffff);  // Certainly invalid instruction header.
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  EXPECT_EQ(false,
+            tools.Parse(words, header_parser_, instruction_parser_, nullptr));
+}
+
 TEST_F(BinaryParseTest, SpecifyConsumerNullDiagnosticsForGoodParse) {
   const auto words = CompileSuccessfully("");
 
@@ -286,6 +361,21 @@ TEST_F(BinaryParseTest, SpecifyConsumerNullDiagnosticsForGoodParse) {
   EXPECT_EQ(SPV_SUCCESS,
             spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, nullptr));
+  EXPECT_EQ(0, invocation);
+}
+
+TEST_F(CxxBinaryParseTest, SpecifyConsumerNullDiagnosticsForGoodParse) {
+  const auto words = CompileSuccessfully("");
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  int invocation = 0;
+  tools.SetMessageConsumer([&invocation](spv_message_level_t, const char*,
+                                         const spv_position_t&,
+                                         const char*) { ++invocation; });
+
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  EXPECT_EQ(true,
+            tools.Parse(words, header_parser_, instruction_parser_, nullptr));
   EXPECT_EQ(0, invocation);
 }
 
@@ -315,6 +405,30 @@ TEST_F(BinaryParseTest, SpecifyConsumerNullDiagnosticsForBadParse) {
   EXPECT_EQ(1, invocation);
 }
 
+TEST_F(CxxBinaryParseTest, SpecifyConsumerNullDiagnosticsForBadParse) {
+  auto words = CompileSuccessfully("");
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  int invocation = 0;
+  tools.SetMessageConsumer(
+      [&invocation](spv_message_level_t level, const char* source,
+                    const spv_position_t& position, const char* message) {
+        ++invocation;
+        EXPECT_EQ(SPV_MSG_ERROR, level);
+        EXPECT_STREQ("input", source);
+        EXPECT_EQ(0u, position.line);
+        EXPECT_EQ(0u, position.column);
+        EXPECT_EQ(1u, position.index);
+        EXPECT_STREQ("Invalid opcode: 65535", message);
+      });
+
+  words.push_back(0xffffffff);  // Certainly invalid instruction header.
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  EXPECT_EQ(false,
+            tools.Parse(words, header_parser_, instruction_parser_, nullptr));
+  EXPECT_EQ(1, invocation);
+}
+
 TEST_F(BinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForGoodParse) {
   const auto words = CompileSuccessfully("");
 
@@ -329,6 +443,22 @@ TEST_F(BinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForGoodParse) {
   EXPECT_EQ(SPV_SUCCESS,
             spvBinaryParse(ctx.CContext(), &client_, words.data(), words.size(),
                            invoke_header, invoke_instruction, &diagnostic_));
+  EXPECT_EQ(0, invocation);
+  EXPECT_EQ(nullptr, diagnostic_);
+}
+
+TEST_F(CxxBinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForGoodParse) {
+  const auto words = CompileSuccessfully("");
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  int invocation = 0;
+  tools.SetMessageConsumer([&invocation](spv_message_level_t, const char*,
+                                         const spv_position_t&,
+                                         const char*) { ++invocation; });
+
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  EXPECT_EQ(true, tools.Parse(words, header_parser_, instruction_parser_,
+                              &diagnostic_));
   EXPECT_EQ(0, invocation);
   EXPECT_EQ(nullptr, diagnostic_);
 }
@@ -352,6 +482,23 @@ TEST_F(BinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForBadParse) {
   EXPECT_STREQ("Invalid opcode: 65535", diagnostic_->error);
 }
 
+TEST_F(CxxBinaryParseTest, SpecifyConsumerSpecifyDiagnosticsForBadParse) {
+  auto words = CompileSuccessfully("");
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  int invocation = 0;
+  tools.SetMessageConsumer([&invocation](spv_message_level_t, const char*,
+                                         const spv_position_t&,
+                                         const char*) { ++invocation; });
+
+  words.push_back(0xffffffff);  // Certainly invalid instruction header.
+  EXPECT_HEADER(1).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).Times(0);  // No instruction callback.
+  EXPECT_EQ(false, tools.Parse(words, header_parser_, instruction_parser_,
+                               &diagnostic_));
+  EXPECT_EQ(0, invocation);
+  EXPECT_STREQ("Invalid opcode: 65535", diagnostic_->error);
+}
+
 TEST_F(BinaryParseTest,
        ModuleWithSingleInstructionHasValidHeaderAndInstructionCallback) {
   for (bool endian_swap : kSwapEndians) {
@@ -361,6 +508,19 @@ TEST_F(BinaryParseTest,
     EXPECT_CALL(client_, Instruction(MakeParsedVoidTypeInstruction(1)))
         .WillOnce(Return(SPV_SUCCESS));
     Parse(words, SPV_SUCCESS, endian_swap);
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
+TEST_F(CxxBinaryParseTest,
+       ModuleWithSingleInstructionHasValidHeaderAndInstructionCallback) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully("%1 = OpTypeVoid");
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(2).WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(MakeParsedVoidTypeInstruction(1)))
+        .WillOnce(Return(SPV_SUCCESS));
+    Parse(words, true, endian_swap);
     EXPECT_EQ(nullptr, diagnostic_);
   }
 }
@@ -408,6 +568,22 @@ TEST_F(BinaryParseTest, TwoScalarTypesGenerateTwoInstructionCallbacks) {
   }
 }
 
+TEST_F(CxxBinaryParseTest, TwoScalarTypesGenerateTwoInstructionCallbacks) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully(
+        "%1 = OpTypeVoid "
+        "%2 = OpTypeInt 32 1");
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(3).WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(MakeParsedVoidTypeInstruction(1)))
+        .WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(MakeParsedInt32TypeInstruction(2)))
+        .WillOnce(Return(SPV_SUCCESS));
+    Parse(words, true, endian_swap);
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
 TEST_F(BinaryParseTest, EarlyReturnWithZeroPassingCallbacks) {
   for (bool endian_swap : kSwapEndians) {
     const auto words = CompileSuccessfully(
@@ -418,6 +594,21 @@ TEST_F(BinaryParseTest, EarlyReturnWithZeroPassingCallbacks) {
     // Early exit means no calls to Instruction().
     EXPECT_CALL(client_, Instruction(_)).Times(0);
     Parse(words, SPV_ERROR_INVALID_BINARY, endian_swap);
+    // On error, the binary parser doesn't generate its own diagnostics.
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
+TEST_F(CxxBinaryParseTest, EarlyReturnWithZeroPassingCallbacks) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully(
+        "%1 = OpTypeVoid "
+        "%2 = OpTypeInt 32 1");
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(3).WillOnce(Return(SPV_ERROR_INVALID_BINARY));
+    // Early exit means no calls to Instruction().
+    EXPECT_CALL(client_, Instruction(_)).Times(0);
+    Parse(words, false, endian_swap);
     // On error, the binary parser doesn't generate its own diagnostics.
     EXPECT_EQ(nullptr, diagnostic_);
   }
@@ -434,6 +625,23 @@ TEST_F(BinaryParseTest,
     // Early exit means no calls to Instruction().
     EXPECT_CALL(client_, Instruction(_)).Times(0);
     Parse(words, SPV_REQUESTED_TERMINATION, endian_swap);
+    // On early termination, the binary parser doesn't generate its own
+    // diagnostics.
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
+TEST_F(CxxBinaryParseTest,
+       EarlyReturnWithZeroPassingCallbacksAndSpecifiedResultCode) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully(
+        "%1 = OpTypeVoid "
+        "%2 = OpTypeInt 32 1");
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(3).WillOnce(Return(SPV_REQUESTED_TERMINATION));
+    // Early exit means no calls to Instruction().
+    EXPECT_CALL(client_, Instruction(_)).Times(0);
+    Parse(words, false, endian_swap);
     // On early termination, the binary parser doesn't generate its own
     // diagnostics.
     EXPECT_EQ(nullptr, diagnostic_);
@@ -457,6 +665,23 @@ TEST_F(BinaryParseTest, EarlyReturnWithOnePassingCallback) {
   }
 }
 
+TEST_F(CxxBinaryParseTest, EarlyReturnWithOnePassingCallback) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully(
+        "%1 = OpTypeVoid "
+        "%2 = OpTypeInt 32 1 "
+        "%3 = OpTypeFloat 32");
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(4).WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(MakeParsedVoidTypeInstruction(1)))
+        .WillOnce(Return(SPV_REQUESTED_TERMINATION));
+    Parse(words, false, endian_swap);
+    // On early termination, the binary parser doesn't generate its own
+    // diagnostics.
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
 TEST_F(BinaryParseTest, EarlyReturnWithTwoPassingCallbacks) {
   for (bool endian_swap : kSwapEndians) {
     const auto words = CompileSuccessfully(
@@ -470,6 +695,25 @@ TEST_F(BinaryParseTest, EarlyReturnWithTwoPassingCallbacks) {
     EXPECT_CALL(client_, Instruction(MakeParsedInt32TypeInstruction(2)))
         .WillOnce(Return(SPV_REQUESTED_TERMINATION));
     Parse(words, SPV_REQUESTED_TERMINATION, endian_swap);
+    // On early termination, the binary parser doesn't generate its own
+    // diagnostics.
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
+TEST_F(CxxBinaryParseTest, EarlyReturnWithTwoPassingCallbacks) {
+  for (bool endian_swap : kSwapEndians) {
+    const auto words = CompileSuccessfully(
+        "%1 = OpTypeVoid "
+        "%2 = OpTypeInt 32 1 "
+        "%3 = OpTypeFloat 32");
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(4).WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(MakeParsedVoidTypeInstruction(1)))
+        .WillOnce(Return(SPV_SUCCESS));
+    EXPECT_CALL(client_, Instruction(MakeParsedInt32TypeInstruction(2)))
+        .WillOnce(Return(SPV_REQUESTED_TERMINATION));
+    Parse(words, false, endian_swap);
     // On early termination, the binary parser doesn't generate its own
     // diagnostics.
     EXPECT_EQ(nullptr, diagnostic_);
@@ -497,6 +741,31 @@ TEST_F(BinaryParseTest, InstructionWithStringOperand) {
             static_cast<uint16_t>(operands.size())})))
         .WillOnce(Return(SPV_SUCCESS));
     Parse(words, SPV_SUCCESS, endian_swap);
+    EXPECT_EQ(nullptr, diagnostic_);
+  }
+}
+
+TEST_F(CxxBinaryParseTest, InstructionWithStringOperand) {
+  for (bool endian_swap : kSwapEndians) {
+    const std::string str =
+        "the future is already here, it's just not evenly distributed";
+    const auto str_words = MakeVector(str);
+    const auto instruction = MakeInstruction(spv::Op::OpName, {99}, str_words);
+    const auto words = Concatenate({ExpectedHeaderForBound(100), instruction});
+    InSequence calls_expected_in_specific_order;
+    EXPECT_HEADER(100).WillOnce(Return(SPV_SUCCESS));
+    const auto operands = std::vector<spv_parsed_operand_t>{
+        MakeSimpleOperand(1, SPV_OPERAND_TYPE_ID),
+        MakeLiteralStringOperand(2, static_cast<uint16_t>(str_words.size()))};
+    EXPECT_CALL(
+        client_,
+        Instruction(ParsedInstruction(spv_parsed_instruction_t{
+            instruction.data(), static_cast<uint16_t>(instruction.size()),
+            uint16_t(spv::Op::OpName), SPV_EXT_INST_TYPE_NONE, 0 /*type id*/,
+            0 /* No result id for OpName*/, operands.data(),
+            static_cast<uint16_t>(operands.size())})))
+        .WillOnce(Return(SPV_SUCCESS));
+    Parse(words, true, endian_swap);
     EXPECT_EQ(nullptr, diagnostic_);
   }
 }
@@ -531,6 +800,37 @@ TEST_F(BinaryParseTest, ExtendedInstruction) {
   // Since we are actually checking the output, don't test the
   // endian-swapped version.
   Parse(words, SPV_SUCCESS, false);
+  EXPECT_EQ(nullptr, diagnostic_);
+}
+
+TEST_F(CxxBinaryParseTest, ExtendedInstruction) {
+  const auto words = CompileSuccessfully(
+      "%extcl = OpExtInstImport \"OpenCL.std\" "
+      "%result = OpExtInst %float %extcl sqrt %x");
+  EXPECT_HEADER(5).WillOnce(Return(SPV_SUCCESS));
+  EXPECT_CALL(client_, Instruction(_)).WillOnce(Return(SPV_SUCCESS));
+  // We're only interested in the second call to Instruction():
+  const auto operands = std::vector<spv_parsed_operand_t>{
+      MakeSimpleOperand(1, SPV_OPERAND_TYPE_TYPE_ID),
+      MakeSimpleOperand(2, SPV_OPERAND_TYPE_RESULT_ID),
+      MakeSimpleOperand(3,
+                        SPV_OPERAND_TYPE_ID),  // Extended instruction set Id
+      MakeSimpleOperand(4, SPV_OPERAND_TYPE_EXTENSION_INSTRUCTION_NUMBER),
+      MakeSimpleOperand(5, SPV_OPERAND_TYPE_ID),  // Id of the argument
+  };
+  const auto instruction = MakeInstruction(
+      spv::Op::OpExtInst,
+      {2, 3, 1, static_cast<uint32_t>(OpenCLLIB::Entrypoints::Sqrt), 4});
+  EXPECT_CALL(client_,
+              Instruction(ParsedInstruction(spv_parsed_instruction_t{
+                  instruction.data(), static_cast<uint16_t>(instruction.size()),
+                  uint16_t(spv::Op::OpExtInst), SPV_EXT_INST_TYPE_OPENCL_STD,
+                  2 /*type id*/, 3 /*result id*/, operands.data(),
+                  static_cast<uint16_t>(operands.size())})))
+      .WillOnce(Return(SPV_SUCCESS));
+  // Since we are actually checking the output, don't test the
+  // endian-swapped version.
+  Parse(words, true, false);
   EXPECT_EQ(nullptr, diagnostic_);
 }
 
@@ -854,7 +1154,10 @@ INSTANTIATE_TEST_SUITE_P(
         {"%2 = OpSpecConstantOp %1 !1000 %2",
          "Invalid OpSpecConstantOp opcode: 1000"},
         {"OpCapability !9999", "Invalid capability operand: 9999"},
-        {"OpSource !9999 100", "Invalid source language operand: 9999"},
+        {"OpSource !9999 100",
+         "Invalid source language operand: 9999, if you are creating a new "
+         "source language please use value 0 (Unknown) and when ready, add "
+         "your source language to SPIRV-Headers"},
         {"OpEntryPoint !9999", "Invalid execution model operand: 9999"},
         {"OpMemoryModel !9999", "Invalid addressing model operand: 9999"},
         {"OpMemoryModel Logical !9999", "Invalid memory model operand: 9999"},

@@ -1,4 +1,6 @@
 // Copyright (c) 2016 Google Inc.
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -178,7 +180,7 @@ void TypeManager::RemoveId(uint32_t id) {
   if (iter == id_to_type_.end()) return;
 
   auto& type = iter->second;
-  if (!type->IsUniqueType(true)) {
+  if (!type->IsUniqueType()) {
     auto tIter = type_to_id_.find(type);
     if (tIter != type_to_id_.end() && tIter->second == id) {
       // |type| currently maps to |id|.
@@ -245,6 +247,7 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
                {(type->AsInteger()->IsSigned() ? 1u : 0u)}}});
       break;
     case Type::kFloat:
+      // TODO: Handle FP encoding enums once actually used.
       typeInst = MakeUnique<Instruction>(
           context(), spv::Op::OpTypeFloat, 0, id,
           std::initializer_list<Operand>{
@@ -331,6 +334,17 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       }
       typeInst = MakeUnique<Instruction>(
           context(), spv::Op::OpTypeRuntimeArray, 0, id,
+          std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}});
+      break;
+    }
+    case Type::kNodePayloadArrayAMDX: {
+      uint32_t subtype =
+          GetTypeInstruction(type->AsNodePayloadArrayAMDX()->element_type());
+      if (subtype == 0) {
+        return 0;
+      }
+      typeInst = MakeUnique<Instruction>(
+          context(), spv::Op::OpTypeNodePayloadArrayAMDX, 0, id,
           std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}});
       break;
     }
@@ -423,6 +437,59 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
               {SPV_OPERAND_TYPE_ID, {coop_mat->columns_id()}}});
       break;
     }
+    case Type::kCooperativeMatrixKHR: {
+      auto coop_mat = type->AsCooperativeMatrixKHR();
+      uint32_t const component_type =
+          GetTypeInstruction(coop_mat->component_type());
+      if (component_type == 0) {
+        return 0;
+      }
+      typeInst = MakeUnique<Instruction>(
+          context(), spv::Op::OpTypeCooperativeMatrixKHR, 0, id,
+          std::initializer_list<Operand>{
+              {SPV_OPERAND_TYPE_ID, {component_type}},
+              {SPV_OPERAND_TYPE_SCOPE_ID, {coop_mat->scope_id()}},
+              {SPV_OPERAND_TYPE_ID, {coop_mat->rows_id()}},
+              {SPV_OPERAND_TYPE_ID, {coop_mat->columns_id()}},
+              {SPV_OPERAND_TYPE_ID, {coop_mat->use_id()}}});
+      break;
+    }
+    case Type::kTensorLayoutNV: {
+      auto tensor_layout = type->AsTensorLayoutNV();
+      typeInst = MakeUnique<Instruction>(
+          context(), spv::Op::OpTypeTensorLayoutNV, 0, id,
+          std::initializer_list<Operand>{
+              {SPV_OPERAND_TYPE_ID, {tensor_layout->dim_id()}},
+              {SPV_OPERAND_TYPE_ID, {tensor_layout->clamp_mode_id()}}});
+      break;
+    }
+    case Type::kTensorViewNV: {
+      auto tensor_view = type->AsTensorViewNV();
+      std::vector<Operand> operands;
+      operands.push_back(Operand{SPV_OPERAND_TYPE_ID, {tensor_view->dim_id()}});
+      operands.push_back(
+          Operand{SPV_OPERAND_TYPE_ID, {tensor_view->has_dimensions_id()}});
+      for (auto p : tensor_view->perm()) {
+        operands.push_back(Operand{SPV_OPERAND_TYPE_ID, {p}});
+      }
+      typeInst = MakeUnique<Instruction>(context(), spv::Op::OpTypeTensorViewNV,
+                                         0, id, operands);
+      break;
+    }
+    case Type::kCooperativeVectorNV: {
+      auto coop_vec = type->AsCooperativeVectorNV();
+      uint32_t const component_type =
+          GetTypeInstruction(coop_vec->component_type());
+      if (component_type == 0) {
+        return 0;
+      }
+      typeInst = MakeUnique<Instruction>(
+          context(), spv::Op::OpTypeCooperativeVectorNV, 0, id,
+          std::initializer_list<Operand>{
+              {SPV_OPERAND_TYPE_ID, {component_type}},
+              {SPV_OPERAND_TYPE_ID, {coop_vec->components()}}});
+      break;
+    }
     default:
       assert(false && "Unexpected type");
       break;
@@ -437,12 +504,7 @@ uint32_t TypeManager::FindPointerToType(uint32_t type_id,
                                         spv::StorageClass storage_class) {
   Type* pointeeTy = GetType(type_id);
   Pointer pointerTy(pointeeTy, storage_class);
-  if (pointeeTy->IsUniqueType(true)) {
-    // Non-ambiguous type. Get the pointer type through the type manager.
-    return GetTypeInstruction(&pointerTy);
-  }
 
-  // Ambiguous type, do a linear search.
   Module::inst_iterator type_itr = context()->module()->types_values_begin();
   for (; type_itr != context()->module()->types_values_end(); ++type_itr) {
     const Instruction* type_inst = &*type_itr;
@@ -455,8 +517,10 @@ uint32_t TypeManager::FindPointerToType(uint32_t type_id,
   }
 
   // Must create the pointer type.
-  // TODO(1841): Handle id overflow.
   uint32_t resultId = context()->TakeNextId();
+  if (resultId == 0) {
+    return 0;
+  }
   std::unique_ptr<Instruction> type_inst(
       new Instruction(context(), spv::Op::OpTypePointer, 0, resultId,
                       {{spv_operand_type_t::SPV_OPERAND_TYPE_STORAGE_CLASS,
@@ -500,13 +564,24 @@ void TypeManager::CreateDecoration(uint32_t target,
   context()->get_def_use_mgr()->AnalyzeInstUse(inst);
 }
 
-Type* TypeManager::RebuildType(const Type& type) {
+Type* TypeManager::RebuildType(uint32_t type_id, const Type& type) {
+  assert(type_id != 0);
+
   // The comparison and hash on the type pool will avoid inserting the rebuilt
   // type if an equivalent type already exists. The rebuilt type will be deleted
   // when it goes out of scope at the end of the function in that case. Repeated
   // insertions of the same Type will, at most, keep one corresponding object in
   // the type pool.
   std::unique_ptr<Type> rebuilt_ty;
+
+  // If |type_id| is already present in the type pool, return the existing type.
+  // This saves extra work in the type builder and prevents running into
+  // circular issues (https://github.com/KhronosGroup/SPIRV-Tools/issues/5623).
+  Type* pool_ty = GetType(type_id);
+  if (pool_ty != nullptr) {
+    return pool_ty;
+  }
+
   switch (type.kind()) {
 #define DefineNoSubtypeCase(kind)             \
   case Type::k##kind:                         \
@@ -533,43 +608,53 @@ Type* TypeManager::RebuildType(const Type& type) {
     case Type::kVector: {
       const Vector* vec_ty = type.AsVector();
       const Type* ele_ty = vec_ty->element_type();
-      rebuilt_ty =
-          MakeUnique<Vector>(RebuildType(*ele_ty), vec_ty->element_count());
+      rebuilt_ty = MakeUnique<Vector>(RebuildType(GetId(ele_ty), *ele_ty),
+                                      vec_ty->element_count());
       break;
     }
     case Type::kMatrix: {
       const Matrix* mat_ty = type.AsMatrix();
       const Type* ele_ty = mat_ty->element_type();
-      rebuilt_ty =
-          MakeUnique<Matrix>(RebuildType(*ele_ty), mat_ty->element_count());
+      rebuilt_ty = MakeUnique<Matrix>(RebuildType(GetId(ele_ty), *ele_ty),
+                                      mat_ty->element_count());
       break;
     }
     case Type::kImage: {
       const Image* image_ty = type.AsImage();
       const Type* ele_ty = image_ty->sampled_type();
-      rebuilt_ty =
-          MakeUnique<Image>(RebuildType(*ele_ty), image_ty->dim(),
-                            image_ty->depth(), image_ty->is_arrayed(),
-                            image_ty->is_multisampled(), image_ty->sampled(),
-                            image_ty->format(), image_ty->access_qualifier());
+      rebuilt_ty = MakeUnique<Image>(
+          RebuildType(GetId(ele_ty), *ele_ty), image_ty->dim(),
+          image_ty->depth(), image_ty->is_arrayed(),
+          image_ty->is_multisampled(), image_ty->sampled(), image_ty->format(),
+          image_ty->access_qualifier());
       break;
     }
     case Type::kSampledImage: {
       const SampledImage* image_ty = type.AsSampledImage();
       const Type* ele_ty = image_ty->image_type();
-      rebuilt_ty = MakeUnique<SampledImage>(RebuildType(*ele_ty));
+      rebuilt_ty =
+          MakeUnique<SampledImage>(RebuildType(GetId(ele_ty), *ele_ty));
       break;
     }
     case Type::kArray: {
       const Array* array_ty = type.AsArray();
-      rebuilt_ty =
-          MakeUnique<Array>(array_ty->element_type(), array_ty->length_info());
+      const Type* ele_ty = array_ty->element_type();
+      rebuilt_ty = MakeUnique<Array>(RebuildType(GetId(ele_ty), *ele_ty),
+                                     array_ty->length_info());
       break;
     }
     case Type::kRuntimeArray: {
       const RuntimeArray* array_ty = type.AsRuntimeArray();
       const Type* ele_ty = array_ty->element_type();
-      rebuilt_ty = MakeUnique<RuntimeArray>(RebuildType(*ele_ty));
+      rebuilt_ty =
+          MakeUnique<RuntimeArray>(RebuildType(GetId(ele_ty), *ele_ty));
+      break;
+    }
+    case Type::kNodePayloadArrayAMDX: {
+      const NodePayloadArrayAMDX* array_ty = type.AsNodePayloadArrayAMDX();
+      const Type* ele_ty = array_ty->element_type();
+      rebuilt_ty =
+          MakeUnique<NodePayloadArrayAMDX>(RebuildType(GetId(ele_ty), *ele_ty));
       break;
     }
     case Type::kStruct: {
@@ -577,7 +662,7 @@ Type* TypeManager::RebuildType(const Type& type) {
       std::vector<const Type*> subtypes;
       subtypes.reserve(struct_ty->element_types().size());
       for (const auto* ele_ty : struct_ty->element_types()) {
-        subtypes.push_back(RebuildType(*ele_ty));
+        subtypes.push_back(RebuildType(GetId(ele_ty), *ele_ty));
       }
       rebuilt_ty = MakeUnique<Struct>(subtypes);
       Struct* rebuilt_struct = rebuilt_ty->AsStruct();
@@ -594,7 +679,7 @@ Type* TypeManager::RebuildType(const Type& type) {
     case Type::kPointer: {
       const Pointer* pointer_ty = type.AsPointer();
       const Type* ele_ty = pointer_ty->pointee_type();
-      rebuilt_ty = MakeUnique<Pointer>(RebuildType(*ele_ty),
+      rebuilt_ty = MakeUnique<Pointer>(RebuildType(GetId(ele_ty), *ele_ty),
                                        pointer_ty->storage_class());
       break;
     }
@@ -604,9 +689,10 @@ Type* TypeManager::RebuildType(const Type& type) {
       std::vector<const Type*> param_types;
       param_types.reserve(function_ty->param_types().size());
       for (const auto* param_ty : function_ty->param_types()) {
-        param_types.push_back(RebuildType(*param_ty));
+        param_types.push_back(RebuildType(GetId(param_ty), *param_ty));
       }
-      rebuilt_ty = MakeUnique<Function>(RebuildType(*ret_ty), param_types);
+      rebuilt_ty = MakeUnique<Function>(RebuildType(GetId(ret_ty), *ret_ty),
+                                        param_types);
       break;
     }
     case Type::kForwardPointer: {
@@ -616,7 +702,7 @@ Type* TypeManager::RebuildType(const Type& type) {
       const Pointer* target_ptr = forward_ptr_ty->target_pointer();
       if (target_ptr) {
         rebuilt_ty->AsForwardPointer()->SetTargetPointer(
-            RebuildType(*target_ptr)->AsPointer());
+            RebuildType(GetId(target_ptr), *target_ptr)->AsPointer());
       }
       break;
     }
@@ -624,8 +710,37 @@ Type* TypeManager::RebuildType(const Type& type) {
       const CooperativeMatrixNV* cm_type = type.AsCooperativeMatrixNV();
       const Type* component_type = cm_type->component_type();
       rebuilt_ty = MakeUnique<CooperativeMatrixNV>(
-          RebuildType(*component_type), cm_type->scope_id(), cm_type->rows_id(),
-          cm_type->columns_id());
+          RebuildType(GetId(component_type), *component_type),
+          cm_type->scope_id(), cm_type->rows_id(), cm_type->columns_id());
+      break;
+    }
+    case Type::kCooperativeMatrixKHR: {
+      const CooperativeMatrixKHR* cm_type = type.AsCooperativeMatrixKHR();
+      const Type* component_type = cm_type->component_type();
+      rebuilt_ty = MakeUnique<CooperativeMatrixKHR>(
+          RebuildType(GetId(component_type), *component_type),
+          cm_type->scope_id(), cm_type->rows_id(), cm_type->columns_id(),
+          cm_type->use_id());
+      break;
+    }
+    case Type::kTensorLayoutNV: {
+      const TensorLayoutNV* tl_type = type.AsTensorLayoutNV();
+      rebuilt_ty = MakeUnique<TensorLayoutNV>(tl_type->dim_id(),
+                                              tl_type->clamp_mode_id());
+      break;
+    }
+    case Type::kTensorViewNV: {
+      const TensorViewNV* tv_type = type.AsTensorViewNV();
+      rebuilt_ty = MakeUnique<TensorViewNV>(
+          tv_type->dim_id(), tv_type->has_dimensions_id(), tv_type->perm());
+      break;
+    }
+    case Type::kCooperativeVectorNV: {
+      const CooperativeVectorNV* cv_type = type.AsCooperativeVectorNV();
+      const Type* component_type = cv_type->component_type();
+      rebuilt_ty = MakeUnique<CooperativeVectorNV>(
+          RebuildType(GetId(component_type), *component_type),
+          cv_type->components());
       break;
     }
     default:
@@ -644,7 +759,7 @@ Type* TypeManager::RebuildType(const Type& type) {
 void TypeManager::RegisterType(uint32_t id, const Type& type) {
   // Rebuild |type| so it and all its constituent types are owned by the type
   // pool.
-  Type* rebuilt = RebuildType(type);
+  Type* rebuilt = RebuildType(id, type);
   assert(rebuilt->IsSame(&type));
   id_to_type_[id] = rebuilt;
   if (GetId(rebuilt) == 0) {
@@ -764,6 +879,14 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
         return type;
       }
       break;
+    case spv::Op::OpTypeNodePayloadArrayAMDX:
+      type = new NodePayloadArrayAMDX(GetType(inst.GetSingleWordInOperand(0)));
+      if (id_to_incomplete_type_.count(inst.GetSingleWordInOperand(0))) {
+        incomplete_types_.emplace_back(inst.result_id(), type);
+        id_to_incomplete_type_[inst.result_id()] = type;
+        return type;
+      }
+      break;
     case spv::Op::OpTypeStruct: {
       std::vector<const Type*> element_types;
       bool incomplete_type = false;
@@ -863,14 +986,38 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
                                      inst.GetSingleWordInOperand(2),
                                      inst.GetSingleWordInOperand(3));
       break;
+    case spv::Op::OpTypeCooperativeMatrixKHR:
+      type = new CooperativeMatrixKHR(
+          GetType(inst.GetSingleWordInOperand(0)),
+          inst.GetSingleWordInOperand(1), inst.GetSingleWordInOperand(2),
+          inst.GetSingleWordInOperand(3), inst.GetSingleWordInOperand(4));
+      break;
+    case spv::Op::OpTypeCooperativeVectorNV:
+      type = new CooperativeVectorNV(GetType(inst.GetSingleWordInOperand(0)),
+                                     inst.GetSingleWordInOperand(1));
+      break;
     case spv::Op::OpTypeRayQueryKHR:
       type = new RayQueryKHR();
       break;
     case spv::Op::OpTypeHitObjectNV:
       type = new HitObjectNV();
       break;
+    case spv::Op::OpTypeTensorLayoutNV:
+      type = new TensorLayoutNV(inst.GetSingleWordInOperand(0),
+                                inst.GetSingleWordInOperand(1));
+      break;
+    case spv::Op::OpTypeTensorViewNV: {
+      const auto count = inst.NumOperands();
+      std::vector<uint32_t> perm;
+      for (uint32_t i = 2; i < count; ++i) {
+        perm.push_back(inst.GetSingleWordOperand(i));
+      }
+      type = new TensorViewNV(inst.GetSingleWordInOperand(0),
+                              inst.GetSingleWordInOperand(1), perm);
+      break;
+    }
     default:
-      SPIRV_UNIMPLEMENTED(consumer_, "unhandled type");
+      assert(false && "Type not handled by the type manager.");
       break;
   }
 
@@ -895,7 +1042,8 @@ void TypeManager::AttachDecoration(const Instruction& inst, Type* type) {
   if (!IsAnnotationInst(opcode)) return;
 
   switch (opcode) {
-    case spv::Op::OpDecorate: {
+    case spv::Op::OpDecorate:
+    case spv::Op::OpDecorateId: {
       const auto count = inst.NumOperands();
       std::vector<uint32_t> data;
       for (uint32_t i = 1; i < count; ++i) {
@@ -912,12 +1060,10 @@ void TypeManager::AttachDecoration(const Instruction& inst, Type* type) {
       }
       if (Struct* st = type->AsStruct()) {
         st->AddMemberDecoration(index, std::move(data));
-      } else {
-        SPIRV_UNIMPLEMENTED(consumer_, "OpMemberDecorate non-struct type");
       }
     } break;
     default:
-      SPIRV_UNREACHABLE(consumer_);
+      assert(false && "Unexpected opcode for a decoration instruction.");
       break;
   }
 }

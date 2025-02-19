@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -67,7 +66,7 @@ func (s wSpy) Write(p []byte) (n int, err error) {
 
 // main entry point.
 func main() {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	if enableDebugLogging {
 		// create a log file in the executable's directory.
 		if logfile, err := os.Create(path.Join(path.Dir(os.Args[0]), "log.txt")); err == nil {
@@ -213,6 +212,10 @@ func (s *server) Initialize(ctx context.Context, p *lsp.ParamInitia) (*lsp.Initi
 			ReferencesProvider:         true,
 			RenameProvider:             true,
 			DocumentFormattingProvider: true,
+			CompletionProvider: &lsp.CompletionOptions{
+				TriggerCharacters: []string{"%"},
+				ResolveProvider:   false,
+			},
 		},
 	}
 	return &res, nil
@@ -225,9 +228,56 @@ func (s *server) WillSaveWaitUntil(ctx context.Context, p *lsp.WillSaveTextDocum
 	log.Println("server.WillSaveWaitUntil()")
 	return nil, nil
 }
+
+func markdownOpcode(op *schema.Opcode) string {
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf("**%s** (%s)\n\n", op.Opname, op.Class))
+
+	for idx, operand := range op.Operands {
+		sb.WriteString(fmt.Sprintf("Operand %d%s: ", idx, operand.Quantifier))
+		sb.WriteString(fmt.Sprintf("%s (%s)\n", operand.Name, operand.Kind.Kind))
+	}
+
+	return sb.String()
+}
+
 func (s *server) Completion(ctx context.Context, p *lsp.CompletionParams) (*lsp.CompletionList, error) {
 	log.Println("server.Completion()")
-	return nil, nil
+	f := s.getFile(p.TextDocument.URI)
+	if f == nil {
+		return nil, fmt.Errorf("Unknown file")
+	}
+
+	if p.Context.TriggerCharacter == "%" {
+		idents := []lsp.CompletionItem{}
+		for name, ident := range f.res.Identifiers {
+			idents = append(idents, lsp.CompletionItem{
+				Label:         name,
+				Kind:          6,
+				Documentation: ident.Definition.Range.Text(f.res.Lines),
+			})
+		}
+		res := &lsp.CompletionList{
+			IsIncomplete: false,
+			Items:        idents,
+		}
+
+		return res, nil
+	}
+
+	opcodes := []lsp.CompletionItem{}
+	for name, opcode := range schema.Opcodes {
+		opcodes = append(opcodes, lsp.CompletionItem{
+			Label:         name,
+			Kind:          3,
+			Documentation: markdownOpcode(opcode),
+		})
+	}
+	res := &lsp.CompletionList{
+		IsIncomplete: false,
+		Items:        opcodes,
+	}
+	return res, nil
 }
 func (s *server) Resolve(ctx context.Context, p *lsp.CompletionItem) (*lsp.CompletionItem, error) {
 	log.Println("server.Resolve()")
@@ -246,7 +296,7 @@ func (s *server) Hover(ctx context.Context, p *lsp.HoverParams) (*lsp.Hover, err
 		default:
 			sb.WriteString(fmt.Sprintf("<Unhandled type '%T'>", v))
 		case *parser.Instruction:
-			sb.WriteString(fmt.Sprintf("```\n%v\n```", v.Opcode.Opname))
+			sb.WriteString(markdownOpcode(v.Opcode))
 		case *parser.Identifier:
 			sb.WriteString(fmt.Sprintf("```\n%v\n```", v.Definition.Range.Text(f.res.Lines)))
 		case *parser.Operand:

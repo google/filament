@@ -20,26 +20,26 @@ kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]],
     bool _71 = cb.d != 0;
     device foo* _72 = _71 ? &buf : nullptr;
     device foo* _67 = _72;
-    device foo* _45 = _72;
+    device foo* _65 = _72;
     thread uint3* _79 = _71 ? &gl_GlobalInvocationID : &gl_LocalInvocationID;
     thread uint3* _74 = _79;
+    device int* _49;
     device int* _52;
-    device int* _55;
-    _52 = &_72->a[0u];
-    _55 = &buf.a[0u];
-    int _57;
-    int _58;
+    _49 = &_72->a[0u];
+    _52 = &buf.a[0u];
+    int _54;
+    int _55;
     for (;;)
     {
-        _57 = *_52;
-        _58 = *_55;
-        if (_57 != _58)
+        _54 = *_49;
+        _55 = *_52;
+        if (_54 != _55)
         {
-            int _66 = (_57 + _58) + int((*_79).x);
-            *_52 = _66;
-            *_55 = _66;
+            int _63 = (_54 + _55) + int((*_79).x);
+            *_49 = _63;
+            *_52 = _63;
+            _49 = &_49[1u];
             _52 = &_52[1u];
-            _55 = &_55[1u];
             continue;
         }
         else

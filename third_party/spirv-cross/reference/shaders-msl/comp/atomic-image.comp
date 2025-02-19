@@ -1,0 +1,75 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+// The required alignment of a linear texture of R32Uint format.
+constant uint spvLinearTextureAlignmentOverride [[function_constant(65535)]];
+constant uint spvLinearTextureAlignment = is_function_constant_defined(spvLinearTextureAlignmentOverride) ? spvLinearTextureAlignmentOverride : 4;
+// Returns buffer coords corresponding to 2D texture coords for emulating 2D texture atomics
+#define spvImage2DAtomicCoord(tc, tex) (((((tex).get_width() +  spvLinearTextureAlignment / 4 - 1) & ~( spvLinearTextureAlignment / 4 - 1)) * (tc).y) + (tc).x)
+
+struct SSBO
+{
+    uint u32;
+    int i32;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& ssbo [[buffer(2)]], texture2d<uint> uImage [[texture(0)]], device atomic_uint* uImage_atomic [[buffer(0)]], texture2d<int, access::write> iImage [[texture(1)]], device atomic_int* iImage_atomic [[buffer(1)]])
+{
+    uint _19 = atomic_fetch_add_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    uint _27 = atomic_fetch_add_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    iImage.write(int4(int(_27)), uint2(int2(1, 6)));
+    uint _32 = atomic_fetch_or_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    uint _34 = atomic_fetch_xor_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    uint _36 = atomic_fetch_and_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    uint _38 = atomic_fetch_min_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    uint _40 = atomic_fetch_max_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], 1u, memory_order_relaxed);
+    uint _44;
+    do
+    {
+        _44 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_uint*)&uImage_atomic[spvImage2DAtomicCoord(int2(1, 5), uImage)], &_44, 2u, memory_order_relaxed, memory_order_relaxed) && _44 == 10u);
+    int _47 = atomic_fetch_add_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 6), iImage)], 1, memory_order_relaxed);
+    int _49 = atomic_fetch_or_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 6), iImage)], 1, memory_order_relaxed);
+    int _51 = atomic_fetch_xor_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 6), iImage)], 1, memory_order_relaxed);
+    int _53 = atomic_fetch_and_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 6), iImage)], 1, memory_order_relaxed);
+    int _55 = atomic_fetch_min_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 6), iImage)], 1, memory_order_relaxed);
+    int _57 = atomic_fetch_max_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 6), iImage)], 1, memory_order_relaxed);
+    int _61;
+    do
+    {
+        _61 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_int*)&iImage_atomic[spvImage2DAtomicCoord(int2(1, 5), iImage)], &_61, 2, memory_order_relaxed, memory_order_relaxed) && _61 == 10);
+    uint _68 = atomic_fetch_add_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _70 = atomic_fetch_or_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _72 = atomic_fetch_xor_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _74 = atomic_fetch_and_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _76 = atomic_fetch_min_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _78 = atomic_fetch_max_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _80 = atomic_exchange_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _82;
+    do
+    {
+        _82 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_uint*)&ssbo.u32, &_82, 2u, memory_order_relaxed, memory_order_relaxed) && _82 == 10u);
+    int _85 = atomic_fetch_add_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _87 = atomic_fetch_or_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _89 = atomic_fetch_xor_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _91 = atomic_fetch_and_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _93 = atomic_fetch_min_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _95 = atomic_fetch_max_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _97 = atomic_exchange_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _99;
+    do
+    {
+        _99 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_int*)&ssbo.i32, &_99, 2, memory_order_relaxed, memory_order_relaxed) && _99 == 10);
+}
+

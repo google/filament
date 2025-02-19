@@ -42,7 +42,7 @@ IrLoader::IrLoader(const MessageConsumer& consumer, Module* m)
 bool IsLineInst(const spv_parsed_instruction_t* inst) {
   const auto opcode = static_cast<spv::Op>(inst->opcode);
   if (IsOpLineInst(opcode)) return true;
-  if (opcode != spv::Op::OpExtInst) return false;
+  if (!spvIsExtendedInstruction(opcode)) return false;
   if (inst->ext_inst_type != SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100)
     return false;
   const uint32_t ext_inst_index = inst->words[kExtInstSetIndex];
@@ -65,7 +65,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
   // create a new instruction, but simply keep the information in
   // struct DebugScope.
   const auto opcode = static_cast<spv::Op>(inst->opcode);
-  if (opcode == spv::Op::OpExtInst &&
+  if (spvIsExtendedInstruction(opcode) &&
       spvExtInstIsDebugInfo(inst->ext_inst_type)) {
     const uint32_t ext_inst_index = inst->words[kExtInstSetIndex];
     if (inst->ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100 ||
@@ -209,10 +209,10 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
       } else if (IsConstantInst(opcode) || opcode == spv::Op::OpVariable ||
                  opcode == spv::Op::OpUndef) {
         module_->AddGlobalValue(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpExtInst &&
+      } else if (spvIsExtendedInstruction(opcode) &&
                  spvExtInstIsDebugInfo(inst->ext_inst_type)) {
         module_->AddExtInstDebugInfo(std::move(spv_inst));
-      } else if (opcode == spv::Op::OpExtInst &&
+      } else if (spvIsExtendedInstruction(opcode) &&
                  spvExtInstIsNonSemantic(inst->ext_inst_type)) {
         // If there are no functions, add the non-semantic instructions to the
         // global values. Otherwise append it to the list of the last function.
@@ -235,7 +235,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
         last_dbg_scope_ = DebugScope(kNoDebugScope, kNoInlinedAt);
       if (last_dbg_scope_.GetLexicalScope() != kNoDebugScope)
         spv_inst->SetDebugScope(last_dbg_scope_);
-      if (opcode == spv::Op::OpExtInst &&
+      if (spvIsExtendedInstruction(opcode) &&
           spvExtInstIsDebugInfo(inst->ext_inst_type)) {
         const uint32_t ext_inst_index = inst->words[kExtInstSetIndex];
         if (inst->ext_inst_type == SPV_EXT_INST_TYPE_OPENCL_DEBUGINFO_100) {

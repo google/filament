@@ -15,6 +15,7 @@
 #include <string>
 
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "test/link/linker_fixture.h"
 
 namespace spvtools {
@@ -174,14 +175,18 @@ OpDecorate %1 LinkageAttributes "foo" Export
 %1 = OpVariable %2 Uniform %3
 )";
 
-  spvtest::Binary linked_binary;
-  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            AssembleAndLink({body1, body2}, &linked_binary))
-      << GetErrorMessage();
-  EXPECT_THAT(
-      GetErrorMessage(),
-      HasSubstr("Type mismatch on symbol \"foo\" between imported "
-                "variable/function %1 and exported variable/function %4"));
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+              AssembleAndLink({body1, body2}, &linked_binary))
+        << GetErrorMessage();
+    EXPECT_THAT(
+        GetErrorMessage(),
+        HasSubstr("Type mismatch on symbol \"foo\" between imported "
+                  "variable/function %1 and exported variable/function %4"));
+  }
 }
 
 TEST_F(MatchingImportsToExports, MultipleDefinitions) {
@@ -216,13 +221,17 @@ OpDecorate %1 LinkageAttributes "foo" Export
 %1 = OpVariable %2 Uniform %3
 )";
 
-  spvtest::Binary linked_binary;
-  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            AssembleAndLink({body1, body2, body3}, &linked_binary))
-      << GetErrorMessage();
-  EXPECT_THAT(GetErrorMessage(),
-              HasSubstr("Too many external references, 2, were found "
-                        "for \"foo\"."));
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+              AssembleAndLink({body1, body2, body3}, &linked_binary))
+        << GetErrorMessage();
+    EXPECT_THAT(GetErrorMessage(),
+                HasSubstr("Too many external references, 2, were found "
+                          "for \"foo\"."));
+  }
 }
 
 TEST_F(MatchingImportsToExports, SameNameDifferentTypes) {
@@ -289,14 +298,18 @@ OpDecorate %1 LinkageAttributes "foo" Export
 %1 = OpVariable %2 Uniform %3
 )";
 
-  spvtest::Binary linked_binary;
-  EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
-            AssembleAndLink({body1, body2}, &linked_binary))
-      << GetErrorMessage();
-  EXPECT_THAT(
-      GetErrorMessage(),
-      HasSubstr("Type mismatch on symbol \"foo\" between imported "
-                "variable/function %1 and exported variable/function %4"));
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    EXPECT_EQ(SPV_ERROR_INVALID_BINARY,
+              AssembleAndLink({body1, body2}, &linked_binary))
+        << GetErrorMessage();
+    EXPECT_THAT(
+        GetErrorMessage(),
+        HasSubstr("Type mismatch on symbol \"foo\" between imported "
+                  "variable/function %1 and exported variable/function %4"));
+  }
 }
 
 TEST_F(MatchingImportsToExports,
@@ -555,6 +568,447 @@ OpFunctionEnd
   ASSERT_EQ(SPV_SUCCESS, Disassemble(linked_binary, &res_body))
       << GetErrorMessage();
   EXPECT_EQ(expected_res, res_body);
+}
+
+TEST_F(MatchingImportsToExports, FunctionCall) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %3 "param"
+OpDecorate %1 LinkageAttributes "foo" Import
+ %5 = OpTypeVoid
+ %6 = OpTypeInt 32 0
+ %9 = OpTypePointer Function %6
+ %7 = OpTypeFunction %5 %9
+ %1 = OpFunction %5 None %7
+ %3 = OpFunctionParameter %9
+OpFunctionEnd
+ %8 = OpFunction %5 None %7
+ %4 = OpFunctionParameter %9
+%10 = OpLabel
+%11 = OpFunctionCall %5 %1 %4
+OpReturn
+OpFunctionEnd
+)";
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpDecorate %1 LinkageAttributes "foo" Export
+%3 = OpTypeVoid
+%4 = OpTypeInt 32 0
+%7 = OpTypePointer Function %4
+%5 = OpTypeFunction %3 %7
+%1 = OpFunction %3 None %5
+%2 = OpFunctionParameter %7
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    ASSERT_EQ(SPV_SUCCESS,
+              AssembleAndLink({body1, body2}, &linked_binary, options))
+        << GetErrorMessage();
+
+    const std::string expected_res = R"(OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpModuleProcessed "Linked by SPIR-V Tools Linker"
+%3 = OpTypeVoid
+%4 = OpTypeInt 32 0
+%5 = OpTypePointer Function %4
+%6 = OpTypeFunction %3 %5
+%7 = OpFunction %3 None %6
+%8 = OpFunctionParameter %5
+%9 = OpLabel
+%10 = OpFunctionCall %3 %1 %8
+OpReturn
+OpFunctionEnd
+%1 = OpFunction %3 None %6
+%2 = OpFunctionParameter %5
+%11 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+    std::string res_body;
+    SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+    ASSERT_EQ(SPV_SUCCESS, Disassemble(linked_binary, &res_body))
+        << GetErrorMessage();
+    EXPECT_EQ(expected_res, res_body);
+  }
+}
+
+TEST_F(MatchingImportsToExports, FunctionSignatureMismatchPointer) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %3 "param"
+OpDecorate %1 LinkageAttributes "foo" Import
+ %5 = OpTypeVoid
+ %6 = OpTypeInt 8 0
+ %9 = OpTypePointer Function %6
+ %7 = OpTypeFunction %5 %9
+ %1 = OpFunction %5 None %7
+ %3 = OpFunctionParameter %9
+OpFunctionEnd
+ %8 = OpFunction %5 None %7
+ %4 = OpFunctionParameter %9
+%10 = OpLabel
+%11 = OpFunctionCall %5 %1 %4
+OpReturn
+OpFunctionEnd
+)";
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpDecorate %1 LinkageAttributes "foo" Export
+%3 = OpTypeVoid
+%4 = OpTypeInt 32 0
+%7 = OpTypePointer Function %4
+%5 = OpTypeFunction %3 %7
+%1 = OpFunction %3 None %5
+%2 = OpFunctionParameter %7
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  spvtest::Binary linked_binary;
+  ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+            AssembleAndLink({body1, body2}, &linked_binary))
+      << GetErrorMessage();
+  EXPECT_THAT(
+      GetErrorMessage(),
+      HasSubstr("Type mismatch on symbol \"foo\" between imported "
+                "variable/function %1 and exported variable/function %11"));
+
+  LinkerOptions options;
+  options.SetAllowPtrTypeMismatch(true);
+  ASSERT_EQ(SPV_SUCCESS,
+            AssembleAndLink({body1, body2}, &linked_binary, options))
+      << GetErrorMessage();
+
+  const std::string expected_res = R"(OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpModuleProcessed "Linked by SPIR-V Tools Linker"
+%3 = OpTypeVoid
+%4 = OpTypeInt 8 0
+%5 = OpTypePointer Function %4
+%6 = OpTypeFunction %3 %5
+%7 = OpTypeInt 32 0
+%8 = OpTypePointer Function %7
+%9 = OpTypeFunction %3 %8
+%10 = OpFunction %3 None %6
+%11 = OpFunctionParameter %5
+%12 = OpLabel
+%13 = OpBitcast %8 %11
+%14 = OpFunctionCall %3 %1 %13
+OpReturn
+OpFunctionEnd
+%1 = OpFunction %3 None %9
+%2 = OpFunctionParameter %8
+%15 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+  std::string res_body;
+  SetDisassembleOptions(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+  ASSERT_EQ(SPV_SUCCESS, Disassemble(linked_binary, &res_body))
+      << GetErrorMessage();
+  EXPECT_EQ(expected_res, res_body);
+}
+
+TEST_F(MatchingImportsToExports, FunctionSignatureMismatchValue) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %3 "param"
+OpDecorate %1 LinkageAttributes "foo" Import
+ %5 = OpTypeVoid
+ %6 = OpTypeInt 8 0
+ %7 = OpTypeFunction %5 %6
+ %1 = OpFunction %5 None %7
+ %3 = OpFunctionParameter %6
+OpFunctionEnd
+ %8 = OpFunction %5 None %7
+ %4 = OpFunctionParameter %6
+%10 = OpLabel
+%11 = OpFunctionCall %5 %1 %4
+OpReturn
+OpFunctionEnd
+)";
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpDecorate %1 LinkageAttributes "foo" Export
+%3 = OpTypeVoid
+%4 = OpTypeInt 32 0
+%5 = OpTypeFunction %3 %4
+%1 = OpFunction %3 None %5
+%2 = OpFunctionParameter %4
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+              AssembleAndLink({body1, body2}, &linked_binary))
+        << GetErrorMessage();
+    EXPECT_THAT(
+        GetErrorMessage(),
+        HasSubstr("Type mismatch on symbol \"foo\" between imported "
+                  "variable/function %1 and exported variable/function %10"));
+  }
+}
+
+TEST_F(MatchingImportsToExports, FunctionSignatureMismatchTypePointerInt) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %3 "param"
+OpDecorate %1 LinkageAttributes "foo" Import
+ %5 = OpTypeVoid
+ %6 = OpTypeInt 64 0
+ %7 = OpTypeFunction %5 %6
+ %1 = OpFunction %5 None %7
+ %3 = OpFunctionParameter %6
+OpFunctionEnd
+ %8 = OpFunction %5 None %7
+ %4 = OpFunctionParameter %6
+%10 = OpLabel
+%11 = OpFunctionCall %5 %1 %4
+OpReturn
+OpFunctionEnd
+)";
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpDecorate %1 LinkageAttributes "foo" Export
+%3 = OpTypeVoid
+%4 = OpTypeInt 64 0
+%7 = OpTypePointer Function %4
+%5 = OpTypeFunction %3 %7
+%1 = OpFunction %3 None %5
+%2 = OpFunctionParameter %7
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+              AssembleAndLink({body1, body2}, &linked_binary))
+        << GetErrorMessage();
+    EXPECT_THAT(
+        GetErrorMessage(),
+        HasSubstr("Type mismatch on symbol \"foo\" between imported "
+                  "variable/function %1 and exported variable/function %10"));
+  }
+}
+
+TEST_F(MatchingImportsToExports, FunctionSignatureMismatchTypeIntPointer) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %3 "param"
+OpDecorate %1 LinkageAttributes "foo" Import
+ %5 = OpTypeVoid
+ %6 = OpTypeInt 64 0
+ %9 = OpTypePointer Function %6
+ %7 = OpTypeFunction %5 %9
+ %1 = OpFunction %5 None %7
+ %3 = OpFunctionParameter %9
+OpFunctionEnd
+ %8 = OpFunction %5 None %7
+ %4 = OpFunctionParameter %9
+%10 = OpLabel
+%11 = OpFunctionCall %5 %1 %4
+OpReturn
+OpFunctionEnd
+)";
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpMemoryModel Physical64 OpenCL
+OpName %1 "foo"
+OpName %2 "param"
+OpDecorate %1 LinkageAttributes "foo" Export
+%3 = OpTypeVoid
+%4 = OpTypeInt 64 0
+%5 = OpTypeFunction %3 %4
+%1 = OpFunction %3 None %5
+%2 = OpFunctionParameter %4
+%6 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  LinkerOptions options;
+  for (int i = 0; i < 2; i++) {
+    spvtest::Binary linked_binary;
+    options.SetAllowPtrTypeMismatch(i == 1);
+    ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+              AssembleAndLink({body1, body2}, &linked_binary))
+        << GetErrorMessage();
+    EXPECT_THAT(
+        GetErrorMessage(),
+        HasSubstr("Type mismatch on symbol \"foo\" between imported "
+                  "variable/function %1 and exported variable/function %11"));
+  }
+}
+
+TEST_F(MatchingImportsToExports, LinkOnceODRLinkageVarSingle) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" LinkOnceODR
+%2 = OpTypeFloat 32
+%3 = OpConstant %2 3.1415
+%1 = OpVariable %2 Uniform %3
+)";
+
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" Import
+%2 = OpTypeFloat 32
+%1 = OpVariable %2 Uniform
+)";
+  spvtest::Binary linked_binary;
+  EXPECT_EQ(SPV_SUCCESS, AssembleAndLink({body1, body2}, &linked_binary))
+      << GetErrorMessage();
+}
+
+TEST_F(MatchingImportsToExports, LinkOnceODRLinkageFunMultiple) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" LinkOnceODR
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%1 = OpFunction %2 Inline %3
+%4 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" Import
+%2 = OpTypeVoid
+%3 = OpTypeFunction %2
+%1 = OpFunction %2 None %3
+OpFunctionEnd
+)";
+  spvtest::Binary linked_binary;
+  EXPECT_EQ(SPV_SUCCESS, AssembleAndLink({body1, body1, body2}, &linked_binary))
+      << GetErrorMessage();
+}
+
+TEST_F(MatchingImportsToExports, LinkOnceODRAndExport) {
+  const std::string body1 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" LinkOnceODR
+%2 = OpTypeFloat 32
+%3 = OpConstant %2 3.1415
+%1 = OpVariable %2 Uniform %3
+)";
+
+  const std::string body2 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" Export
+%2 = OpTypeFloat 32
+%3 = OpConstant %2 2.7183
+%1 = OpVariable %2 Uniform %3
+)";
+
+  const std::string body3 = R"(
+OpCapability Linkage
+OpCapability Addresses
+OpCapability Kernel
+OpExtension "SPV_KHR_linkonce_odr"
+OpMemoryModel Physical64 OpenCL
+OpDecorate %1 LinkageAttributes "foo" Import
+%2 = OpTypeFloat 32
+%1 = OpVariable %2 Uniform
+)";
+  spvtest::Binary linked_binary;
+  ASSERT_EQ(SPV_ERROR_INVALID_BINARY,
+            AssembleAndLink({body1, body2, body3}, &linked_binary))
+      << GetErrorMessage();
+  EXPECT_THAT(
+      GetErrorMessage(),
+      HasSubstr("Combination of Export and LinkOnceODR is not allowed, found "
+                "for \"foo\""));
 }
 
 }  // namespace

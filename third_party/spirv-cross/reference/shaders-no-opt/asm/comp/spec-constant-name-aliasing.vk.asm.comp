@@ -35,10 +35,10 @@ const int A_11 = (A_10 + A_5);
 layout(binding = 0, std430) buffer SSBO
 {
     int values[];
-} _5;
+} _7;
 
 void main()
 {
-    _5.values[gl_GlobalInvocationID.x] = A_11;
+    _7.values[gl_GlobalInvocationID.x] = A_11;
 }
 

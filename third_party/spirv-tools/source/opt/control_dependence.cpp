@@ -16,8 +16,6 @@
 
 #include <cassert>
 #include <tuple>
-#include <utility>
-#include <vector>
 
 #include "source/opt/basic_block.h"
 #include "source/opt/cfg.h"

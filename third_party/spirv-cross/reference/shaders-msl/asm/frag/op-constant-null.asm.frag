@@ -50,7 +50,7 @@ struct D
     float b;
 };
 
-constant spvUnsafeArray<float4, 4> _14 = spvUnsafeArray<float4, 4>({ float4(0.0), float4(0.0), float4(0.0), float4(0.0) });
+constant spvUnsafeArray<float4, 4> _41 = spvUnsafeArray<float4, 4>({ float4(0.0), float4(0.0), float4(0.0), float4(0.0) });
 
 struct main0_out
 {

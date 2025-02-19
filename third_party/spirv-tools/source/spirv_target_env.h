@@ -16,6 +16,8 @@
 #define SOURCE_SPIRV_TARGET_ENV_H_
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "spirv-tools/libspirv.h"
 
@@ -45,5 +47,10 @@ std::string spvLogStringForEnv(spv_target_env env);
 // |wrap| is the max length of lines the user desires. Word-wrapping will
 //        occur to satisfy this limit.
 std::string spvTargetEnvList(const int pad, const int wrap);
+
+// Reads the target environment from the header comments of disassembly. Returns
+// true if valid name found, false otherwise.
+bool spvReadEnvironmentFromText(const std::vector<char>& text,
+                                spv_target_env* env);
 
 #endif  // SOURCE_SPIRV_TARGET_ENV_H_

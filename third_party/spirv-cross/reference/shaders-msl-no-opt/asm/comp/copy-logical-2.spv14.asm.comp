@@ -3,12 +3,12 @@
 
 using namespace metal;
 
-struct _11
+struct _13
 {
     float2x2 _m0;
 };
 
-struct _12
+struct _14
 {
     float2x4 _m0;
 };
@@ -23,7 +23,7 @@ struct C
     float4 c;
     B2 b2;
     B2 b2_array[4];
-    _12 _m3;
+    _14 _m3;
 };
 
 struct B1
@@ -36,25 +36,25 @@ struct A
     float4 a;
     B1 b1;
     B1 b1_array[4];
-    _11 _m3;
+    _13 _m3;
 };
 
-struct _8
+struct _10
 {
     A a_block;
     C c_block;
 };
 
-kernel void main0(device _8& _3 [[buffer(0)]])
+kernel void main0(device _10& _4 [[buffer(0)]])
 {
-    A _31;
-    _31.a = _3.c_block.c;
-    _31.b1.elem1 = _3.c_block.b2.elem2;
-    _31.b1_array[0].elem1 = _3.c_block.b2_array[0].elem2;
-    _31.b1_array[1].elem1 = _3.c_block.b2_array[1].elem2;
-    _31.b1_array[2].elem1 = _3.c_block.b2_array[2].elem2;
-    _31.b1_array[3].elem1 = _3.c_block.b2_array[3].elem2;
-    _31._m3._m0 = transpose(float2x2(_3.c_block._m3._m0[0].xy, _3.c_block._m3._m0[1].xy));
-    _3.a_block = _31;
+    A _24;
+    _24.a = _4.c_block.c;
+    _24.b1.elem1 = _4.c_block.b2.elem2;
+    _24.b1_array[0].elem1 = _4.c_block.b2_array[0].elem2;
+    _24.b1_array[1].elem1 = _4.c_block.b2_array[1].elem2;
+    _24.b1_array[2].elem1 = _4.c_block.b2_array[2].elem2;
+    _24.b1_array[3].elem1 = _4.c_block.b2_array[3].elem2;
+    _24._m3._m0 = transpose(float2x2(_4.c_block._m3._m0[0].xy, _4.c_block._m3._m0[1].xy));
+    _4.a_block = _24;
 }
 

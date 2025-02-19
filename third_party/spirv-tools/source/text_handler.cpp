@@ -329,8 +329,9 @@ spv_result_t AssemblyContext::recordTypeDefinition(
     types_[value] = {pInst->words[2], pInst->words[3] != 0,
                      IdTypeClass::kScalarIntegerType};
   } else if (pInst->opcode == spv::Op::OpTypeFloat) {
-    if (pInst->words.size() != 3)
+    if ((pInst->words.size() != 3) && (pInst->words.size() != 4))
       return diagnostic() << "Invalid OpTypeFloat instruction";
+    // TODO(kpet) Do we need to record the FP Encoding here?
     types_[value] = {pInst->words[2], false, IdTypeClass::kScalarFloatType};
   } else {
     types_[value] = {0, false, IdTypeClass::kOtherType};

@@ -7,26 +7,26 @@ layout(location = 0) out float FragColor;
 
 void main()
 {
-    highp float _19;
+    highp float _27;
     switch (vIndex)
     {
         case 0:
         case 2:
         {
-            _19 = 1.0;
+            _27 = 1.0;
             break;
         }
         default:
         {
-            _19 = 3.0;
+            _27 = 3.0;
             break;
         }
         case 8:
         {
-            _19 = 8.0;
+            _27 = 8.0;
             break;
         }
     }
-    FragColor = _19;
+    FragColor = _27;
 }
 

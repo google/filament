@@ -82,6 +82,11 @@ filegroup(
 )
 
 filegroup(
+    name = "spirv_ext_inst_nonsemantic_vkspreflection_grammar_unified1",
+    srcs = ["include/spirv/unified1/extinst.nonsemantic.vkspreflection.grammar.json"],
+)
+
+filegroup(
     name = "spirv_ext_inst_nonsemantic_debugprintf_grammar_unified1",
     srcs = ["include/spirv/unified1/extinst.nonsemantic.debugprintf.grammar.json"],
 )
@@ -128,6 +133,8 @@ cc_library(
         "include/spirv/unified1/GLSL.std.450.h",
         "include/spirv/unified1/NonSemanticClspvReflection.h",
         "include/spirv/unified1/NonSemanticDebugPrintf.h",
+        "include/spirv/unified1/NonSemanticShaderDebugInfo100.h",
+        "include/spirv/unified1/NonSemanticVkspReflection.h",
         "include/spirv/unified1/OpenCL.std.h",
     ],
     includes = ["include"],

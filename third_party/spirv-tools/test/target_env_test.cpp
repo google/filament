@@ -79,9 +79,16 @@ INSTANTIATE_TEST_SUITE_P(
         {"spv1.1", true, SPV_ENV_UNIVERSAL_1_1},
         {"spv1.2", true, SPV_ENV_UNIVERSAL_1_2},
         {"spv1.3", true, SPV_ENV_UNIVERSAL_1_3},
+        {"spv1.4", true, SPV_ENV_UNIVERSAL_1_4},
+        {"spv1.5", true, SPV_ENV_UNIVERSAL_1_5},
+        {"spv1.6", true, SPV_ENV_UNIVERSAL_1_6},
+        {"spv1.7", false, SPV_ENV_UNIVERSAL_1_3},
         {"vulkan1.0", true, SPV_ENV_VULKAN_1_0},
         {"vulkan1.1", true, SPV_ENV_VULKAN_1_1},
         {"vulkan1.2", true, SPV_ENV_VULKAN_1_2},
+        {"vulkan1.3", true, SPV_ENV_VULKAN_1_3},
+        {"vulkan1.4", true, SPV_ENV_VULKAN_1_4},
+        {"vulkan1.5", false, SPV_ENV_UNIVERSAL_1_0},
         {"opencl2.1", true, SPV_ENV_OPENCL_2_1},
         {"opencl2.2", true, SPV_ENV_OPENCL_2_2},
         {"opengl4.0", true, SPV_ENV_OPENGL_4_0},
@@ -170,5 +177,61 @@ INSTANTIATE_TEST_SUITE_P(
         {VK(99, 0), SPV(1, 0), false, SPV_ENV_UNIVERSAL_1_0},
     }));
 
-}  // namespace
+// A test case for parsing the text header of disassembly.
+struct ParseEnvInDisassemblyCase {
+  std::string text;
+  bool success;        // Expect to successfully parse?
+  spv_target_env env;  // The parsed environment, if successful.
+};
+
+using TargetParseEnvInDisassemblyTest =
+    ::testing::TestWithParam<ParseEnvInDisassemblyCase>;
+
+constexpr spv_target_env kSentinelEnv = SPV_ENV_OPENCL_2_2;
+
+TEST_P(TargetParseEnvInDisassemblyTest, Samples) {
+  const std::string& text = GetParam().text;
+  const std::vector<char> text_vec(text.begin(), text.end());
+  spv_target_env got_env = kSentinelEnv;
+  bool parsed = spvReadEnvironmentFromText(text_vec, &got_env);
+  EXPECT_EQ(parsed, GetParam().success);
+  EXPECT_EQ(got_env, GetParam().env) << '"' << text << '"';
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TargetTextParsing, TargetParseEnvInDisassemblyTest,
+    ValuesIn(std::vector<ParseEnvInDisassemblyCase>{
+        {"; Version: 1.0", true, SPV_ENV_UNIVERSAL_1_0},
+        {"; Version: 1.1", true, SPV_ENV_UNIVERSAL_1_1},
+        {"; Version: 1.2", true, SPV_ENV_UNIVERSAL_1_2},
+        {"; Version: 1.3", true, SPV_ENV_UNIVERSAL_1_3},
+        {"; Version: 1.4", true, SPV_ENV_UNIVERSAL_1_4},
+        {"; Version: 1.5", true, SPV_ENV_UNIVERSAL_1_5},
+        {"; Version: 1.6", true, SPV_ENV_UNIVERSAL_1_6},
+        {"; Version: 1.7", false, kSentinelEnv},
+        {"; Version: 1.8", false, kSentinelEnv},
+        {"; Version: 1.9", false, kSentinelEnv},
+        {"; Version: 2.0", false, kSentinelEnv},
+
+        // Check trailing text
+        {"; Version: 1.1\n", true, SPV_ENV_UNIVERSAL_1_1},
+        {"; Version: 1.1\t", true, SPV_ENV_UNIVERSAL_1_1},
+        {"; Version: 1.1 ", true, SPV_ENV_UNIVERSAL_1_1},
+        {"; Version: 1.1x", true, SPV_ENV_UNIVERSAL_1_1},
+        // Not a digit.
+        {"; Version: 1.10", false, kSentinelEnv},
+
+        // Unexpected prefix
+        {";Version: 1.1", false, kSentinelEnv},
+
+        // Leading spaces
+        {"     \t ; Version: 1.1", true, SPV_ENV_UNIVERSAL_1_1},
+        // Previous lines
+        {"; SPIR-V\n; Version: 1.1", true, SPV_ENV_UNIVERSAL_1_1},
+        {"; -\n; SPIR-V\n; Version: 1.1", true, SPV_ENV_UNIVERSAL_1_1},
+
+        // After a non-header line
+        {"OpCapability Shader\n; Version: 1.1", false, kSentinelEnv}}));
+
+}  // anonymous namespace
 }  // namespace spvtools

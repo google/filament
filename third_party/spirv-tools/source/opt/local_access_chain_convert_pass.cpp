@@ -1,6 +1,8 @@
 // Copyright (c) 2017 The Khronos Group Inc.
 // Copyright (c) 2017 Valve Corporation
 // Copyright (c) 2017 LunarG Inc.
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +18,6 @@
 
 #include "source/opt/local_access_chain_convert_pass.h"
 
-#include "ir_builder.h"
 #include "ir_context.h"
 #include "iterator.h"
 #include "source/util/string_utils.h"
@@ -398,60 +399,41 @@ Pass::Status LocalAccessChainConvertPass::Process() {
 
 void LocalAccessChainConvertPass::InitExtensions() {
   extensions_allowlist_.clear();
-  extensions_allowlist_.insert({
-      "SPV_AMD_shader_explicit_vertex_parameter",
-      "SPV_AMD_shader_trinary_minmax",
-      "SPV_AMD_gcn_shader",
-      "SPV_KHR_shader_ballot",
-      "SPV_AMD_shader_ballot",
-      "SPV_AMD_gpu_shader_half_float",
-      "SPV_KHR_shader_draw_parameters",
-      "SPV_KHR_subgroup_vote",
-      "SPV_KHR_8bit_storage",
-      "SPV_KHR_16bit_storage",
-      "SPV_KHR_device_group",
-      "SPV_KHR_multiview",
-      "SPV_NVX_multiview_per_view_attributes",
-      "SPV_NV_viewport_array2",
-      "SPV_NV_stereo_view_rendering",
-      "SPV_NV_sample_mask_override_coverage",
-      "SPV_NV_geometry_shader_passthrough",
-      "SPV_AMD_texture_gather_bias_lod",
-      "SPV_KHR_storage_buffer_storage_class",
-      // SPV_KHR_variable_pointers
-      //   Currently do not support extended pointer expressions
-      "SPV_AMD_gpu_shader_int16",
-      "SPV_KHR_post_depth_coverage",
-      "SPV_KHR_shader_atomic_counter_ops",
-      "SPV_EXT_shader_stencil_export",
-      "SPV_EXT_shader_viewport_index_layer",
-      "SPV_AMD_shader_image_load_store_lod",
-      "SPV_AMD_shader_fragment_mask",
-      "SPV_EXT_fragment_fully_covered",
-      "SPV_AMD_gpu_shader_half_float_fetch",
-      "SPV_GOOGLE_decorate_string",
-      "SPV_GOOGLE_hlsl_functionality1",
-      "SPV_GOOGLE_user_type",
-      "SPV_NV_shader_subgroup_partitioned",
-      "SPV_EXT_demote_to_helper_invocation",
-      "SPV_EXT_descriptor_indexing",
-      "SPV_NV_fragment_shader_barycentric",
-      "SPV_NV_compute_shader_derivatives",
-      "SPV_NV_shader_image_footprint",
-      "SPV_NV_shading_rate",
-      "SPV_NV_mesh_shader",
-      "SPV_NV_ray_tracing",
-      "SPV_KHR_ray_tracing",
-      "SPV_KHR_ray_query",
-      "SPV_EXT_fragment_invocation_density",
-      "SPV_KHR_terminate_invocation",
-      "SPV_KHR_subgroup_uniform_control_flow",
-      "SPV_KHR_integer_dot_product",
-      "SPV_EXT_shader_image_int64",
-      "SPV_KHR_non_semantic_info",
-      "SPV_KHR_uniform_group_instructions",
-      "SPV_KHR_fragment_shader_barycentric",
-  });
+  extensions_allowlist_.insert(
+      {"SPV_AMD_shader_explicit_vertex_parameter",
+       "SPV_AMD_shader_trinary_minmax", "SPV_AMD_gcn_shader",
+       "SPV_KHR_shader_ballot", "SPV_AMD_shader_ballot",
+       "SPV_AMD_gpu_shader_half_float", "SPV_KHR_shader_draw_parameters",
+       "SPV_KHR_subgroup_vote", "SPV_KHR_8bit_storage", "SPV_KHR_16bit_storage",
+       "SPV_KHR_device_group", "SPV_KHR_multiview",
+       "SPV_NVX_multiview_per_view_attributes", "SPV_NV_viewport_array2",
+       "SPV_NV_stereo_view_rendering", "SPV_NV_sample_mask_override_coverage",
+       "SPV_NV_geometry_shader_passthrough", "SPV_AMD_texture_gather_bias_lod",
+       "SPV_KHR_storage_buffer_storage_class",
+       // SPV_KHR_variable_pointers
+       //   Currently do not support extended pointer expressions
+       "SPV_AMD_gpu_shader_int16", "SPV_KHR_post_depth_coverage",
+       "SPV_KHR_shader_atomic_counter_ops", "SPV_EXT_shader_stencil_export",
+       "SPV_EXT_shader_viewport_index_layer",
+       "SPV_AMD_shader_image_load_store_lod", "SPV_AMD_shader_fragment_mask",
+       "SPV_EXT_fragment_fully_covered", "SPV_AMD_gpu_shader_half_float_fetch",
+       "SPV_GOOGLE_decorate_string", "SPV_GOOGLE_hlsl_functionality1",
+       "SPV_GOOGLE_user_type", "SPV_NV_shader_subgroup_partitioned",
+       "SPV_EXT_demote_to_helper_invocation", "SPV_EXT_descriptor_indexing",
+       "SPV_NV_fragment_shader_barycentric",
+       "SPV_NV_compute_shader_derivatives", "SPV_NV_shader_image_footprint",
+       "SPV_NV_shading_rate", "SPV_NV_mesh_shader", "SPV_EXT_mesh_shader",
+       "SPV_NV_ray_tracing", "SPV_KHR_ray_tracing", "SPV_KHR_ray_query",
+       "SPV_EXT_fragment_invocation_density", "SPV_KHR_terminate_invocation",
+       "SPV_KHR_subgroup_uniform_control_flow", "SPV_KHR_integer_dot_product",
+       "SPV_EXT_shader_image_int64", "SPV_KHR_non_semantic_info",
+       "SPV_KHR_uniform_group_instructions",
+       "SPV_KHR_fragment_shader_barycentric", "SPV_KHR_vulkan_memory_model",
+       "SPV_NV_bindless_texture", "SPV_EXT_shader_atomic_float_add",
+       "SPV_EXT_fragment_shader_interlock",
+       "SPV_KHR_compute_shader_derivatives", "SPV_NV_cooperative_matrix",
+       "SPV_KHR_cooperative_matrix", "SPV_KHR_ray_tracing_position_fetch",
+       "SPV_AMDX_shader_enqueue", "SPV_KHR_fragment_shading_rate"});
 }
 
 bool LocalAccessChainConvertPass::AnyIndexIsOutOfBounds(

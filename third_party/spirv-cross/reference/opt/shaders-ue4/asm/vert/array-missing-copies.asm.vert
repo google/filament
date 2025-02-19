@@ -435,7 +435,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_View& View [[buff
     float3 _459;
     if (MobileBasePass.MobileBasePass_Fog_InscatteringLightDirection.w >= 0.0)
     {
-        _459 = (MobileBasePass.MobileBasePass_Fog_DirectionalInscatteringColor.xyz * float3(pow(fast::clamp(dot(_341 * float3(_346), MobileBasePass.MobileBasePass_Fog_InscatteringLightDirection.xyz), 0.0, 1.0), MobileBasePass.MobileBasePass_Fog_DirectionalInscatteringColor.w))) * float3(1.0 - fast::clamp(exp2(-(_428 * fast::max(_393 - MobileBasePass.MobileBasePass_Fog_InscatteringLightDirection.w, 0.0))), 0.0, 1.0));
+        _459 = (MobileBasePass.MobileBasePass_Fog_DirectionalInscatteringColor.xyz * float3(powr(fast::clamp(dot(_341 * float3(_346), MobileBasePass.MobileBasePass_Fog_InscatteringLightDirection.xyz), 0.0, 1.0), MobileBasePass.MobileBasePass_Fog_DirectionalInscatteringColor.w))) * float3(1.0 - fast::clamp(exp2(-(_428 * fast::max(_393 - MobileBasePass.MobileBasePass_Fog_InscatteringLightDirection.w, 0.0))), 0.0, 1.0));
     }
     else
     {

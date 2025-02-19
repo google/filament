@@ -1,4 +1,4 @@
-ByteAddressBuffer _8 : register(t0, space2);
+ByteAddressBuffer _12 : register(t0, space2);
 Texture2D<float4> uSamplers[] : register(t0, space0);
 SamplerState _uSamplers_sampler[] : register(s0, space0);
 Texture2D<float4> uSampler : register(t1, space1);
@@ -21,8 +21,8 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    FragColor = uSamplers[NonUniformResourceIndex(_8.Load(40))].SampleLevel(_uSamplers_sampler[NonUniformResourceIndex(_8.Load(40))], vUV, 0.0f);
-    FragColor += uSampler.SampleLevel(_uSampler_sampler, vUV, float(_8.Load(int(gl_FragCoord.y) * 4 + 0)));
+    FragColor = uSamplers[NonUniformResourceIndex(_12.Load(40))].SampleLevel(_uSamplers_sampler[NonUniformResourceIndex(_12.Load(40))], vUV, 0.0f);
+    FragColor += uSampler.SampleLevel(_uSampler_sampler, vUV, float(_12.Load(int(gl_FragCoord.y) * 4 + 0)));
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

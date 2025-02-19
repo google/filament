@@ -1,0 +1,26 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4 values[1];
+};
+
+constant int _12_tmp [[function_constant(1)]];
+constant int _12 = is_function_constant_defined(_12_tmp) ? _12_tmp : 11;
+constant int _13_tmp [[function_constant(2)]];
+constant int _13 = is_function_constant_defined(_13_tmp) ? _13_tmp : 12;
+constant int _6_tmp [[function_constant(3)]];
+constant int _6 = is_function_constant_defined(_6_tmp) ? _6_tmp : 13;
+constant int _7_tmp [[function_constant(4)]];
+constant int _7 = is_function_constant_defined(_7_tmp) ? _7_tmp : 14;
+constant uint _37 = (uint(_6) + 3u);
+constant uint3 _38 = uint3(_37, _7, 2u);
+
+kernel void main0(device SSBO& _10 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    _10.values[gl_GlobalInvocationID.x] = ((((_10.values[gl_GlobalInvocationID.x] + float4(2.0)) + float3(_38).xyzz) * float(_6)) * float(_7)) * float(int(2u));
+}
+

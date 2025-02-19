@@ -338,7 +338,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_View& View [[bu
             else
             {
                 float3 _521 = _501 * float3(_Globals.LightPositionAndInvRadius[_491].w);
-                _537 = pow(1.0 - fast::clamp(dot(_521, _521), 0.0, 1.0), _Globals.LightColorAndFalloffExponent[_491].w);
+                _537 = powr(1.0 - fast::clamp(dot(_521, _521), 0.0, 1.0), _Globals.LightColorAndFalloffExponent[_491].w);
             }
             float3 _544 = cross(_206, _507);
             float _546 = _511 * _442;

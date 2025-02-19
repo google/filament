@@ -20,7 +20,6 @@
 #include "source/opt/ir_context.h"
 #include "source/spirv_constant.h"
 #include "spirv-tools/libspirv.hpp"
-#include "tools/io.h"
 #include "tools/util/cli_consumer.h"
 
 #include <fstream>

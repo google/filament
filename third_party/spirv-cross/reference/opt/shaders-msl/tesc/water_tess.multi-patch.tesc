@@ -22,7 +22,7 @@ struct main0_patchOut
 struct main0_in
 {
     float3 vPatchPosBase;
-    ushort2 m_996;
+    ushort2 m_997;
 };
 
 kernel void main0(constant UBO& _41 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]], device main0_in* spvIn [[buffer(22)]])

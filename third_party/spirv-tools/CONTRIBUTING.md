@@ -2,9 +2,8 @@
 
 ## For users: Reporting bugs and requesting features
 
-We organize known future work in GitHub projects. See [Tracking SPIRV-Tools work
-with GitHub
-projects](https://github.com/KhronosGroup/SPIRV-Tools/blob/master/docs/projects.md)
+We organize known future work in GitHub projects. See
+[Tracking SPIRV-Tools work with GitHub projects](https://github.com/KhronosGroup/SPIRV-Tools/blob/main/docs/projects.md)
 for more.
 
 To report a new bug or request a new feature, please file a GitHub issue. Please
@@ -36,9 +35,9 @@ create a new issue, as with bugs. In the issue provide
 
 ## For developers: Contributing a patch
 
-Before we can use your code, you must sign the [Khronos Open Source Contributor
-License Agreement](https://cla-assistant.io/KhronosGroup/SPIRV-Tools) (CLA),
-which you can do online. The CLA is necessary mainly because you own the
+Before we can use your code, you must sign the
+[Khronos Open Source Contributor License Agreement](https://cla-assistant.io/KhronosGroup/SPIRV-Tools)
+(CLA), which you can do online. The CLA is necessary mainly because you own the
 copyright to your changes, even after your contribution becomes part of our
 codebase, so we need your permission to use and distribute your code. We also
 need to be sure of various other things -- for instance that you'll tell us if
@@ -47,20 +46,20 @@ sign the CLA until after you've submitted your code for review and a member has
 approved it, but you must do it before we can put your code into our codebase.
 
 See
-[README.md](https://github.com/KhronosGroup/SPIRV-Tools/blob/master/README.md)
+[README.md](https://github.com/KhronosGroup/SPIRV-Tools/blob/main/README.md)
 for instruction on how to get, build, and test the source. Once you have made
 your changes:
 
-*   Ensure the code follows the [Google C++ Style
-    Guide](https://google.github.io/styleguide/cppguide.html). Running
-    `clang-format -style=file -i [modified-files]` can help.
+*   Ensure the code follows the
+    [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
+    Running `clang-format -style=file -i [modified-files]` can help.
 *   Create a pull request (PR) with your patch.
 *   Make sure the PR description clearly identified the problem, explains the
     solution, and references the issue if applicable.
 *   If your patch completely fixes bug 1234, the commit message should say
-    `Fixes https://github.com/KhronosGroup/SPIRV-Tools/issues/1234`
-    When you do this, the issue will be closed automatically when the commit
-    goes into master.  Also, this helps us update the [CHANGES](CHANGES) file.
+    `Fixes https://github.com/KhronosGroup/SPIRV-Tools/issues/1234` When you do
+    this, the issue will be closed automatically when the commit goes into
+    main. Also, this helps us update the [CHANGES](CHANGES) file.
 *   Watch the continuous builds to make sure they pass.
 *   Request a code review.
 
@@ -82,8 +81,8 @@ Instructions for this are given below.
 The formal code reviews are done on GitHub. Reviewers are to look for all of the
 usual things:
 
-*   Coding style follows the [Google C++ Style
-    Guide](https://google.github.io/styleguide/cppguide.html)
+*   Coding style follows the
+    [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
 *   Identify potential functional problems.
 *   Identify code duplication.
 *   Ensure the unit tests have enough coverage.
@@ -102,84 +101,49 @@ should pay particular attention to:
     updated. For example, a new instruction is added, but the def-use manager is
     not updated. Later on, it is possible that the def-use manager will be used,
     and give wrong results.
+*   If a pass gets the id of a type from the type manager, make sure the type is
+    not a struct or array. It there are two structs that look the same, the type
+    manager can return the wrong one.
 
 ## For maintainers: Merging a PR
 
-We intend to maintain a linear history on the GitHub master branch, and the
+We intend to maintain a linear history on the GitHub main branch, and the
 build and its tests should pass at each commit in that history. A linear
 always-working history is easier to understand and to bisect in case we want to
-find which commit introduced a bug.
+find which commit introduced a bug. The
+[Squash and Merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)
+button on the GitHub web interface. All other ways of merging on the web
+interface have been disabled.
 
-### Initial merge setup
+Before merging, we generally require:
 
-The following steps should be done exactly once (when you are about to merge a
-PR for the first time):
+1.  All tests except for the smoke test pass. See
+    [failing smoke test](#failing-smoke-test).
+1.  The PR is approved by at least one of the maintainers. If the PR modifies
+    different parts of the code, then multiple reviewers might be necessary.
 
-*   It is assumed that upstream points to
-    [git@github.com](mailto:git@github.com):KhronosGroup/SPIRV-Tools.git or
-    https://github.com/KhronosGroup/SPIRV-Tools.git.
+The squash-and-merge button will turn green when these requirements are met.
+Maintainers have the to power to merge even if the button is not green, but that
+is discouraged.
 
-*   Find out the local name for the main github repo in your git configuration.
-    For example, in this configuration, it is labeled `upstream`.
+### Failing smoke test
 
-    ```
-    git remote -v
-    [ ... ]
-    upstream https://github.com/KhronosGroup/SPIRV-Tools.git (fetch)
-    upstream https://github.com/KhronosGroup/SPIRV-Tools.git (push)
-    ```
+The purpose of the smoke test is to let us know if
+[shaderc](https://github.com/google/shaderc) fails to build with the change. If
+it fails, the maintainer needs to determine if the reason for the failure is a
+problem in the current PR or if another repository needs to be changed. Most of
+the time [Glslang](https://github.com/KhronosGroup/glslang) needs to be updated
+to account for the change in SPIR-V Tools.
 
-*   Make sure that the `upstream` remote is set to fetch from the `refs/pull`
-    namespace:
+The PR can still be merged if the problem is not with that PR.
 
-    ```
-    git config --get-all remote.upstream.fetch
-    +refs/heads/*:refs/remotes/upstream/*
-    +refs/pull/*/head:refs/remotes/upstream/pr/*
-    ```
+## For maintainers: Running tests
 
-*   If the line `+refs/pull/*/head:refs/remotes/upstream/pr/*` is not present in
-    your configuration, you can add it with the command:
+For security reasons, not all tests will run automatically. When they do not, a
+maintainer will have to start the tests.
 
-    ```
-    git config --local --add remote.upstream.fetch '+refs/pull/*/head:refs/remotes/upstream/pr/*'
-    ```
+If the Github actions tests do not run on a PR, they can be initiated by closing
+and reopening the PR.
 
-### Merge workflow
-
-The following steps should be done for every PR that you intend to merge:
-
-*   Make sure your local copy of the master branch is up to date:
-
-    ```
-    git checkout master
-    git pull
-    ```
-
-*   Fetch all pull requests refs:
-
-    ```
-    git fetch upstream
-    ```
-
-*   Checkout the particular pull request you are going to review:
-
-    ```
-    git checkout pr/1048
-    ```
-
-*   Rebase the PR on top of the master branch. If there are conflicts, send it
-    back to the author and ask them to rebase. During the interactive rebase be
-    sure to squash all of the commits down to a single commit.
-
-    ```
-    git rebase -i master
-    ```
-
-*   **Build and test the PR.**
-
-*   If all of the tests pass, push the commit `git push upstream HEAD:master`
-
-*   Close the PR and add a comment saying it was push using the commit that you
-    just pushed. See https://github.com/KhronosGroup/SPIRV-Tools/pull/935 as an
-    example.
+If the kokoro tests are not run, they can be run by adding the label
+`kokoro:run` to the PR.

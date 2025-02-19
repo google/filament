@@ -15,7 +15,7 @@ fi
 echo "Building glslang."
 mkdir -p external/glslang-build
 cd external/glslang-build
-cmake ../glslang -DCMAKE_BUILD_TYPE=$PROFILE -DCMAKE_INSTALL_PREFIX=output
+cmake ../glslang -DCMAKE_BUILD_TYPE=$PROFILE -DCMAKE_INSTALL_PREFIX=output -DENABLE_OPT=OFF
 cmake --build . --config $PROFILE --target install ${NPROC}
 cd ../..
 

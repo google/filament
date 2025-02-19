@@ -8,9 +8,9 @@ struct SPIRV_Cross_Input
 
 void comp_main()
 {
-    uint _26 = gl_GlobalInvocationID.z;
+    uint _18 = gl_GlobalInvocationID.z;
     uint _31;
-    InterlockedAdd(uImage[NonUniformResourceIndex(_26)][int2(gl_GlobalInvocationID.xy)], 1u, _31);
+    InterlockedAdd(uImage[NonUniformResourceIndex(_18)][int2(gl_GlobalInvocationID.xy)], 1u, _31);
 }
 
 [numthreads(1, 1, 1)]

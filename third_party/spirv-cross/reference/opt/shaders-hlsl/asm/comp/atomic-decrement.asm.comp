@@ -9,9 +9,9 @@ struct SPIRV_Cross_Input
 
 void comp_main()
 {
-    uint _29;
-    u0_counter.InterlockedAdd(0, -1, _29);
-    u0[asint(asfloat(_29))] = uint(int(gl_GlobalInvocationID.x)).x;
+    uint _24;
+    u0_counter.InterlockedAdd(0, -1, _24);
+    u0[asint(asfloat(_24))] = uint(int(gl_GlobalInvocationID.x)).x;
 }
 
 [numthreads(4, 1, 1)]
