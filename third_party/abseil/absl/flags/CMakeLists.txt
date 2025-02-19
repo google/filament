@@ -340,7 +340,6 @@ absl_cc_test(
     absl::flags_config
     absl::flags_internal
     absl::flags_marshalling
-    absl::flags_parse
     absl::flags_reflection
     absl::int128
     absl::optional
