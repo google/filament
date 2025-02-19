@@ -6,7 +6,7 @@ layout(set = 0, binding = 0, r32ui) uniform uimage2D uImage[];
 
 void main()
 {
-    uint _26 = gl_GlobalInvocationID.z;
-    uint _31 = imageAtomicAdd(uImage[nonuniformEXT(_26)], ivec2(gl_GlobalInvocationID.xy), 1u);
+    uint _18 = gl_GlobalInvocationID.z;
+    uint _31 = imageAtomicAdd(uImage[nonuniformEXT(_18)], ivec2(gl_GlobalInvocationID.xy), 1u);
 }
 

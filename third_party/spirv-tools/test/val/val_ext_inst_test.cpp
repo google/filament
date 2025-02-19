@@ -447,6 +447,7 @@ OpCapability Matrix
 %u8arr_uniform_constant = OpVariable %u8arr_ptr_uniform_constant UniformConstant
 %u8_ptr_uniform_constant = OpTypePointer UniformConstant %u8
 %u8_ptr_generic = OpTypePointer Generic %u8
+%u8_ptr_input = OpTypePointer Input %u8
 
 %main = OpFunction %void None %func
 %main_entry = OpLabel
@@ -5269,6 +5270,26 @@ TEST_F(ValidateExtInst, OpenCLStdPrintfFormatNotUniformConstStorageClass) {
                         "be UniformConstant"));
 }
 
+TEST_F(ValidateExtInst,
+       OpenCLStdPrintfFormatWithExtensionNotAllowedStorageClass) {
+  const std::string body = R"(
+%format_const = OpAccessChain %u8_ptr_uniform_constant %u8arr_uniform_constant %u32_0
+%format = OpBitcast %u8_ptr_input %format_const
+%val1 = OpExtInst %u32 %extinst printf %format %u32_0 %u32_1
+)";
+
+  const std::string extension = R"(
+OpExtension  "SPV_EXT_relaxed_printf_string_address_space"
+)";
+
+  CompileSuccessfully(GenerateKernelCode(body, extension));
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpenCL.std printf: expected Format storage class to "
+                        "be UniformConstant, Crossworkgroup, Workgroup, "
+                        "Function, or Generic"));
+}
+
 TEST_F(ValidateExtInst, OpenCLStdPrintfFormatNotU8Pointer) {
   const std::string body = R"(
 %format = OpAccessChain %u32_ptr_uniform_constant %u32vec8_uniform_constant %u32_0
@@ -6239,6 +6260,197 @@ OpFunctionEnd
               HasSubstr("Name must match an entry-point for Kernel"));
 }
 
+TEST_F(ValidateClspvReflection, KernelArgumentsVersionGood) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %int_1
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateClspvReflection, KernelArgumentsVersionBad) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.4"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %int_1
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Version 4 of the Kernel instruction can only have 2 "
+                        "additional operands"));
+}
+
+TEST_F(ValidateClspvReflection, KernelNumArgumentsNotInt) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %float_0
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("NumArguments must be a 32-bit unsigned integer OpConstant"));
+}
+
+TEST_F(ValidateClspvReflection, KernelNumArgumentsNotConstant) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%null = OpConstantNull %int
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %null
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("NumArguments must be a 32-bit unsigned integer OpConstant"));
+}
+
+TEST_F(ValidateClspvReflection, KernelFlagsNotInt) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %int_0 %float_0
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Flags must be a 32-bit unsigned integer OpConstant"));
+}
+
+TEST_F(ValidateClspvReflection, KernelFlagsNotConstant) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%null = OpConstantNull %int
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %int_0 %null
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Flags must be a 32-bit unsigned integer OpConstant"));
+}
+
+TEST_F(ValidateClspvReflection, KernelAttributesNotString) {
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%void = OpTypeVoid
+%void_fn = OpTypeFunction %void
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name %int_0 %int_0 %int_0
+)";
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Attributes must be an OpString"));
+}
+
 using ArgumentBasics =
     spvtest::ValidateBase<std::pair<std::string, std::string>>;
 
@@ -6254,7 +6466,11 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair("ArgumentSampledImage", "%int_0 %int_0"),
         std::make_pair("ArgumentStorageImage", "%int_0 %int_0"),
         std::make_pair("ArgumentSampler", "%int_0 %int_0"),
-        std::make_pair("ArgumentWorkgroup", "%int_0 %int_0")}));
+        std::make_pair("ArgumentWorkgroup", "%int_0 %int_0"),
+        std::make_pair("ArgumentPointerPushConstant", "%int_0 %int_4"),
+        std::make_pair("ArgumentPointerUniform", "%int_0 %int_0 %int_0 %int_4"),
+        std::make_pair("ArgumentStorageTexelBuffer", "%int_0 %int_0"),
+        std::make_pair("ArgumentUniformTexelBuffer", "%int_0 %int_0")}));
 
 TEST_P(ArgumentBasics, KernelNotAnExtendedInstruction) {
   const std::string ext_inst = std::get<0>(GetParam());
@@ -6262,7 +6478,7 @@ TEST_P(ArgumentBasics, KernelNotAnExtendedInstruction) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6291,8 +6507,8 @@ TEST_P(ArgumentBasics, KernelFromDifferentImport) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
-%ext2 = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+%ext2 = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6323,7 +6539,7 @@ TEST_P(ArgumentBasics, KernelWrongExtendedInstruction) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6353,7 +6569,7 @@ TEST_P(ArgumentBasics, ArgumentInfo) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6383,7 +6599,7 @@ TEST_P(ArgumentBasics, ArgumentInfoNotAnExtendedInstruction) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6414,8 +6630,8 @@ TEST_P(ArgumentBasics, ArgumentInfoFromDifferentImport) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
-%ext2 = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+%ext2 = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6659,7 +6875,269 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair(
             "PropertyRequiredWorkgroupSize %decl %int_1 %int_1 %float_0", "Z"),
         std::make_pair(
-            "PropertyRequiredWorkgroupSize %decl %int_1 %int_1 %null", "Z")}));
+            "PropertyRequiredWorkgroupSize %decl %int_1 %int_1 %null", "Z"),
+        std::make_pair("SpecConstantSubgroupMaxSize %float_0", "Size"),
+        std::make_pair("SpecConstantSubgroupMaxSize %null", "Size"),
+        std::make_pair(
+            "ArgumentPointerPushConstant %decl %float_0 %int_0 %int_0",
+            "Ordinal"),
+        std::make_pair("ArgumentPointerPushConstant %decl %null %int_0 %int_0",
+                       "Ordinal"),
+        std::make_pair(
+            "ArgumentPointerPushConstant %decl %int_0 %float_0 %int_0",
+            "Offset"),
+        std::make_pair("ArgumentPointerPushConstant %decl %int_0 %null %int_0",
+                       "Offset"),
+        std::make_pair(
+            "ArgumentPointerPushConstant %decl %int_0 %int_0 %float_0", "Size"),
+        std::make_pair("ArgumentPointerPushConstant %decl %int_0 %int_0 %null",
+                       "Size"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %float_0 %int_0 %int_0 %int_0 %int_4",
+            "Ordinal"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %null %int_0 %int_0 %int_0 %int_4",
+            "Ordinal"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %float_0 %int_0 %int_0 %int_4",
+            "DescriptorSet"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %null %int_0 %int_0 %int_4",
+            "DescriptorSet"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %float_0 %int_0 %int_4",
+            "Binding"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %null %int_0 %int_4",
+            "Binding"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %int_0 %float_0 %int_4",
+            "Offset"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %int_0 %null %int_4",
+            "Offset"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %int_0 %int_0 %float_0",
+            "Size"),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %int_0 %int_0 %null",
+            "Size"),
+        std::make_pair(
+            "ProgramScopeVariablesStorageBuffer %float_0 %int_0 %data",
+            "DescriptorSet"),
+        std::make_pair("ProgramScopeVariablesStorageBuffer %null %int_0 %data",
+                       "DescriptorSet"),
+        std::make_pair(
+            "ProgramScopeVariablesStorageBuffer %int_0 %float_0 %data",
+            "Binding"),
+        std::make_pair("ProgramScopeVariablesStorageBuffer %int_0 %null %data",
+                       "Binding"),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %float_0 %int_0 %int_4",
+            "ObjectOffset"),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %null %int_0 %int_4",
+            "ObjectOffset"),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %int_0 %float_0 %int_4",
+            "PointerOffset"),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %int_0 %null %int_4",
+            "PointerOffset"),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %int_0 %int_0 %float_0",
+            "PointerSize"),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %int_0 %int_0 %null",
+            "PointerSize"),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl "
+                       "%float_0 %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl %null "
+                       "%int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl %int_0 "
+                       "%float_0 %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl %int_0 "
+                       "%null %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl %int_0 "
+                       "%int_0 %float_0",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl %int_0 "
+                       "%int_0 %null",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%float_0 %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%null %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%int_0 %float_0 %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%int_0 %null %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%int_0 %int_0 %float_0",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%int_0 %int_0 %null",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %float_0 "
+                       "%int_0 %int_0 %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %null "
+                       "%int_0 %int_0 %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%float_0 %int_0 %int_0 %int_4",
+                       "DescriptorSet"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%null %int_0 %int_0 %int_4",
+                       "DescriptorSet"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %float_0 %int_0 %int_4",
+                       "Binding"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %null %int_0 %int_4",
+                       "Binding"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %int_0 %float_0 %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %int_0 %null %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %int_0 %int_0 %float_0",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %int_0 %int_0 %null",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %float_0 "
+                       "%int_0 %int_0 %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %null "
+                       "%int_0 %int_0 %int_0 %int_4",
+                       "Ordinal"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%float_0 %int_0 %int_0 %int_4",
+                       "DescriptorSet"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%null %int_0 %int_0 %int_4",
+                       "DescriptorSet"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %float_0 %int_0 %int_4",
+                       "Binding"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %null %int_0 %int_4",
+                       "Binding"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %int_0 %float_0 %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %int_0 %null %int_4",
+                       "Offset"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %int_0 %int_0 %float_0",
+                       "Size"),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %int_0 %int_0 %null",
+                       "Size"),
+        std::make_pair(
+            "ArgumentStorageTexelBuffer %decl %float_0 %int_0 %int_0",
+            "Ordinal"),
+        std::make_pair("ArgumentStorageTexelBuffer %decl %null %int_0 %int_0",
+                       "Ordinal"),
+        std::make_pair(
+            "ArgumentStorageTexelBuffer %decl %int_0 %float_0 %int_0",
+            "DescriptorSet"),
+        std::make_pair("ArgumentStorageTexelBuffer %decl %int_0 %null %int_0",
+                       "DescriptorSet"),
+        std::make_pair(
+            "ArgumentStorageTexelBuffer %decl %int_0 %int_0 %float_0",
+            "Binding"),
+        std::make_pair("ArgumentStorageTexelBuffer %decl %int_0 %int_0 %null",
+                       "Binding"),
+        std::make_pair(
+            "ArgumentUniformTexelBuffer %decl %float_0 %int_0 %int_0",
+            "Ordinal"),
+        std::make_pair("ArgumentUniformTexelBuffer %decl %null %int_0 %int_0",
+                       "Ordinal"),
+        std::make_pair(
+            "ArgumentUniformTexelBuffer %decl %int_0 %float_0 %int_0",
+            "DescriptorSet"),
+        std::make_pair("ArgumentUniformTexelBuffer %decl %int_0 %null %int_0",
+                       "DescriptorSet"),
+        std::make_pair(
+            "ArgumentUniformTexelBuffer %decl %int_0 %int_0 %float_0",
+            "Binding"),
+        std::make_pair("ArgumentUniformTexelBuffer %decl %int_0 %int_0 %null",
+                       "Binding"),
+        std::make_pair("ConstantDataPointerPushConstant %float_0 %int_4 %data",
+                       "Offset"),
+        std::make_pair("ConstantDataPointerPushConstant %null %int_4 %data",
+                       "Offset"),
+        std::make_pair("ConstantDataPointerPushConstant %int_0 %float_0 %data",
+                       "Size"),
+        std::make_pair("ConstantDataPointerPushConstant %int_0 %null %data",
+                       "Size"),
+        std::make_pair(
+            "ProgramScopeVariablePointerPushConstant %float_0 %int_4 %data",
+            "Offset"),
+        std::make_pair(
+            "ProgramScopeVariablePointerPushConstant %null %int_4 %data",
+            "Offset"),
+        std::make_pair(
+            "ProgramScopeVariablePointerPushConstant %int_0 %float_0 %data",
+            "Size"),
+        std::make_pair(
+            "ProgramScopeVariablePointerPushConstant %int_0 %null %data",
+            "Size"),
+        std::make_pair("PrintfInfo %float_0 %data %int_0 %int_0 %int_0",
+                       "PrintfID"),
+        std::make_pair("PrintfInfo %null %data %int_0 %int_0 %int_0",
+                       "PrintfID"),
+        std::make_pair("PrintfInfo %int_0 %data %float_0 %int_0 %int_0",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %null %int_0 %int_0",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %int_0 %float_0 %int_0",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %int_0 %null %int_0",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %int_0 %int_0 %null",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %int_0 %int_0 %float_0",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %int_0 %float_0",
+                       "ArgumentSizes"),
+        std::make_pair("PrintfInfo %int_0 %data %int_0 %null", "ArgumentSizes"),
+        std::make_pair("PrintfBufferStorageBuffer %float_0 %int_0 %int_4",
+                       "DescriptorSet"),
+        std::make_pair("PrintfBufferStorageBuffer %null %int_0 %int_4",
+                       "DescriptorSet"),
+        std::make_pair("PrintfBufferStorageBuffer %int_0 %float_0 %int_4",
+                       "Binding"),
+        std::make_pair("PrintfBufferStorageBuffer %int_0 %null %int_4",
+                       "Binding"),
+        std::make_pair("PrintfBufferStorageBuffer %int_0 %int_0 %float_0",
+                       "Size"),
+        std::make_pair("PrintfBufferStorageBuffer %int_0 %int_0 %null", "Size"),
+        std::make_pair("PrintfBufferPointerPushConstant %float_0 %int_0 %int_4",
+                       "Offset"),
+        std::make_pair("PrintfBufferPointerPushConstant %null %int_0 %int_4",
+                       "Offset"),
+        std::make_pair("PrintfBufferPointerPushConstant %int_0 %float_0 %int_4",
+                       "Size"),
+        std::make_pair("PrintfBufferPointerPushConstant %int_0 %null %int_4",
+                       "Size"),
+        std::make_pair("PrintfBufferPointerPushConstant %int_0 %int_0 %float_0",
+                       "BufferSize"),
+        std::make_pair("PrintfBufferPointerPushConstant %int_0 %int_0 %null",
+                       "BufferSize")}));
 
 TEST_P(Uint32Constant, Invalid) {
   const std::string ext_inst = std::get<0>(GetParam());
@@ -6667,7 +7145,7 @@ TEST_P(Uint32Constant, Invalid) {
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
-%ext = OpExtInstImport "NonSemantic.ClspvReflection.1"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
 OpMemoryModel Logical GLSL450
 OpEntryPoint GLCompute %foo "foo"
 OpExecutionMode %foo LocalSize 1 1 1
@@ -6705,11 +7183,119 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(std::vector<std::pair<std::string, std::string>>{
         std::make_pair("ConstantDataStorageBuffer %int_0 %int_0 %int_0",
                        "Data"),
-        std::make_pair("ConstantDataUniform %int_0 %int_0 %int_0", "Data")}));
+        std::make_pair("ConstantDataUniform %int_0 %int_0 %int_0", "Data"),
+        std::make_pair(
+            "ProgramScopeVariablesStorageBuffer %int_0 %int_0 %int_0", "Data"),
+        std::make_pair("ConstantDataPointerPushConstant %int_0 %int_0 %int_0",
+                       "Data"),
+        std::make_pair(
+            "ProgramScopeVariablePointerPushConstant %int_0 %int_0 %int_0",
+            "Data"),
+        std::make_pair("PrintfInfo %int_0 %int_0", "FormatString")}));
 
 TEST_P(StringOperand, Invalid) {
   const std::string ext_inst = std::get<0>(GetParam());
   const std::string name = std::get<1>(GetParam());
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%data = OpString "1234"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_4 = OpConstant %int 4
+%null = OpConstantNull %int
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name
+%inst = OpExtInst %void %ext )" +
+                           ext_inst;
+
+  CompileSuccessfully(text);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(), HasSubstr(name + " must be an OpString"));
+}
+
+using VersionCheck = spvtest::ValidateBase<std::pair<std::string, uint32_t>>;
+
+INSTANTIATE_TEST_SUITE_P(
+    ValidateClspvReflectionVersionCheck, VersionCheck,
+    ::testing::ValuesIn(std::vector<std::pair<std::string, uint32_t>>{
+        std::make_pair("ArgumentStorageBuffer %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("ArgumentUniform %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair(
+            "ArgumentPodStorageBuffer %decl %int_0 %int_0 %int_0 %int_0 %int_0",
+            1),
+        std::make_pair(
+            "ArgumentPodUniform %decl %int_0 %int_0 %int_0 %int_0 %int_0", 1),
+        std::make_pair("ArgumentPodPushConstant %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("ArgumentSampledImage %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("ArgumentStorageImage %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("ArgumentSampler %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("ArgumentWorkgroup %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("SpecConstantWorkgroupSize %int_0 %int_0 %int_0", 1),
+        std::make_pair("SpecConstantGlobalOffset %int_0 %int_0 %int_0", 1),
+        std::make_pair("SpecConstantWorkDim %int_0", 1),
+        std::make_pair("PushConstantGlobalOffset %int_0 %int_0", 1),
+        std::make_pair("PushConstantEnqueuedLocalSize %int_0 %int_0", 1),
+        std::make_pair("PushConstantGlobalSize %int_0 %int_0", 1),
+        std::make_pair("PushConstantRegionOffset %int_0 %int_0", 1),
+        std::make_pair("PushConstantNumWorkgroups %int_0 %int_0", 1),
+        std::make_pair("PushConstantRegionGroupOffset %int_0 %int_0", 1),
+        std::make_pair("ConstantDataStorageBuffer %int_0 %int_0 %data", 1),
+        std::make_pair("ConstantDataUniform %int_0 %int_0 %data", 1),
+        std::make_pair("LiteralSampler %int_0 %int_0 %int_0", 1),
+        std::make_pair(
+            "PropertyRequiredWorkgroupSize %decl %int_0 %int_0 %int_0", 1),
+        std::make_pair("SpecConstantSubgroupMaxSize %int_0", 2),
+        std::make_pair("ArgumentPointerPushConstant %decl %int_0 %int_0 %int_0",
+                       3),
+        std::make_pair(
+            "ArgumentPointerUniform %decl %int_0 %int_0 %int_0 %int_0 %int_0",
+            3),
+        std::make_pair("ProgramScopeVariablesStorageBuffer %int_0 %int_0 %data",
+                       3),
+        std::make_pair(
+            "ProgramScopeVariablePointerRelocation %int_0 %int_0 %int_0", 3),
+        std::make_pair("ImageArgumentInfoChannelOrderPushConstant %decl %int_0 "
+                       "%int_0 %int_0",
+                       3),
+        std::make_pair("ImageArgumentInfoChannelDataTypePushConstant %decl "
+                       "%int_0 %int_0 %int_0",
+                       3),
+        std::make_pair("ImageArgumentInfoChannelOrderUniform %decl %int_0 "
+                       "%int_0 %int_0 %int_0 %int_0",
+                       3),
+        std::make_pair("ImageArgumentInfoChannelDataTypeUniform %decl %int_0 "
+                       "%int_0 %int_0 %int_0 %int_0",
+                       3),
+        std::make_pair("ArgumentStorageTexelBuffer %decl %int_0 %int_0 %int_0",
+                       4),
+        std::make_pair("ArgumentUniformTexelBuffer %decl %int_0 %int_0 %int_0",
+                       4),
+        std::make_pair("ConstantDataPointerPushConstant %int_0 %int_0 %data",
+                       5),
+        std::make_pair(
+            "ProgramScopeVariablePointerPushConstant %int_0 %int_0 %data", 5),
+        std::make_pair("PrintfInfo %int_0 %data", 5),
+        std::make_pair("PrintfBufferStorageBuffer %int_0 %int_0 %int_0", 5),
+        std::make_pair("PrintfBufferPointerPushConstant %int_0 %int_0 %int_0",
+                       5)}));
+
+TEST_P(VersionCheck, V1) {
+  const std::string ext_inst = std::get<0>(GetParam());
+  const uint32_t version = std::get<1>(GetParam());
   const std::string text = R"(
 OpCapability Shader
 OpExtension "SPV_KHR_non_semantic_info"
@@ -6737,8 +7323,250 @@ OpFunctionEnd
                            ext_inst;
 
   CompileSuccessfully(text);
-  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr(name + " must be an OpString"));
+  if (version <= 1) {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("requires version " + std::to_string(version) +
+                          ", but parsed version is 1"));
+  }
+}
+
+TEST_P(VersionCheck, V2) {
+  const std::string ext_inst = std::get<0>(GetParam());
+  const uint32_t version = std::get<1>(GetParam());
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%data = OpString "1234"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_4 = OpConstant %int 4
+%null = OpConstantNull %int
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name
+%inst = OpExtInst %void %ext )" +
+                           ext_inst;
+
+  CompileSuccessfully(text);
+  if (version <= 2) {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("requires version " + std::to_string(version) +
+                          ", but parsed version is 2"));
+  }
+}
+
+TEST_P(VersionCheck, V3) {
+  const std::string ext_inst = std::get<0>(GetParam());
+  const uint32_t version = std::get<1>(GetParam());
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.3"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%data = OpString "1234"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_4 = OpConstant %int 4
+%null = OpConstantNull %int
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name
+%inst = OpExtInst %void %ext )" +
+                           ext_inst;
+
+  CompileSuccessfully(text);
+  if (version <= 3) {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("requires version " + std::to_string(version) +
+                          ", but parsed version is 3"));
+  }
+}
+
+TEST_P(VersionCheck, V4) {
+  const std::string ext_inst = std::get<0>(GetParam());
+  const uint32_t version = std::get<1>(GetParam());
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.4"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%data = OpString "1234"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_4 = OpConstant %int 4
+%null = OpConstantNull %int
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name
+%inst = OpExtInst %void %ext )" +
+                           ext_inst;
+
+  CompileSuccessfully(text);
+  if (version <= 4) {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("requires version " + std::to_string(version) +
+                          ", but parsed version is 4"));
+  }
+}
+
+TEST_P(VersionCheck, V5) {
+  const std::string ext_inst = std::get<0>(GetParam());
+  const uint32_t version = std::get<1>(GetParam());
+  const std::string text = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%ext = OpExtInstImport "NonSemantic.ClspvReflection.5"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %foo "foo"
+OpExecutionMode %foo LocalSize 1 1 1
+%foo_name = OpString "foo"
+%data = OpString "1234"
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_0 = OpConstant %int 0
+%int_1 = OpConstant %int 1
+%int_4 = OpConstant %int 4
+%null = OpConstantNull %int
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%void_fn = OpTypeFunction %void
+%foo = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+%decl = OpExtInst %void %ext Kernel %foo %foo_name
+%inst = OpExtInst %void %ext )" +
+                           ext_inst;
+
+  CompileSuccessfully(text);
+  if (version <= 5) {
+    EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+  } else {
+    EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("requires version " + std::to_string(version) +
+                          ", but parsed version is 1"));
+  }
+}
+
+TEST_F(ValidateExtInst, OpExtInstWithForwardNotAllowedSemantic) {
+  const std::string body = R"(
+             OpCapability Shader
+             OpExtension "SPV_KHR_non_semantic_info"
+             OpExtension "SPV_KHR_relaxed_extended_instruction"
+        %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+  %extinst = OpExtInstImport "GLSL.std.450"
+             OpMemoryModel Logical GLSL450
+             OpEntryPoint GLCompute %2 "main"
+             OpExecutionMode %2 LocalSize 1 1 1
+        %3 = OpString "sample"
+     %void = OpTypeVoid
+     %uint = OpTypeInt 32 0
+      %f32 = OpTypeFloat 32
+   %uint_0 = OpConstant %uint 0
+    %f32_0 = OpConstant %f32 0
+    %f32_1 = OpConstant %f32 1
+        %7 = OpTypeFunction %void
+        %8 = OpExtInst %void %1 DebugSource %3 %3
+        %9 = OpExtInst %void %1 DebugCompilationUnit %uint_0 %uint_0 %8 %uint_0
+       %10 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeFunction %uint_0 %11
+       %12 = OpExtInstWithForwardRefsKHR %void %1 DebugFunction %3 %10 %8 %uint_0 %uint_0 %11 %3 %uint_0 %uint_0
+       %11 = OpExtInst %void %1 DebugTypeComposite %3 %uint_0 %8 %uint_0 %uint_0 %9 %3 %uint_0 %uint_0 %12
+        %2 = OpFunction %void None %7
+       %13 = OpLabel
+       %18 = OpExtInstWithForwardRefsKHR %f32 %extinst FMin %f32_0 %19
+       %19 = OpExtInst %f32 %extinst FMin %f32_0 %f32_1
+             OpReturn
+             OpFunctionEnd
+)";
+
+  CompileSuccessfully(body);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpExtInstWithForwardRefsKHR is only allowed with non-semantic "
+          "instructions.\n"
+          "  %18 = OpExtInstWithForwardRefsKHR %float %2 FMin %float_0 %19\n"));
+}
+
+TEST_F(ValidateExtInst, OpExtInstRequiresNonSemanticBefore16) {
+  const std::string body = R"(
+             OpCapability Shader
+             OpExtension "SPV_KHR_non_semantic_info"
+        %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+  %extinst = OpExtInstImport "GLSL.std.450"
+             OpMemoryModel Logical GLSL450
+             OpEntryPoint GLCompute %2 "main"
+             OpExecutionMode %2 LocalSize 1 1 1
+        %3 = OpString "sample"
+     %void = OpTypeVoid
+     %uint = OpTypeInt 32 0
+   %uint_0 = OpConstant %uint 0
+        %7 = OpTypeFunction %void
+        %8 = OpExtInst %void %1 DebugSource %3 %3
+        %9 = OpExtInst %void %1 DebugCompilationUnit %uint_0 %uint_0 %8 %uint_0
+       %10 = OpExtInstWithForwardRefsKHR %void %1 DebugTypeFunction %uint_0 %11
+       %12 = OpExtInstWithForwardRefsKHR %void %1 DebugFunction %3 %10 %8 %uint_0 %uint_0 %11 %3 %uint_0 %uint_0
+       %11 = OpExtInst %void %1 DebugTypeComposite %3 %uint_0 %8 %uint_0 %uint_0 %9 %3 %uint_0 %uint_0 %12
+        %2 = OpFunction %void None %7
+       %13 = OpLabel
+             OpReturn
+             OpFunctionEnd
+)";
+
+  CompileSuccessfully(body);
+  ASSERT_EQ(SPV_ERROR_MISSING_EXTENSION, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("ExtInstWithForwardRefsKHR requires one of the following "
+                "extensions: SPV_KHR_relaxed_extended_instruction \n"
+                "  %11 = OpExtInstWithForwardRefsKHR %void %1 "
+                "DebugTypeFunction %uint_0 %12\n"));
 }
 
 }  // namespace

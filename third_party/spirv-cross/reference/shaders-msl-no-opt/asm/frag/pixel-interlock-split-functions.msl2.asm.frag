@@ -16,34 +16,34 @@ struct SSBO0
 };
 
 static inline __attribute__((always_inline))
-void callee2(thread float4& gl_FragCoord, device SSBO1& _7)
+void callee2(thread float4& gl_FragCoord, device SSBO1& _11)
 {
-    int _37 = int(gl_FragCoord.x);
-    _7.values1[_37]++;
+    int _25 = int(gl_FragCoord.x);
+    _11.values1[_25]++;
 }
 
 static inline __attribute__((always_inline))
-void callee(thread float4& gl_FragCoord, device SSBO1& _7, device SSBO0& _9)
+void callee(thread float4& gl_FragCoord, device SSBO1& _11, device SSBO0& _13)
 {
-    int _45 = int(gl_FragCoord.x);
-    _9.values0[_45]++;
-    callee2(gl_FragCoord, _7);
+    int _38 = int(gl_FragCoord.x);
+    _13.values0[_38]++;
+    callee2(gl_FragCoord, _11);
 }
 
 static inline __attribute__((always_inline))
-void _29()
+void _46()
 {
 }
 
 static inline __attribute__((always_inline))
-void _31()
+void _48()
 {
 }
 
-fragment void main0(device SSBO1& _7 [[buffer(0), raster_order_group(0)]], device SSBO0& _9 [[buffer(1), raster_order_group(0)]], float4 gl_FragCoord [[position]])
+fragment void main0(device SSBO1& _11 [[buffer(0), raster_order_group(0)]], device SSBO0& _13 [[buffer(1), raster_order_group(0)]], float4 gl_FragCoord [[position]])
 {
-    callee(gl_FragCoord, _7, _9);
-    _29();
-    _31();
+    callee(gl_FragCoord, _11, _13);
+    _46();
+    _48();
 }
 

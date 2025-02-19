@@ -156,8 +156,8 @@ TEST_F(ValidateDerivatives, OpDPdxWrongExecutionModel) {
   CompileSuccessfully(GenerateShaderCode(body, "", "Vertex").c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Derivative instructions require Fragment or GLCompute "
-                        "execution model: DPdx"));
+              HasSubstr("Derivative instructions require Fragment, GLCompute, "
+                        "MeshEXT or TaskEXT execution model: DPdx"));
 }
 
 TEST_F(ValidateDerivatives, NoExecutionModeGLCompute) {
@@ -181,8 +181,9 @@ OpFunctionEnd
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Derivative instructions require "
-                        "DerivativeGroupQuadsNV or DerivativeGroupLinearNV "
-                        "execution mode for GLCompute execution model"));
+                        "DerivativeGroupQuadsKHR or DerivativeGroupLinearKHR "
+                        "execution mode for GLCompute, MeshEXT or TaskEXT "
+                        "execution model"));
 }
 
 using ValidateHalfDerivatives = spvtest::ValidateBase<std::string>;

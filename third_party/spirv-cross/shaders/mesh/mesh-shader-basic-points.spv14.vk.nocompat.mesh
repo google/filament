@@ -1,5 +1,6 @@
 #version 450
 #extension GL_EXT_mesh_shader : require
+#extension GL_EXT_fragment_shading_rate : require
 layout(local_size_x = 2, local_size_y = 3, local_size_z = 4) in;
 layout(points, max_vertices = 24, max_primitives = 22) out;
 

@@ -14,7 +14,6 @@
 
 // Tests instructions from SPV_EXT_mesh_shader
 
-#include <sstream>
 #include <string>
 
 #include "gmock/gmock.h"
@@ -468,6 +467,79 @@ TEST_F(ValidateMeshShading, TaskPayloadWorkgroupBadExecutionModel) {
                         "TaskEXT and MeshKHR execution model"));
 }
 
+TEST_F(ValidateMeshShading, BadMultipleTaskPayloadWorkgroupEXT) {
+  const std::string body = R"(
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint TaskEXT %main "main" %payload %payload1
+       %void = OpTypeVoid
+       %func = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_TaskPayloadWorkgroupEXT = OpTypePointer TaskPayloadWorkgroupEXT %uint
+    %payload = OpVariable %_ptr_TaskPayloadWorkgroupEXT TaskPayloadWorkgroupEXT
+    %payload1 = OpVariable %_ptr_TaskPayloadWorkgroupEXT TaskPayloadWorkgroupEXT
+       %main = OpFunction %void None %func
+      %label = OpLabel
+       %load = OpLoad %uint %payload
+               OpReturn
+               OpFunctionEnd
+)";
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("There can be at most one OpVariable with storage "
+                        "class TaskPayloadWorkgroupEXT associated with "
+                        "an OpEntryPoint"));
+}
+
+TEST_F(ValidateMeshShading, TaskPayloadWorkgroupTaskExtExecutionModel) {
+  const std::string body = R"(
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint TaskEXT %main "main" %payload
+       %void = OpTypeVoid
+       %func = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_TaskPayloadWorkgroupEXT = OpTypePointer TaskPayloadWorkgroupEXT %uint
+    %payload = OpVariable %_ptr_TaskPayloadWorkgroupEXT TaskPayloadWorkgroupEXT
+       %main = OpFunction %void None %func
+      %label = OpLabel
+       %load = OpLoad %uint %payload
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+}
+
+TEST_F(ValidateMeshShading, TaskPayloadWorkgroupMeshExtExecutionModel) {
+  const std::string body = R"(
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint MeshEXT %main "main" %payload
+               OpExecutionMode %main OutputVertices 1
+               OpExecutionMode %main OutputPrimitivesEXT 1
+               OpExecutionMode %main OutputTrianglesEXT
+       %void = OpTypeVoid
+       %func = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_TaskPayloadWorkgroupEXT = OpTypePointer TaskPayloadWorkgroupEXT %uint
+    %payload = OpVariable %_ptr_TaskPayloadWorkgroupEXT TaskPayloadWorkgroupEXT
+       %main = OpFunction %void None %func
+      %label = OpLabel
+       %load = OpLoad %uint %payload
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+}
+
 TEST_F(ValidateMeshShading, OpSetMeshOutputsBadVertexCount) {
   const std::string body = R"(
                OpCapability MeshShadingEXT
@@ -592,6 +664,317 @@ TEST_F(ValidateMeshShading, OpEmitMeshTasksZeroSuccess) {
        %main = OpFunction %void None %func
       %label = OpLabel
                OpEmitMeshTasksEXT %uint_0 %uint_0 %uint_0
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+}
+
+TEST_F(ValidateMeshShading, BadPerPrimitiveEXTStorageClassInMeshEXT) {
+  const std::string body = R"(
+              OpCapability MeshShadingEXT
+              OpExtension "SPV_EXT_mesh_shader"
+         %1 = OpExtInstImport "GLSL.std.450"
+              OpMemoryModel Logical GLSL450
+              OpEntryPoint MeshEXT %main "main" %gl_LocalInvocationID %blk %triangleNormal
+              OpExecutionMode %main LocalSize 32 1 1
+              OpExecutionMode %main OutputVertices 81
+              OpExecutionMode %main OutputPrimitivesNV 32
+              OpExecutionMode %main OutputTrianglesNV
+              OpSource GLSL 450
+              OpSourceExtension "GL_EXT_mesh_shader"
+              OpName %main "main"
+              OpName %iid "iid"
+              OpName %gl_LocalInvocationID "gl_LocalInvocationID"
+              OpName %myblock "myblock"
+              OpMemberName %myblock 0 "f"
+              OpName %blk "blk"
+              OpName %triangleNormal "triangleNormal"
+              OpDecorate %gl_LocalInvocationID BuiltIn LocalInvocationId
+              OpMemberDecorate %myblock 0 PerPrimitiveEXT
+              OpDecorate %myblock Block
+              OpDecorate %blk Location 0
+              OpDecorate %triangleNormal PerPrimitiveEXT
+              OpDecorate %triangleNormal Location 0
+              OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+      %void = OpTypeVoid
+         %3 = OpTypeFunction %void
+      %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+    %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_LocalInvocationID = OpVariable %_ptr_Input_v3uint Input
+    %uint_0 = OpConstant %uint 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+     %float = OpTypeFloat 32
+   %myblock = OpTypeStruct %float
+   %uint_32 = OpConstant %uint 32
+%_arr_myblock_uint_32 = OpTypeArray %myblock %uint_32
+%_ptr_Output__arr_myblock_uint_32 = OpTypePointer Output %_arr_myblock_uint_32
+       %blk = OpVariable %_ptr_Output__arr_myblock_uint_32 Output
+       %int = OpTypeInt 32 1
+     %int_0 = OpConstant %int 0
+  %float_11 = OpConstant %float 11
+%_ptr_Output_float = OpTypePointer Output %float
+   %v3float = OpTypeVector %float 3
+%_arr_v3float_uint_32 = OpTypeArray %v3float %uint_32
+%_ptr_Output__arr_v3float_uint_32 = OpTypePointer Input %_arr_v3float_uint_32
+%triangleNormal = OpVariable %_ptr_Output__arr_v3float_uint_32 Input
+        %33 = OpConstantComposite %v3float %float_11 %float_11 %float_11
+%_ptr_Output_v3float = OpTypePointer Output %v3float
+    %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_32 %uint_1 %uint_1
+      %main = OpFunction %void None %3
+         %5 = OpLabel
+       %iid = OpVariable %_ptr_Function_uint Function
+        %14 = OpAccessChain %_ptr_Input_uint %gl_LocalInvocationID %uint_0
+        %15 = OpLoad %uint %14
+              OpStore %iid %15
+        %22 = OpLoad %uint %iid
+        %27 = OpAccessChain %_ptr_Output_float %blk %22 %int_0
+              OpStore %27 %float_11
+              OpReturn
+              OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("PerPrimitiveEXT decoration must be applied only to "
+                        "variables in the Output Storage Class in the Storage "
+                        "Class in the MeshEXT Execution Model."));
+}
+
+TEST_F(ValidateMeshShading, VulkanPerPrimitiveEXTStorageClassInMeshEXT) {
+  const std::string body = R"(
+      OpCapability MeshShadingEXT
+      OpExtension "SPV_EXT_mesh_shader"
+ %1 = OpExtInstImport "GLSL.std.450"
+      OpMemoryModel Logical GLSL450
+      OpEntryPoint MeshEXT %main "main" %gl_LocalInvocationID %blk %triangleNormal
+      OpExecutionMode %main LocalSize 32 1 1
+      OpExecutionMode %main OutputVertices 81
+      OpExecutionMode %main OutputPrimitivesNV 32
+      OpExecutionMode %main OutputTrianglesNV
+      OpSource GLSL 450
+      OpSourceExtension "GL_EXT_mesh_shader"
+      OpName %main "main"
+      OpName %iid "iid"
+      OpName %gl_LocalInvocationID "gl_LocalInvocationID"
+      OpName %myblock "myblock"
+      OpMemberName %myblock 0 "f"
+      OpName %blk "blk"
+      OpName %triangleNormal "triangleNormal"
+      OpDecorate %gl_LocalInvocationID BuiltIn LocalInvocationId
+      OpMemberDecorate %myblock 0 PerPrimitiveEXT
+      OpDecorate %myblock Block
+      OpDecorate %blk Location 0
+      OpDecorate %triangleNormal PerPrimitiveEXT
+      OpDecorate %triangleNormal Location 0
+      OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+%void = OpTypeVoid
+ %3 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+%v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_LocalInvocationID = OpVariable %_ptr_Input_v3uint Input
+%uint_0 = OpConstant %uint 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%float = OpTypeFloat 32
+%myblock = OpTypeStruct %float
+%uint_32 = OpConstant %uint 32
+%_arr_myblock_uint_32 = OpTypeArray %myblock %uint_32
+%_ptr_Output__arr_myblock_uint_32 = OpTypePointer Output %_arr_myblock_uint_32
+%blk = OpVariable %_ptr_Output__arr_myblock_uint_32 Output
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%float_11 = OpConstant %float 11
+%_ptr_Output_float = OpTypePointer Output %float
+%v3float = OpTypeVector %float 3
+%_arr_v3float_uint_32 = OpTypeArray %v3float %uint_32
+%_ptr_Output__arr_v3float_uint_32 = OpTypePointer Input %_arr_v3float_uint_32
+%triangleNormal = OpVariable %_ptr_Output__arr_v3float_uint_32 Input
+%33 = OpConstantComposite %v3float %float_11 %float_11 %float_11
+%_ptr_Output_v3float = OpTypePointer Output %v3float
+%uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_32 %uint_1 %uint_1
+%main = OpFunction %void None %3
+ %5 = OpLabel
+%iid = OpVariable %_ptr_Function_uint Function
+%14 = OpAccessChain %_ptr_Input_uint %gl_LocalInvocationID %uint_0
+%15 = OpLoad %uint %14
+      OpStore %iid %15
+%22 = OpLoad %uint %iid
+%27 = OpAccessChain %_ptr_Output_float %blk %22 %int_0
+      OpStore %27 %float_11
+      OpReturn
+      OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-PrimitiveId-PrimitiveId-04336"));
+}
+
+TEST_F(ValidateMeshShading, BadPerPrimitiveEXTStorageClassInFrag) {
+  const std::string body = R"(
+             OpCapability Shader
+             OpCapability MeshShadingEXT
+             OpExtension "SPV_EXT_mesh_shader"
+        %1 = OpExtInstImport "GLSL.std.450"
+             OpMemoryModel Logical GLSL450
+             OpEntryPoint Fragment %main "main" %triangleNormal
+             OpExecutionMode %main OriginUpperLeft
+             OpSource GLSL 450
+             OpSourceExtension "GL_EXT_mesh_shader"
+             OpName %main "main"
+             OpName %triangleNormal "triangleNormal"
+             OpDecorate %triangleNormal PerPrimitiveNV
+             OpDecorate %triangleNormal Location 0
+     %void = OpTypeVoid
+        %3 = OpTypeFunction %void
+    %float = OpTypeFloat 32
+  %v3float = OpTypeVector %float 3
+     %uint = OpTypeInt 32 0
+   %uint_3 = OpConstant %uint 3
+%_arr_v3float_uint_3 = OpTypeArray %v3float %uint_3
+%_ptr_Input__arr_v3float_uint_3 = OpTypePointer Output %_arr_v3float_uint_3
+%triangleNormal = OpVariable %_ptr_Input__arr_v3float_uint_3 Output
+      %int = OpTypeInt 32 1
+    %int_0 = OpConstant %int 0
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+     %main = OpFunction %void None %3
+        %5 = OpLabel
+       %18 = OpAccessChain %_ptr_Input_v3float %triangleNormal %int_0
+       %19 = OpLoad %v3float %18
+             OpReturn
+             OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("PerPrimitiveEXT decoration must be applied only to "
+                        "variables in the Input Storage Class in the Fragment "
+                        "Execution Model."));
+}
+
+TEST_F(ValidateMeshShading, PerPrimitiveEXTStorageClassInFrag) {
+  const std::string body = R"(
+                OpCapability Shader
+                OpCapability MeshShadingEXT
+                OpExtension "SPV_EXT_mesh_shader"
+           %1 = OpExtInstImport "GLSL.std.450"
+                OpMemoryModel Logical GLSL450
+                OpEntryPoint Fragment %main "main" %res3 %triangleNormal
+                OpExecutionMode %main OriginUpperLeft
+                OpSource GLSL 450
+                OpSourceExtension "GL_EXT_mesh_shader"
+                OpName %main "main"
+                OpName %res3 "res3"
+                OpName %triangleNormal "triangleNormal"
+                OpDecorate %res3 Location 0
+                OpDecorate %triangleNormal PerPrimitiveNV
+                OpDecorate %triangleNormal Location 0
+        %void = OpTypeVoid
+           %3 = OpTypeFunction %void
+       %float = OpTypeFloat 32
+     %v3float = OpTypeVector %float 3
+ %_ptr_Output_v3float = OpTypePointer Output %v3float
+        %res3 = OpVariable %_ptr_Output_v3float Output
+        %uint = OpTypeInt 32 0
+      %uint_3 = OpConstant %uint 3
+ %_arr_v3float_uint_3 = OpTypeArray %v3float %uint_3
+ %_ptr_Input__arr_v3float_uint_3 = OpTypePointer Input %_arr_v3float_uint_3
+ %triangleNormal = OpVariable %_ptr_Input__arr_v3float_uint_3 Input
+         %int = OpTypeInt 32 1
+       %int_0 = OpConstant %int 0
+ %_ptr_Input_v3float = OpTypePointer Input %v3float
+        %main = OpFunction %void None %3
+           %5 = OpLabel
+          %18 = OpAccessChain %_ptr_Input_v3float %triangleNormal %int_0
+          %19 = OpLoad %v3float %18
+                OpStore %res3 %19
+                OpReturn
+                OpFunctionEnd
+)";
+
+  CompileSuccessfully(body, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+}
+
+TEST_F(ValidateMeshShading, PerPrimitiveEXTStorageClassInMeshEXT) {
+  const std::string body = R"(
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint MeshEXT %main "main" %gl_LocalInvocationID %blk %triangleNormal
+               OpExecutionMode %main LocalSize 32 1 1
+               OpExecutionMode %main OutputVertices 81
+               OpExecutionMode %main OutputPrimitivesNV 32
+               OpExecutionMode %main OutputTrianglesNV
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_mesh_shader"
+               OpName %main "main"
+               OpName %iid "iid"
+               OpName %gl_LocalInvocationID "gl_LocalInvocationID"
+               OpName %myblock "myblock"
+               OpMemberName %myblock 0 "f"
+               OpName %blk "blk"
+               OpName %triangleNormal "triangleNormal"
+               OpDecorate %gl_LocalInvocationID BuiltIn LocalInvocationId
+               OpMemberDecorate %myblock 0 PerPrimitiveNV
+               OpDecorate %myblock Block
+               OpDecorate %blk Location 0
+               OpDecorate %triangleNormal PerPrimitiveNV
+               OpDecorate %triangleNormal Location 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_LocalInvocationID = OpVariable %_ptr_Input_v3uint Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+      %float = OpTypeFloat 32
+    %myblock = OpTypeStruct %float
+    %uint_32 = OpConstant %uint 32
+%_arr_myblock_uint_32 = OpTypeArray %myblock %uint_32
+%_ptr_Output__arr_myblock_uint_32 = OpTypePointer Output %_arr_myblock_uint_32
+        %blk = OpVariable %_ptr_Output__arr_myblock_uint_32 Output
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+   %float_11 = OpConstant %float 11
+%_ptr_Output_float = OpTypePointer Output %float
+    %v3float = OpTypeVector %float 3
+%_arr_v3float_uint_32 = OpTypeArray %v3float %uint_32
+%_ptr_Output__arr_v3float_uint_32 = OpTypePointer Output %_arr_v3float_uint_32
+%triangleNormal = OpVariable %_ptr_Output__arr_v3float_uint_32 Output
+         %33 = OpConstantComposite %v3float %float_11 %float_11 %float_11
+%_ptr_Output_v3float = OpTypePointer Output %v3float
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_32 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %iid = OpVariable %_ptr_Function_uint Function
+         %14 = OpAccessChain %_ptr_Input_uint %gl_LocalInvocationID %uint_0
+         %15 = OpLoad %uint %14
+               OpStore %iid %15
+         %22 = OpLoad %uint %iid
+         %27 = OpAccessChain %_ptr_Output_float %blk %22 %int_0
+               OpStore %27 %float_11
+         %32 = OpLoad %uint %iid
+         %35 = OpAccessChain %_ptr_Output_v3float %triangleNormal %32
+               OpStore %35 %33
+               OpReturn
                OpFunctionEnd
 )";
 

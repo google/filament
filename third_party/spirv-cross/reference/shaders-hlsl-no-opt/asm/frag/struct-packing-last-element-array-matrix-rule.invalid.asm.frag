@@ -12,12 +12,12 @@ struct Bar
 
 cbuffer FooUBO : register(b0)
 {
-    Foo _6_foo : packoffset(c0);
+    Foo _8_foo : packoffset(c0);
 };
 
 cbuffer BarUBO : register(b1)
 {
-    Bar _9_bar : packoffset(c0);
+    Bar _11_bar : packoffset(c0);
 };
 
 
@@ -30,7 +30,7 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    FragColor = (_6_foo.v + _9_bar.v).xxxx;
+    FragColor = (_8_foo.v + _11_bar.v).xxxx;
 }
 
 SPIRV_Cross_Output main()

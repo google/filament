@@ -123,7 +123,8 @@ if (${SPIRV_BUILD_FUZZER})
           transformation_wrap_early_terminator_in_function_test.cpp
           transformation_wrap_region_in_selection_test.cpp
           transformation_wrap_vector_synonym_test.cpp
-          uniform_buffer_element_descriptor_test.cpp)
+          uniform_buffer_element_descriptor_test.cpp
+          ${spirv-tools_SOURCE_DIR}/tools/io.cpp)
 
   if (${SPIRV_ENABLE_LONG_FUZZER_TESTS})
     # These are long-running tests that depend on random seeds.  We do not want

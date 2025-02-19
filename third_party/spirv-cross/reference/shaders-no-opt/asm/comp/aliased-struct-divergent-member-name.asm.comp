@@ -9,17 +9,17 @@ struct T
 layout(binding = 0, std430) buffer SSBO1
 {
     T foo[];
-} _7;
+} _9;
 
 layout(binding = 1, std140) buffer SSBO2
 {
     T bar[];
-} _10;
+} _13;
 
 void main()
 {
     T v = T(40.0);
-    _7.foo[10].c = v.c;
-    _10.bar[30].c = v.c;
+    _9.foo[10].c = v.c;
+    _13.bar[30].c = v.c;
 }
 

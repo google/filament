@@ -45,7 +45,7 @@ struct spvUnsafeArray
 };
 
 constant spvUnsafeArray<float, 3> _49 = spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 });
-constant spvUnsafeArray<spvUnsafeArray<float, 3>, 4> _27 = spvUnsafeArray<spvUnsafeArray<float, 3>, 4>({ spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }), spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }), spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }), spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }) });
+constant spvUnsafeArray<spvUnsafeArray<float, 3>, 4> _33 = spvUnsafeArray<spvUnsafeArray<float, 3>, 4>({ spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }), spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }), spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }), spvUnsafeArray<float, 3>({ 0.0, 0.0, 0.0 }) });
 
 struct main0_out
 {
@@ -56,7 +56,7 @@ struct main0_out
 kernel void main0(uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 4];
-    gl_out[gl_InvocationID].foo = _27[gl_InvocationID];
+    gl_out[gl_InvocationID].foo = _33[gl_InvocationID];
     gl_out[gl_InvocationID].gl_Position = float4(1.0);
     gl_out[gl_InvocationID].foo[0] = float(gl_InvocationID);
     gl_out[gl_InvocationID].foo[1] = float(gl_InvocationID) + 1.0;

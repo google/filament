@@ -15,14 +15,12 @@
 #include "source/opt/loop_dependence.h"
 
 #include <functional>
-#include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "source/opt/instruction.h"
-#include "source/opt/scalar_analysis.h"
 #include "source/opt/scalar_analysis_nodes.h"
 
 namespace spvtools {

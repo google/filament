@@ -13,7 +13,7 @@ layout(location = 0) out float FooOut;
 
 void main()
 {
-    SwizzleTest _22 = SwizzleTest(foo.x, foo.y);
-    FooOut = _22.a + _22.b;
+    SwizzleTest _19 = SwizzleTest(foo.x, foo.y);
+    FooOut = _19.a + _19.b;
 }
 

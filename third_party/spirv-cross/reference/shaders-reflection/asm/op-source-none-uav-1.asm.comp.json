@@ -16,7 +16,7 @@
         }
     ],
     "types" : {
-        "_4" : {
+        "_6" : {
             "name" : "UAV0",
             "members" : [
                 {
@@ -36,7 +36,7 @@
     },
     "ssbos" : [
         {
-            "type" : "_4",
+            "type" : "_6",
             "name" : "UAV0",
             "block_size" : 0,
             "set" : 0,

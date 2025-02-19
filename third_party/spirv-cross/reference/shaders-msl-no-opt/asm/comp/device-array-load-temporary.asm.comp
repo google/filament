@@ -165,7 +165,7 @@ struct SSBO
 
 kernel void main0(device SSBO& ssbo [[buffer(0)]])
 {
-    threadgroup uint2 _18[2];
+    threadgroup spvUnsafeArray<uint2, 2> _18;
     spvUnsafeArray<uint2, 2> _27;
     spvArrayCopyFromDeviceToStack1(_27.elements, ssbo._m0[0u]._m1);
     spvArrayCopyFromStackToDevice1(ssbo._m0[0u]._m0, _27.elements);

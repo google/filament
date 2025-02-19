@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <string>
 #include <tuple>
@@ -28,7 +26,6 @@
 #include "source/cfa.h"
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
-#include "source/spirv_target_env.h"
 #include "source/spirv_validator_options.h"
 #include "source/val/basic_block.h"
 #include "source/val/construct.h"
@@ -193,6 +190,8 @@ spv_result_t ValidateBranchConditional(ValidationState_t& _,
               "ID of an OpLabel instruction";
   }
 
+  // A similar requirement for SPV_KHR_maximal_reconvergence is deferred until
+  // entry point call trees have been reconrded.
   if (_.version() >= SPV_SPIRV_VERSION_WORD(1, 6) && true_id == false_id) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "In SPIR-V 1.6 or later, True Label and False Label must be "
@@ -251,7 +250,8 @@ spv_result_t ValidateReturnValue(ValidationState_t& _,
   }
 
   if (_.addressing_model() == spv::AddressingModel::Logical &&
-      spv::Op::OpTypePointer == value_type->opcode() &&
+      (spv::Op::OpTypePointer == value_type->opcode() ||
+       spv::Op::OpTypeUntypedPointerKHR == value_type->opcode()) &&
       !_.features().variable_pointers && !_.options()->relax_logical_pointer) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "OpReturnValue value's type <id> "
@@ -468,13 +468,13 @@ std::string ConstructErrorString(const Construct& construct,
 // headed by |target_block| branches to multiple case constructs.
 spv_result_t FindCaseFallThrough(
     ValidationState_t& _, BasicBlock* target_block, uint32_t* case_fall_through,
-    const BasicBlock* merge, const std::unordered_set<uint32_t>& case_targets,
-    Function* function) {
+    const Construct& switch_construct,
+    const std::unordered_set<uint32_t>& case_targets) {
+  const auto* merge = switch_construct.exit_block();
   std::vector<BasicBlock*> stack;
   stack.push_back(target_block);
   std::unordered_set<const BasicBlock*> visited;
   bool target_reachable = target_block->structurally_reachable();
-  int target_depth = function->GetBlockDepth(target_block);
   while (!stack.empty()) {
     auto block = stack.back();
     stack.pop_back();
@@ -492,9 +492,14 @@ spv_result_t FindCaseFallThrough(
     } else {
       // Exiting the case construct to non-merge block.
       if (!case_targets.count(block->id())) {
-        int depth = function->GetBlockDepth(block);
-        if ((depth < target_depth) ||
-            (depth == target_depth && block->is_type(kBlockTypeContinue))) {
+        // We have already filtered out the following:
+        //  * The switch's merge
+        //  * Other case targets
+        //  * Blocks in the same case construct
+        //
+        // So the only remaining valid branches are the structured exits from
+        // the overall selection construct of the switch.
+        if (switch_construct.IsStructuredExit(_, block)) {
           continue;
         }
 
@@ -526,9 +531,10 @@ spv_result_t FindCaseFallThrough(
 }
 
 spv_result_t StructuredSwitchChecks(ValidationState_t& _, Function* function,
-                                    const Instruction* switch_inst,
-                                    const BasicBlock* header,
-                                    const BasicBlock* merge) {
+                                    const Construct& switch_construct) {
+  const auto* header = switch_construct.entry_block();
+  const auto* merge = switch_construct.exit_block();
+  const auto* switch_inst = header->terminator();
   std::unordered_set<uint32_t> case_targets;
   for (uint32_t i = 1; i < switch_inst->operands().size(); i += 2) {
     uint32_t target = switch_inst->GetOperandAs<uint32_t>(i);
@@ -546,6 +552,7 @@ spv_result_t StructuredSwitchChecks(ValidationState_t& _, Function* function,
       break;
     }
   }
+
   std::unordered_map<uint32_t, uint32_t> seen_to_fall_through;
   for (uint32_t i = 1; i < switch_inst->operands().size(); i += 2) {
     uint32_t target = switch_inst->GetOperandAs<uint32_t>(i);
@@ -560,13 +567,13 @@ spv_result_t StructuredSwitchChecks(ValidationState_t& _, Function* function,
           target_block->structurally_reachable() &&
           !header->structurally_dominates(*target_block)) {
         return _.diag(SPV_ERROR_INVALID_CFG, header->label())
-               << "Selection header " << _.getIdName(header->id())
+               << "Switch header " << _.getIdName(header->id())
                << " does not structurally dominate its case construct "
                << _.getIdName(target);
       }
 
       if (auto error = FindCaseFallThrough(_, target_block, &case_fall_through,
-                                           merge, case_targets, function)) {
+                                           switch_construct, case_targets)) {
         return error;
       }
 
@@ -671,7 +678,8 @@ spv_result_t ValidateStructuredSelections(
       // previously.
       const bool true_label_unseen = seen.insert(true_label).second;
       const bool false_label_unseen = seen.insert(false_label).second;
-      if (!merge && true_label_unseen && false_label_unseen) {
+      if ((!merge || merge->opcode() == spv::Op::OpLoopMerge) &&
+          true_label_unseen && false_label_unseen) {
         return _.diag(SPV_ERROR_INVALID_CFG, terminator)
                << "Selection must be structured";
       }
@@ -838,6 +846,9 @@ spv_result_t StructuredControlFlowChecks(
       const auto* continue_target = next_inst.block();
       if (header->id() != continue_id) {
         for (auto pred : *continue_target->predecessors()) {
+          if (!pred->structurally_reachable()) {
+            continue;
+          }
           // Ignore back-edges from within the continue construct.
           bool is_back_edge = false;
           for (auto back_edge : back_edges) {
@@ -862,9 +873,7 @@ spv_result_t StructuredControlFlowChecks(
     // Checks rules for case constructs.
     if (construct.type() == ConstructType::kSelection &&
         header->terminator()->opcode() == spv::Op::OpSwitch) {
-      const auto terminator = header->terminator();
-      if (auto error =
-              StructuredSwitchChecks(_, function, terminator, header, merge)) {
+      if (auto error = StructuredSwitchChecks(_, function, construct)) {
         return error;
       }
     }
@@ -872,6 +881,95 @@ spv_result_t StructuredControlFlowChecks(
 
   if (auto error = ValidateStructuredSelections(_, postorder)) {
     return error;
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t MaximalReconvergenceChecks(ValidationState_t& _) {
+  // Find all the entry points with the MaximallyReconvergencesKHR execution
+  // mode.
+  std::unordered_set<uint32_t> maximal_funcs;
+  std::unordered_set<uint32_t> maximal_entry_points;
+  for (auto entry_point : _.entry_points()) {
+    const auto* exec_modes = _.GetExecutionModes(entry_point);
+    if (exec_modes &&
+        exec_modes->count(spv::ExecutionMode::MaximallyReconvergesKHR)) {
+      maximal_entry_points.insert(entry_point);
+      maximal_funcs.insert(entry_point);
+    }
+  }
+
+  if (maximal_entry_points.empty()) {
+    return SPV_SUCCESS;
+  }
+
+  // Find all the functions reachable from a maximal reconvergence entry point.
+  for (const auto& func : _.functions()) {
+    const auto& entry_points = _.EntryPointReferences(func.id());
+    for (auto id : entry_points) {
+      if (maximal_entry_points.count(id)) {
+        maximal_funcs.insert(func.id());
+        break;
+      }
+    }
+  }
+
+  // Check for conditional branches with the same true and false targets.
+  for (const auto& inst : _.ordered_instructions()) {
+    if (inst.opcode() == spv::Op::OpBranchConditional) {
+      const auto true_id = inst.GetOperandAs<uint32_t>(1);
+      const auto false_id = inst.GetOperandAs<uint32_t>(2);
+      if (true_id == false_id && maximal_funcs.count(inst.function()->id())) {
+        return _.diag(SPV_ERROR_INVALID_ID, &inst)
+               << "In entry points using the MaximallyReconvergesKHR execution "
+                  "mode, True Label and False Label must be different labels";
+      }
+    }
+  }
+
+  // Check for invalid multiple predecessors. Only loop headers, continue
+  // targets, merge targets or switch targets or defaults may have multiple
+  // unique predecessors.
+  for (const auto& func : _.functions()) {
+    if (!maximal_funcs.count(func.id())) continue;
+
+    for (const auto* block : func.ordered_blocks()) {
+      std::unordered_set<uint32_t> unique_preds;
+      const auto* preds = block->predecessors();
+      if (!preds) continue;
+
+      for (const auto* pred : *preds) {
+        unique_preds.insert(pred->id());
+      }
+      if (unique_preds.size() < 2) continue;
+
+      const auto* terminator = block->terminator();
+      const auto index = terminator - &_.ordered_instructions()[0];
+      const auto* pre_terminator = &_.ordered_instructions()[index - 1];
+      if (pre_terminator->opcode() == spv::Op::OpLoopMerge) continue;
+
+      const auto* label = _.FindDef(block->id());
+      bool ok = false;
+      for (const auto& pair : label->uses()) {
+        const auto* use_inst = pair.first;
+        switch (use_inst->opcode()) {
+          case spv::Op::OpSelectionMerge:
+          case spv::Op::OpLoopMerge:
+          case spv::Op::OpSwitch:
+            ok = true;
+            break;
+          default:
+            break;
+        }
+      }
+      if (!ok) {
+        return _.diag(SPV_ERROR_INVALID_CFG, label)
+               << "In entry points using the MaximallyReconvergesKHR "
+                  "execution mode, this basic block must not have multiple "
+                  "unique predecessors";
+      }
+    }
   }
 
   return SPV_SUCCESS;
@@ -1001,6 +1099,11 @@ spv_result_t PerformCfgChecks(ValidationState_t& _) {
         return error;
     }
   }
+
+  if (auto error = MaximalReconvergenceChecks(_)) {
+    return error;
+  }
+
   return SPV_SUCCESS;
 }
 

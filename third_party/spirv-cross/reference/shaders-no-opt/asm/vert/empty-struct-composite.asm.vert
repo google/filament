@@ -7,7 +7,7 @@ struct Test
 
 void main()
 {
-    Test _14 = Test(0);
-    Test t = _14;
+    Test _13 = Test(0);
+    Test t = _13;
 }
 

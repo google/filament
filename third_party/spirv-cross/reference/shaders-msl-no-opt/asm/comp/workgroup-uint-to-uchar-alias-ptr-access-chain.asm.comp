@@ -1,0 +1,175 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+constant uint _15_tmp [[function_constant(0)]];
+constant uint _15 = is_function_constant_defined(_15_tmp) ? _15_tmp : 1u;
+constant uint _16_tmp [[function_constant(1)]];
+constant uint _16 = is_function_constant_defined(_16_tmp) ? _16_tmp : 1u;
+constant uint _17_tmp [[function_constant(2)]];
+constant uint _17 = is_function_constant_defined(_17_tmp) ? _17_tmp : 1u;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_15, _16, _17);
+
+struct _6
+{
+    uint4 _m0[1];
+};
+
+struct _7
+{
+    uint _m0;
+};
+
+struct _8
+{
+    _7 _m0;
+};
+
+constant uchar4 _137 = {};
+
+kernel void main0(device _6& _25 [[buffer(0)]], constant _8& _29 [[buffer(1)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    threadgroup spvUnsafeArray<uint, 256> _5;
+    threadgroup spvUnsafeArray<uchar, 1024> _10;
+    uint3 _20 = gl_WorkGroupSize;
+    bool _40 = _29._m0._m0 != 0u;
+    if (_40)
+    {
+        uchar _58 = uchar(((gl_LocalInvocationID.y * gl_LocalInvocationID.x) / gl_WorkGroupID.y) % 255u);
+        uint _66;
+        uint _61 = 0u;
+        uint _62;
+        for (;;)
+        {
+            _62 = _61 * _29._m0._m0;
+            _66 = 0u;
+            for (;;)
+            {
+                uint _67 = _66 + _62;
+                uint _68 = _66 * _61;
+                _5[_67] = gl_WorkGroupID.x + _68;
+                uint _74 = _67 << 2u;
+                uint _76 = _74 >> 10u;
+                uint _78 = _74 & 1020u;
+                uchar4 _80 = as_type<uchar4>(gl_WorkGroupID.y + _68);
+                ((&_10)[_76])[_78 | 1u] = _80.y;
+                ((&_10)[_76])[_78 | 2u] = _80.z;
+                ((&_10)[_76])[_78 | 3u] = _80.w;
+                ((&_10)[_76])[_78] = _58;
+                uint _93 = _66 + 1u;
+                if (_93 >= _29._m0._m0)
+                {
+                    break;
+                }
+                else
+                {
+                    _66 = _93;
+                }
+            }
+            uint _100 = _61 + 1u;
+            if (_100 >= _29._m0._m0)
+            {
+                break;
+            }
+            else
+            {
+                _61 = _100;
+                continue;
+            }
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    uint _112;
+    if (_40)
+    {
+        _112 = 0u;
+        uint _117;
+        uint _113;
+        for (;;)
+        {
+            _113 = _112 * _29._m0._m0;
+            _117 = 0u;
+            for (;;)
+            {
+                uint _118 = _117 + _113;
+                uint _123 = _118 << 2u;
+                uint _124 = _123 >> 10u;
+                uint _125 = _123 & 1020u;
+                uchar4 _138;
+                _138.x = ((&_10)[_124])[_125];
+                _138.y = ((&_10)[_124])[_125 | 1u];
+                _138.z = ((&_10)[_124])[_125 | 2u];
+                _138.w = ((&_10)[_124])[_125 | 3u];
+                uint _143 = _5[_118] + as_type<uint>(_138);
+                uint4 _144 = _25._m0[_118];
+                _144.x = _143;
+                _144.y = _143 >> 2u;
+                _144.w = _143 >> 3u;
+                _25._m0[_118] = _144;
+                uint _150 = _117 + 1u;
+                if (_150 >= _29._m0._m0)
+                {
+                    break;
+                }
+                else
+                {
+                    _117 = _150;
+                }
+            }
+            uint _157 = _112 + 1u;
+            if (_157 >= _29._m0._m0)
+            {
+                break;
+            }
+            else
+            {
+                _112 = _157;
+                continue;
+            }
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+

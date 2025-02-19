@@ -30,13 +30,21 @@ using ::testing::Values;
 using ValidateRayTracingReorderNV = spvtest::ValidateBase<bool>;
 
 std::string GenerateReorderThreadCode(const std::string& body = "",
-                                      const std::string& declarations = "") {
+                                      const std::string& declarations = "",
+                                      const std::string& extensions = "",
+                                      const std::string& capabilities = "") {
   std::ostringstream ss;
   ss << R"(
             OpCapability RayTracingKHR
             OpCapability ShaderInvocationReorderNV
+         )";
+  ss << capabilities;
+  ss << R"(
             OpExtension "SPV_KHR_ray_tracing"
             OpExtension "SPV_NV_shader_invocation_reorder"
+          )";
+  ss << extensions;
+  ss << R"(
        %1 = OpExtInstImport "GLSL.std.450"
             OpMemoryModel Logical GLSL450
             OpEntryPoint RayGenerationNV %main "main" %hObj
@@ -593,6 +601,196 @@ TEST_F(ValidateRayTracingReorderNV,
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
 }
 
+TEST_F(ValidateRayTracingReorderNV, ClusterASNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingClusterAccelerationStructureNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_cluster_acceleration_structure"
+                           )";
+
+  const std::string declarations = R"(
+        %int = OpTypeInt 32 1
+        %_ptr_Function_int = OpTypePointer Function %int
+  )";
+
+  const std::string body = R"(
+      %id = OpVariable %_ptr_Function_int Function
+      %12 = OpHitObjectGetClusterIdNV %int %hObj
+      OpStore %id %12
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderNV, LSSGetSpherePositionNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingSpheresGeometryNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_linear_swept_spheres"
+                           )";
+
+  const std::string declarations = R"(
+        %float = OpTypeFloat 32
+        %v3float = OpTypeVector %float 3
+        %_ptr_Function_v3float = OpTypePointer Function %v3float
+  )";
+
+  const std::string body = R"(
+      %pos = OpVariable %_ptr_Function_v3float Function
+      %result = OpHitObjectGetSpherePositionNV %v3float %hObj
+      OpStore %pos %result
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderNV, LSSGetLSSPositionsNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingSpheresGeometryNV
+               OpCapability RayTracingLinearSweptSpheresGeometryNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_linear_swept_spheres"
+                           )";
+
+  const std::string declarations = R"(
+        %float = OpTypeFloat 32
+        %uint = OpTypeInt 32 0
+        %v3float = OpTypeVector %float 3
+        %uint_2 = OpConstant %uint 2
+        %arr = OpTypeArray %v3float %uint_2
+        %_ptr_Function_v3float = OpTypePointer Function %arr
+  )";
+
+  const std::string body = R"(
+      %lsspos = OpVariable %_ptr_Function_v3float Function
+      %result = OpHitObjectGetLSSPositionsNV %arr %hObj
+      OpStore %lsspos %result
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderNV, LSSGetSphereRadiusNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingSpheresGeometryNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_linear_swept_spheres"
+                           )";
+
+  const std::string declarations = R"(
+        %float = OpTypeFloat 32
+        %_ptr_Function_float = OpTypePointer Function %float
+  )";
+
+  const std::string body = R"(
+      %rad = OpVariable %_ptr_Function_float Function
+      %result = OpHitObjectGetSphereRadiusNV %float %hObj
+      OpStore %rad %result
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderNV, LSSGetLSSRadiiNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingLinearSweptSpheresGeometryNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_linear_swept_spheres"
+                           )";
+
+  const std::string declarations = R"(
+        %float = OpTypeFloat 32
+        %uint = OpTypeInt 32 0
+        %uint_2 = OpConstant %uint 2
+        %arr = OpTypeArray %float %uint_2
+        %_ptr_Function_float = OpTypePointer Function %arr
+  )";
+
+  const std::string body = R"(
+      %rad = OpVariable %_ptr_Function_float Function
+      %result = OpHitObjectGetLSSRadiiNV %arr %hObj
+      OpStore %rad %result
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderNV, LSSIsSphereHitNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingSpheresGeometryNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_linear_swept_spheres"
+                           )";
+
+  const std::string declarations = R"(
+        %bool = OpTypeBool
+        %_ptr_Function_bool = OpTypePointer Function %bool
+  )";
+
+  const std::string body = R"(
+      %ishit = OpVariable %_ptr_Function_bool Function
+      %result = OpHitObjectIsSphereHitNV %bool %hObj
+      OpStore %ishit %result
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
+
+TEST_F(ValidateRayTracingReorderNV, LSSIsLSSHitNV) {
+  const std::string cap = R"(
+               OpCapability RayTracingLinearSweptSpheresGeometryNV
+                            )";
+
+  const std::string ext = R"(
+               OpExtension "SPV_NV_linear_swept_spheres"
+                           )";
+
+  const std::string declarations = R"(
+        %bool = OpTypeBool
+        %_ptr_Function_bool = OpTypePointer Function %bool
+  )";
+
+  const std::string body = R"(
+      %ishit = OpVariable %_ptr_Function_bool Function
+      %result = OpHitObjectIsLSSHitNV %bool %hObj
+      OpStore %ishit %result
+  )";
+
+  CompileSuccessfully(
+      GenerateReorderThreadCode(body, declarations, ext, cap).c_str(),
+      SPV_ENV_VULKAN_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+}
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

@@ -44,13 +44,13 @@ struct spvUnsafeArray
     }
 };
 
-struct _15
+struct _16
 {
     float _m0;
 };
 
-constant spvUnsafeArray<float, 2> _29 = spvUnsafeArray<float, 2>({ 0.0, 1.0 });
-constant spvUnsafeArray<float, 2> _30 = spvUnsafeArray<float, 2>({ 1.0, 0.0 });
+constant spvUnsafeArray<float, 2> _34 = spvUnsafeArray<float, 2>({ 0.0, 1.0 });
+constant spvUnsafeArray<float, 2> _35 = spvUnsafeArray<float, 2>({ 1.0, 0.0 });
 
 struct main0_out
 {
@@ -64,8 +64,8 @@ fragment main0_out main0()
     out.FragColor = float4(false);
     out.FragColor = select(float4(0.0, 0.0, 0.0, 1.0), float4(1.0, 1.0, 0.0, 1.0), bool4(false, true, false, true));
     out.FragColor = float4(bool4(false, true, false, true));
-    _15 _32 = false ? (_15{ 0.0 }) : (_15{ 1.0 });
-    spvUnsafeArray<float, 2> _33 = true ? _29 : _30;
+    _16 _36 = false ? (_16{ 0.0 }) : (_16{ 1.0 });
+    spvUnsafeArray<float, 2> _37 = true ? _34 : _35;
     return out;
 }
 

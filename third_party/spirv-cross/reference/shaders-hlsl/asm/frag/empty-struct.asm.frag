@@ -15,10 +15,10 @@ float GetValue_1(EmptyStructTest self)
 
 void frag_main()
 {
-    EmptyStructTest _23 = { 0 };
+    EmptyStructTest _24 = { 0 };
     EmptyStructTest emptyStruct;
     float value = GetValue(emptyStruct);
-    value = GetValue_1(_23);
+    value = GetValue_1(_24);
 }
 
 void main()

@@ -18,58 +18,57 @@
 #include "spirv-tools/linter.hpp"
 #include "tools/io.h"
 #include "tools/util/cli_consumer.h"
-
-const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+#include "tools/util/flags.h"
 
 namespace {
-// Status and actions to perform after parsing command-line arguments.
-enum LintActions { LINT_CONTINUE, LINT_STOP };
 
-struct LintStatus {
-  LintActions action;
-  int code;
-};
+constexpr auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+constexpr auto kHelpTextFmt =
+    R"(%s - Lint a SPIR-V binary module.
 
-// Parses command-line flags. |argc| contains the number of command-line flags.
-// |argv| points to an array of strings holding the flags.
-//
-// On return, this function stores the name of the input program in |in_file|.
-// The return value indicates whether optimization should continue and a status
-// code indicating an error or success.
-LintStatus ParseFlags(int argc, const char** argv, const char** in_file) {
-  // TODO (dongja): actually parse flags, etc.
-  if (argc != 2) {
-    spvtools::Error(spvtools::utils::CLIMessageConsumer, nullptr, {},
-                    "expected exactly one argument: in_file");
-    return {LINT_STOP, 1};
-  }
+Usage: %s [options] <filename>
 
-  *in_file = argv[1];
+Options:
 
-  return {LINT_CONTINUE, 0};
-}
+  -h, --help      Print this help.
+  --version       Display assembler version information.
+)";
+
 }  // namespace
 
-int main(int argc, const char** argv) {
-  const char* in_file = nullptr;
+// clang-format off
+FLAG_SHORT_bool(  h,       /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool(   help,    /* default_value= */ false, /* required= */ false);
+FLAG_LONG_bool(   version, /* default_value= */ false, /* required= */ false);
+// clang-format on
 
-  spv_target_env target_env = kDefaultEnvironment;
-
-  spvtools::Linter linter(target_env);
-  linter.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);
-
-  LintStatus status = ParseFlags(argc, argv, &in_file);
-
-  if (status.action == LINT_STOP) {
-    return status.code;
-  }
-
-  std::vector<uint32_t> binary;
-  if (!ReadBinaryFile(in_file, &binary)) {
+int main(int, const char** argv) {
+  if (!flags::Parse(argv)) {
     return 1;
   }
 
-  bool ok = linter.Run(binary.data(), binary.size());
+  if (flags::h.value() || flags::help.value()) {
+    printf(kHelpTextFmt, argv[0], argv[0]);
+    return 0;
+  }
 
-  return ok ? 0 : 1;
+  if (flags::version.value()) {
+    printf("%s\n", spvSoftwareVersionDetailsString());
+    return 0;
+  }
+
+  if (flags::positional_arguments.size() != 1) {
+    spvtools::Error(spvtools::utils::CLIMessageConsumer, nullptr, {},
+                    "expected exactly one input file.");
+    return 1;
+  }
+
+  spvtools::Linter linter(kDefaultEnvironment);
+  linter.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);
+  std::vector<uint32_t> binary;
+  if (!ReadBinaryFile(flags::positional_arguments[0].c_str(), &binary)) {
+    return 1;
+  }
+
+  return linter.Run(binary.data(), binary.size()) ? 0 : 1;
 }

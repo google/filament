@@ -1,0 +1,37 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(256u, 1u, 1u);
+
+struct spvDescriptorSetBuffer1
+{
+    texture2d<uint, access::read_write> rw_spd_global_atomic [[id(0)]];
+};
+
+static inline __attribute__((always_inline))
+void SPD_IncreaseAtomicCounter(thread uint& spdCounter, texture2d<uint, access::read_write> rw_spd_global_atomic)
+{
+    uint _25 = rw_spd_global_atomic.atomic_fetch_add(uint2(int2(0)), 1u).x;
+    spdCounter = _25;
+}
+
+static inline __attribute__((always_inline))
+void ComputeAutoExposure(texture2d<uint, access::read_write> rw_spd_global_atomic)
+{
+    uint v = 0u;
+    uint param = v;
+    SPD_IncreaseAtomicCounter(param, rw_spd_global_atomic);
+    v = param;
+}
+
+kernel void main0(constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]])
+{
+    ComputeAutoExposure(spvDescriptorSet1.rw_spd_global_atomic);
+}
+

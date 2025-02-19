@@ -12,14 +12,14 @@
 #define SPIRV_CROSS_LOOP
 #endif
 
-int _231;
+int _239;
 
 layout(binding = 0, std140) uniform Foo
 {
     layout(row_major) mat4 lightVP[64];
     uint shadowCascadesNum;
     int test;
-} _11;
+} _16;
 
 layout(location = 0) in vec3 fragWorld;
 layout(location = 0) out int _entryPointOutput;
@@ -28,56 +28,56 @@ mat4 spvWorkaroundRowMajor(mat4 wrap) { return wrap; }
 
 void main()
 {
-    int _228;
+    int _236;
     do
     {
-        bool _225;
-        int _229;
-        uint _222 = 0u;
+        bool _233;
+        int _237;
+        uint _230 = 0u;
         SPIRV_CROSS_UNROLL
         for (;;)
         {
-            if (_222 < _11.shadowCascadesNum)
+            if (_230 < _16.shadowCascadesNum)
             {
-                mat4 _223;
+                mat4 _231;
                 do
                 {
-                    if (_11.test == 0)
+                    if (_16.test == 0)
                     {
-                        _223 = mat4(vec4(0.5, 0.0, 0.0, 0.0), vec4(0.0, 0.5, 0.0, 0.0), vec4(0.0, 0.0, 0.5, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+                        _231 = mat4(vec4(0.5, 0.0, 0.0, 0.0), vec4(0.0, 0.5, 0.0, 0.0), vec4(0.0, 0.0, 0.5, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
                         break;
                     }
-                    _223 = mat4(vec4(1.0, 0.0, 0.0, 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+                    _231 = mat4(vec4(1.0, 0.0, 0.0, 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
                     break;
                 } while(false);
-                vec4 _170 = (_223 * spvWorkaroundRowMajor(_11.lightVP[_222])) * vec4(fragWorld, 1.0);
-                float _172 = _170.z;
-                float _179 = _170.x;
-                float _181 = _170.y;
-                if ((((_172 >= 0.0) && (_172 <= 1.0)) && (max(_179, _181) <= 1.0)) && (min(_179, _181) >= 0.0))
+                vec4 _178 = (_231 * spvWorkaroundRowMajor(_16.lightVP[_230])) * vec4(fragWorld, 1.0);
+                float _180 = _178.z;
+                float _187 = _178.x;
+                float _189 = _178.y;
+                if ((((_180 >= 0.0) && (_180 <= 1.0)) && (max(_187, _189) <= 1.0)) && (min(_187, _189) >= 0.0))
                 {
-                    _229 = int(_222);
-                    _225 = true;
+                    _237 = int(_230);
+                    _233 = true;
                     break;
                 }
-                _222++;
+                _230++;
                 continue;
             }
             else
             {
-                _229 = _231;
-                _225 = false;
+                _237 = _239;
+                _233 = false;
                 break;
             }
         }
-        if (_225)
+        if (_233)
         {
-            _228 = _229;
+            _236 = _237;
             break;
         }
-        _228 = -1;
+        _236 = -1;
         break;
     } while(false);
-    _entryPointOutput = _228;
+    _entryPointOutput = _236;
 }
 

@@ -31,18 +31,18 @@ float4 frag_body(device foo_t& foo, thread float4& gl_FragCoord, texture2d<uint,
     {
         foo.x = 1.0;
     }
-    uint _25 = (!gl_HelperInvocation ? atomic_exchange_explicit((device atomic_uint*)&foo.y, 0u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&foo.y, memory_order_relaxed));
+    uint _25 = (!gl_HelperInvocation ? atomic_exchange_explicit((device atomic_uint*)&foo.y, 0u, memory_order_relaxed) : uint{});
     if (int(gl_FragCoord.x) == 3)
     {
         gl_HelperInvocation = true, discard_fragment();
     }
     (gl_HelperInvocation ? ((void)0) : bar.write(uint4(1u), uint2(int2(gl_FragCoord.xy))));
-    uint _50 = (!gl_HelperInvocation ? atomic_fetch_add_explicit((device atomic_uint*)&foo.y, 42u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&foo.y, memory_order_relaxed));
-    uint _57 = (!gl_HelperInvocation ? atomic_fetch_or_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], 62u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], memory_order_relaxed));
-    uint _60 = (!gl_HelperInvocation ? atomic_fetch_and_explicit((device atomic_uint*)&foo.y, 65535u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&foo.y, memory_order_relaxed));
-    uint _63 = (!gl_HelperInvocation ? atomic_fetch_xor_explicit((device atomic_uint*)&foo.y, 4294967040u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&foo.y, memory_order_relaxed));
-    uint _65 = (!gl_HelperInvocation ? atomic_fetch_min_explicit((device atomic_uint*)&foo.y, 1u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&foo.y, memory_order_relaxed));
-    uint _71 = (!gl_HelperInvocation ? atomic_fetch_max_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], 100u, memory_order_relaxed) : atomic_load_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], memory_order_relaxed));
+    uint _50 = (!gl_HelperInvocation ? atomic_fetch_add_explicit((device atomic_uint*)&foo.y, 42u, memory_order_relaxed) : uint{});
+    uint _57 = (!gl_HelperInvocation ? atomic_fetch_or_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], 62u, memory_order_relaxed) : uint{});
+    uint _60 = (!gl_HelperInvocation ? atomic_fetch_and_explicit((device atomic_uint*)&foo.y, 65535u, memory_order_relaxed) : uint{});
+    uint _63 = (!gl_HelperInvocation ? atomic_fetch_xor_explicit((device atomic_uint*)&foo.y, 4294967040u, memory_order_relaxed) : uint{});
+    uint _65 = (!gl_HelperInvocation ? atomic_fetch_min_explicit((device atomic_uint*)&foo.y, 1u, memory_order_relaxed) : uint{});
+    uint _71 = (!gl_HelperInvocation ? atomic_fetch_max_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], 100u, memory_order_relaxed) : uint{});
     uint _76;
     if (!gl_HelperInvocation)
     {
@@ -53,7 +53,7 @@ float4 frag_body(device foo_t& foo, thread float4& gl_FragCoord, texture2d<uint,
     }
     else
     {
-        _76 = atomic_load_explicit((device atomic_uint*)&bar_atomic[spvImage2DAtomicCoord(int2(gl_FragCoord.xy), bar)], memory_order_relaxed);
+        _76 = {};
     }
     bool _77 = gl_HelperInvocation;
     return float4(1.0, float(_77), 0.0, 1.0);

@@ -1,0 +1,37 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+inline bool spvSubgroupAllEqual(T value)
+{
+    return simd_all(all(value == simd_broadcast_first(value)));
+}
+
+template<>
+inline bool spvSubgroupAllEqual(bool value)
+{
+    return simd_all(value) || !simd_any(value);
+}
+
+template<uint N>
+inline bool spvSubgroupAllEqual(vec<bool, N> value)
+{
+    return simd_all(all(value == (vec<bool, N>)simd_broadcast_first((vec<ushort, N>)value)));
+}
+
+struct inputData
+{
+    float inputDataArray[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+kernel void main0(device inputData& _12 [[buffer(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+{
+    bool _31 = _12.inputDataArray[gl_LocalInvocationID.x] > 0.0;
+}
+

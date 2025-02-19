@@ -29,21 +29,21 @@ struct main0_out
 };
 
 static inline __attribute__((always_inline))
-float4 _main(thread const float4& pos, constant buf& _11)
+float4 _main(thread const float4& pos, constant buf& _15)
 {
-    int _46 = int(pos.x) % 16;
+    int _32 = int(pos.x) % 16;
     Foo foo;
-    foo.a = float3(_11.results[_46].a);
-    foo.b = _11.results[_46].b;
-    return float4(dot(foo.a, _11.bar.xyz), foo.b, 0.0, 0.0);
+    foo.a = float3(_15.results[_32].a);
+    foo.b = _15.results[_32].b;
+    return float4(dot(foo.a, _15.bar.xyz), foo.b, 0.0, 0.0);
 }
 
-fragment main0_out main0(constant buf& _11 [[buffer(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant buf& _15 [[buffer(0)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
     float4 pos = gl_FragCoord;
     float4 param = pos;
-    out._entryPointOutput = _main(param, _11);
+    out._entryPointOutput = _main(param, _15);
     return out;
 }
 

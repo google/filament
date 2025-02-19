@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "test/test_fixture.h"
 #include "test/unit_spirv.h"
 #include "test/val/val_code_generator.h"
 #include "test/val/val_fixtures.h"
@@ -60,6 +59,214 @@ OpDecorate %var BuiltIn WorkgroupSize
 %int3 = OpTypeVector %int 3
 %ptr = OpTypePointer Input %int3
 %var = OpVariable %ptr Input
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(DecorationTest, FPFastMathModeInvalidMask) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability FloatControls2
+OpExtension "SPV_KHR_float_controls2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add FPFastMathMode !524288
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%undef = OpUndef %float
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%add = OpFAdd %float %undef %undef
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_BINARY, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Invalid floating-point fast math mode operand"));
+}
+
+TEST_F(DecorationTest, FPFastMathModeAllowTransformMissingAllowContract) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability FloatControls2
+OpExtension "SPV_KHR_float_controls2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add FPFastMathMode AllowTransform|AllowReassoc
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%undef = OpUndef %float
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%add = OpFAdd %float %undef %undef
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AllowReassoc and AllowContract must be specified when "
+                        "AllowTransform is specified"));
+}
+
+TEST_F(DecorationTest, FPFastMathModeAllowTransformMissingAllowReassoc) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability FloatControls2
+OpExtension "SPV_KHR_float_controls2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add FPFastMathMode AllowTransform|AllowContract
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%undef = OpUndef %float
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%add = OpFAdd %float %undef %undef
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AllowReassoc and AllowContract must be specified when "
+                        "AllowTransform is specified"));
+}
+
+TEST_F(DecorationTest, FPFastMathModeAllowTransformMissingContractAndReassoc) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability FloatControls2
+OpExtension "SPV_KHR_float_controls2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add FPFastMathMode AllowTransform
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%undef = OpUndef %float
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%add = OpFAdd %float %undef %undef
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("AllowReassoc and AllowContract must be specified when "
+                        "AllowTransform is specified"));
+}
+
+TEST_F(DecorationTest, FPFastMathModeAndNoContraction) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability FloatControls2
+OpExtension "SPV_KHR_float_controls2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add FPFastMathMode None
+OpDecorate %add NoContraction
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%undef = OpUndef %float
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%add = OpFAdd %float %undef %undef
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "FPFastMathMode and NoContraction cannot decorate the same target"));
+}
+
+TEST_F(DecorationTest, FPFastMathModeAndNoContraction2) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability FloatControls2
+OpExtension "SPV_KHR_float_controls2"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %add NoContraction
+OpDecorate %add FPFastMathMode None
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%undef = OpUndef %float
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%add = OpFAdd %float %undef %undef
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "FPFastMathMode and NoContraction cannot decorate the same target"));
+}
+
+TEST_F(DecorationTest, RestrictOnUntypedPointer) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability UntypedPointersKHR
+OpCapability SampleRateShading
+OpCapability TransformFeedback
+OpCapability GeometryStreams
+OpCapability Tessellation
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpDecorate %param Restrict
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
+%void = OpTypeVoid
+%f_ty = OpTypeFunction %void %ptr
+%f = OpFunction %void None %f_ty
+%param = OpFunctionParameter %ptr
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(DecorationTest, ArrayStrideUntypedPointerKHR) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpCapability UntypedPointersKHR
+OpExtension "SPV_KHR_untyped_pointers"
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpDecorate %ptr ArrayStride 4
+%ptr = OpTypeUntypedPointerKHR StorageBuffer
 )";
 
   CompileSuccessfully(text);

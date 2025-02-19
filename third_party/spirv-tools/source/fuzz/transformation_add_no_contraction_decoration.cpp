@@ -36,6 +36,11 @@ bool TransformationAddNoContractionDecoration::IsApplicable(
   if (!instr) {
     return false;
   }
+  // |instr| must not be decorated with NoContraction.
+  if (ir_context->get_decoration_mgr()->HasDecoration(
+          message_.result_id(), spv::Decoration::NoContraction)) {
+    return false;
+  }
   // The instruction must be arithmetic.
   return IsArithmetic(instr->opcode());
 }

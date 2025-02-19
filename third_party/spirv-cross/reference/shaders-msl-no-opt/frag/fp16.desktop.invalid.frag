@@ -102,7 +102,7 @@ void test_builtins(thread half4& v4, thread half3& v3, thread half& v1)
     res = asinh(v4);
     res = acosh(v4);
     res = atanh(v4);
-    res = pow(v4, v4);
+    res = powr(v4, v4);
     res = exp(v4);
     res = log(v4);
     res = exp2(v4);

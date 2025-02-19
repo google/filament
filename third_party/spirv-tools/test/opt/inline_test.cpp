@@ -3749,13 +3749,13 @@ float4 main(float4 color : COLOR) : SV_TARGET {
       %color = OpFunctionParameter %_ptr_Function_v4float
    %bb_entry = OpLabel
         %140 = OpExtInst %void %1 DebugFunctionDefinition %22 %src_main
-        %141 = OpExtInst %void %1 DebugLine %5 %uint_1 %uint_1 %uint_1 %uint_1
+        %141 = OpExtInst %void %1 DebugLine %15 %uint_1 %uint_1 %uint_1 %uint_1
          %34 = OpExtInst %void %1 DebugScope %22
          %36 = OpExtInst %void %1 DebugDeclare %25 %color %13
          %38 = OpExtInst %void %1 DebugScope %26
-        %142 = OpExtInst %void %1 DebugLine %5 %uint_2 %uint_2 %uint_10 %uint_10
+        %142 = OpExtInst %void %1 DebugLine %15 %uint_2 %uint_2 %uint_10 %uint_10
          %39 = OpLoad %v4float %color
-        %143 = OpExtInst %void %1 DebugLine %5 %uint_2 %uint_2 %uint_3 %uint_3
+        %143 = OpExtInst %void %1 DebugLine %15 %uint_2 %uint_2 %uint_3 %uint_3
                OpReturnValue %39
                OpFunctionEnd
 )";
@@ -4417,6 +4417,55 @@ OpFunctionEnd
 OpReturnValue %int_1
 OpFunctionEnd
 )";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<InlineExhaustivePass>(text, true);
+}
+
+TEST_F(InlineTest, DecorateReturnVariableWithAliasedPointer) {
+  const std::string text = R"(OpCapability Int64
+               OpCapability VariablePointers
+               OpCapability PhysicalStorageBufferAddresses
+               OpCapability Shader
+               OpExtension "SPV_KHR_storage_buffer_storage_class"
+               OpExtension "SPV_KHR_variable_pointers"
+               OpExtension "SPV_KHR_physical_storage_buffer"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %1 "main"
+               OpExecutionMode %1 LocalSize 8 8 1
+               OpDecorate %_ptr_PhysicalStorageBuffer__struct_5 ArrayStride 8
+               OpMemberDecorate %_struct_3 0 Offset 0
+               OpMemberDecorate %_struct_3 1 Offset 8
+               OpDecorate %_ptr_PhysicalStorageBuffer_int ArrayStride 4
+               OpMemberDecorate %_struct_5 0 Offset 0
+               OpMemberDecorate %_struct_5 1 Offset 4
+               OpDecorate %6 Aliased
+; CHECK:       OpDecorate %22 AliasedPointer
+       %void = OpTypeVoid
+          %8 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer__struct_5 PhysicalStorageBuffer
+  %_struct_3 = OpTypeStruct %int %_ptr_PhysicalStorageBuffer__struct_5
+%_ptr_PhysicalStorageBuffer_int = OpTypePointer PhysicalStorageBuffer %int
+  %_struct_5 = OpTypeStruct %int %int
+         %11 = OpTypeFunction %_ptr_PhysicalStorageBuffer_int %_ptr_PhysicalStorageBuffer__struct_5
+%_ptr_PhysicalStorageBuffer__struct_5 = OpTypePointer PhysicalStorageBuffer %_struct_5
+%_ptr_Function__struct_3 = OpTypePointer Function %_struct_3
+          %1 = OpFunction %void None %8
+         %13 = OpLabel
+         %14 = OpVariable %_ptr_Function__struct_3 Function
+         %15 = OpLoad %_struct_3 %14
+         %16 = OpCompositeExtract %_ptr_PhysicalStorageBuffer__struct_5 %15 1
+         %17 = OpFunctionCall %_ptr_PhysicalStorageBuffer_int %18 %16
+               OpReturn
+               OpFunctionEnd
+         %18 = OpFunction %_ptr_PhysicalStorageBuffer_int None %11
+          %6 = OpFunctionParameter %_ptr_PhysicalStorageBuffer__struct_5
+         %19 = OpLabel
+         %20 = OpAccessChain %_ptr_PhysicalStorageBuffer_int %6 %int_0
+               OpReturnValue %20
+               OpFunctionEnd)";
 
   SetTargetEnv(SPV_ENV_VULKAN_1_2);
   SinglePassRunAndMatch<InlineExhaustivePass>(text, true);

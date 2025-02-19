@@ -3,33 +3,33 @@
 #ifndef SPIRV_CROSS_CONSTANT_ID_201
 #define SPIRV_CROSS_CONSTANT_ID_201 -10
 #endif
-const int _7 = SPIRV_CROSS_CONSTANT_ID_201;
-const int _20 = (_7 + 2);
+const int _13 = SPIRV_CROSS_CONSTANT_ID_201;
+const int _15 = (_13 + 2);
 #ifndef SPIRV_CROSS_CONSTANT_ID_202
 #define SPIRV_CROSS_CONSTANT_ID_202 100u
 #endif
-const uint _8 = SPIRV_CROSS_CONSTANT_ID_202;
-const uint _25 = (_8 % 5u);
-const int _30 = _7 - (-3) * (_7 / (-3));
-const ivec4 _32 = ivec4(20, 30, _20, _30);
-const ivec2 _34 = ivec2(_32.y, _32.x);
-const int _35 = _32.y;
+const uint _24 = SPIRV_CROSS_CONSTANT_ID_202;
+const uint _26 = (_24 % 5u);
+const int _61 = _13 - (-3) * (_13 / (-3));
+const ivec4 _36 = ivec4(20, 30, _15, _61);
+const ivec2 _41 = ivec2(_36.y, _36.x);
+const int _62 = _36.y;
 #ifndef SPIRV_CROSS_CONSTANT_ID_200
 #define SPIRV_CROSS_CONSTANT_ID_200 3.141590118408203125
 #endif
-const float _9 = SPIRV_CROSS_CONSTANT_ID_200;
+const float _57 = SPIRV_CROSS_CONSTANT_ID_200;
 
-layout(location = 0) flat out int _4;
+layout(location = 0) flat out int _58;
 
 void main()
 {
     vec4 pos = vec4(0.0);
-    pos.y += float(_20);
-    pos.z += float(_25);
-    pos += vec4(_32);
-    vec2 _58 = pos.xy + vec2(_34);
-    pos = vec4(_58.x, _58.y, pos.z, pos.w);
+    pos.y += float(_15);
+    pos.z += float(_26);
+    pos += vec4(_36);
+    vec2 _46 = pos.xy + vec2(_41);
+    pos = vec4(_46.x, _46.y, pos.z, pos.w);
     gl_Position = pos;
-    _4 = _35;
+    _58 = _62;
 }
 

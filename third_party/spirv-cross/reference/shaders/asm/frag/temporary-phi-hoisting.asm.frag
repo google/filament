@@ -8,19 +8,19 @@ struct MyStruct
 layout(binding = 0, std140) uniform MyStruct_CB
 {
     MyStruct g_MyStruct[4];
-} _6;
+} _8;
 
 layout(location = 0) out vec4 _entryPointOutput;
 
 void main()
 {
-    vec3 _28;
-    _28 = vec3(0.0);
-    vec3 _29;
-    for (int _31 = 0; _31 < 4; _28 = _29, _31++)
+    vec3 _85;
+    _85 = vec3(0.0);
+    vec3 _77;
+    for (int _86 = 0; _86 < 4; _85 = _77, _86++)
     {
-        _29 = _28 + _6.g_MyStruct[_31].color.xyz;
+        _77 = _85 + _8.g_MyStruct[_86].color.xyz;
     }
-    _entryPointOutput = vec4(_28, 1.0);
+    _entryPointOutput = vec4(_85, 1.0);
 }
 

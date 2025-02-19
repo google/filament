@@ -24,11 +24,11 @@ struct SSBO0
     float4 vec4_val;
 };
 
-kernel void main0(device SSBO0& _4 [[buffer(0)]])
+kernel void main0(device SSBO0& _12 [[buffer(0)]])
 {
-    _4.scalar = spvQuantizeToF16(_4.scalar);
-    _4.vec2_val = spvQuantizeToF16(_4.vec2_val);
-    _4.vec3_val = spvQuantizeToF16(_4.vec3_val);
-    _4.vec4_val = spvQuantizeToF16(_4.vec4_val);
+    _12.scalar = spvQuantizeToF16(_12.scalar);
+    _12.vec2_val = spvQuantizeToF16(_12.vec2_val);
+    _12.vec3_val = spvQuantizeToF16(_12.vec3_val);
+    _12.vec4_val = spvQuantizeToF16(_12.vec4_val);
 }
 

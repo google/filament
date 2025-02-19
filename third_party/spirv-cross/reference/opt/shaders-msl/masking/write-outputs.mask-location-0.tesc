@@ -58,7 +58,7 @@ struct main0_patchOut
 
 kernel void main0(uint gl_InvocationID [[thread_index_in_threadgroup]], uint gl_PrimitiveID [[threadgroup_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
-    threadgroup float4 v0[4];
+    threadgroup spvUnsafeArray<float4, 4> v0;
     device main0_out* gl_out = &spvOut[gl_PrimitiveID * 4];
     device main0_patchOut& patchOut = spvPatchOut[gl_PrimitiveID];
     v0[gl_InvocationID] = float4(1.0);

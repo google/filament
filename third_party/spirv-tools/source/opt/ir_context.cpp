@@ -1,4 +1,6 @@
 // Copyright (c) 2017 Google Inc.
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +21,6 @@
 #include "OpenCLDebugInfo100.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/opt/log.h"
-#include "source/opt/mem_pass.h"
 #include "source/opt/reflect.h"
 
 namespace spvtools {
@@ -88,6 +89,9 @@ void IRContext::BuildInvalidAnalyses(IRContext::Analysis set) {
   }
   if (set & kAnalysisDebugInfo) {
     BuildDebugInfoManager();
+  }
+  if (set & kAnalysisLiveness) {
+    BuildLivenessManager();
   }
 }
 
@@ -221,6 +225,28 @@ Instruction* IRContext::KillInst(Instruction* inst) {
   return next_instruction;
 }
 
+bool IRContext::KillInstructionIf(Module::inst_iterator begin,
+                                  Module::inst_iterator end,
+                                  std::function<bool(Instruction*)> condition) {
+  bool removed = false;
+  for (auto it = begin; it != end;) {
+    if (!condition(&*it)) {
+      ++it;
+      continue;
+    }
+
+    removed = true;
+    // `it` is an iterator on an intrusive list. Next is invalidated on the
+    // current node when an instruction is killed. The iterator must be moved
+    // forward before deleting the node.
+    auto instruction = &*it;
+    ++it;
+    KillInst(instruction);
+  }
+
+  return removed;
+}
+
 void IRContext::CollectNonSemanticTree(
     Instruction* inst, std::unordered_set<Instruction*>* to_kill) {
   if (!inst->HasResultId()) return;
@@ -250,6 +276,36 @@ bool IRContext::KillDef(uint32_t id) {
     return true;
   }
   return false;
+}
+
+bool IRContext::RemoveCapability(spv::Capability capability) {
+  const bool removed = KillInstructionIf(
+      module()->capability_begin(), module()->capability_end(),
+      [capability](Instruction* inst) {
+        return static_cast<spv::Capability>(inst->GetSingleWordOperand(0)) ==
+               capability;
+      });
+
+  if (removed && feature_mgr_ != nullptr) {
+    feature_mgr_->RemoveCapability(capability);
+  }
+
+  return removed;
+}
+
+bool IRContext::RemoveExtension(Extension extension) {
+  const std::string_view extensionName = ExtensionToString(extension);
+  const bool removed = KillInstructionIf(
+      module()->extension_begin(), module()->extension_end(),
+      [&extensionName](Instruction* inst) {
+        return inst->GetOperand(0).AsString() == extensionName;
+      });
+
+  if (removed && feature_mgr_ != nullptr) {
+    feature_mgr_->RemoveExtension(extension);
+  }
+
+  return removed;
 }
 
 bool IRContext::ReplaceAllUsesWith(uint32_t before, uint32_t after) {
@@ -485,6 +541,7 @@ void IRContext::AddCombinatorsForCapability(uint32_t capability) {
          (uint32_t)spv::Op::OpTypeHitObjectNV,
          (uint32_t)spv::Op::OpTypeArray,
          (uint32_t)spv::Op::OpTypeRuntimeArray,
+         (uint32_t)spv::Op::OpTypeNodePayloadArrayAMDX,
          (uint32_t)spv::Op::OpTypeStruct,
          (uint32_t)spv::Op::OpTypeOpaque,
          (uint32_t)spv::Op::OpTypePointer,
@@ -719,9 +776,9 @@ void IRContext::AddCombinatorsForExtension(Instruction* extension) {
 }
 
 void IRContext::InitializeCombinators() {
-  get_feature_mgr()->GetCapabilities()->ForEach([this](spv::Capability cap) {
-    AddCombinatorsForCapability(uint32_t(cap));
-  });
+  for (auto capability : get_feature_mgr()->GetCapabilities()) {
+    AddCombinatorsForCapability(uint32_t(capability));
+  }
 
   for (auto& extension : module()->ext_inst_imports()) {
     AddCombinatorsForExtension(&extension);
@@ -872,9 +929,35 @@ uint32_t IRContext::GetBuiltinInputVarId(uint32_t builtin) {
 
 void IRContext::AddCalls(const Function* func, std::queue<uint32_t>* todo) {
   for (auto bi = func->begin(); bi != func->end(); ++bi)
-    for (auto ii = bi->begin(); ii != bi->end(); ++ii)
+    for (auto ii = bi->begin(); ii != bi->end(); ++ii) {
       if (ii->opcode() == spv::Op::OpFunctionCall)
         todo->push(ii->GetSingleWordInOperand(0));
+      if (ii->opcode() == spv::Op::OpCooperativeMatrixPerElementOpNV)
+        todo->push(ii->GetSingleWordInOperand(1));
+      if (ii->opcode() == spv::Op::OpCooperativeMatrixReduceNV)
+        todo->push(ii->GetSingleWordInOperand(2));
+      if (ii->opcode() == spv::Op::OpCooperativeMatrixLoadTensorNV) {
+        const auto memory_operands_index = 3;
+        auto mask = ii->GetSingleWordInOperand(memory_operands_index);
+
+        uint32_t count = 1;
+        if (mask & uint32_t(spv::MemoryAccessMask::Aligned)) ++count;
+        if (mask & uint32_t(spv::MemoryAccessMask::MakePointerAvailableKHR))
+          ++count;
+        if (mask & uint32_t(spv::MemoryAccessMask::MakePointerVisibleKHR))
+          ++count;
+
+        const auto tensor_operands_index = memory_operands_index + count;
+        mask = ii->GetSingleWordInOperand(tensor_operands_index);
+        count = 1;
+        if (mask & uint32_t(spv::TensorAddressingOperandsMask::TensorView))
+          ++count;
+
+        if (mask & uint32_t(spv::TensorAddressingOperandsMask::DecodeFunc)) {
+          todo->push(ii->GetSingleWordInOperand(tensor_operands_index + count));
+        }
+      }
+    }
 }
 
 bool IRContext::ProcessEntryPointCallTree(ProcessFunction& pfn) {

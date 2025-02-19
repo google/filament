@@ -1,27 +1,27 @@
-struct _8
+struct _9
 {
     float _m0;
     float _m1;
 };
 
-struct _15
+struct _16
 {
     float _m0;
     int _m1;
 };
 
-RWByteAddressBuffer _4 : register(u0);
+RWByteAddressBuffer _6 : register(u0);
 
 void comp_main()
 {
-    _8 _23;
+    _9 _23;
     _23._m0 = modf(20.0f, _23._m1);
-    _15 _24;
+    _16 _24;
     _24._m0 = frexp(40.0f, _24._m1);
-    _4.Store(0, asuint(_23._m0));
-    _4.Store(0, asuint(_23._m1));
-    _4.Store(0, asuint(_24._m0));
-    _4.Store(4, uint(_24._m1));
+    _6.Store(0, asuint(_23._m0));
+    _6.Store(0, asuint(_23._m1));
+    _6.Store(0, asuint(_24._m0));
+    _6.Store(4, uint(_24._m1));
 }
 
 [numthreads(1, 1, 1)]
