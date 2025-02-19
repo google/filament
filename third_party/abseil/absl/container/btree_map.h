@@ -49,8 +49,6 @@
 //
 // Another API difference is that btree iterators can be subtracted, and this
 // is faster than using std::distance.
-//
-// B-tree maps are not exception-safe.
 
 #ifndef ABSL_CONTAINER_BTREE_MAP_H_
 #define ABSL_CONTAINER_BTREE_MAP_H_
@@ -87,7 +85,7 @@ struct map_params;
 //
 template <typename Key, typename Value, typename Compare = std::less<Key>,
           typename Alloc = std::allocator<std::pair<const Key, Value>>>
-class ABSL_ATTRIBUTE_OWNER btree_map
+class btree_map
     : public container_internal::btree_map_container<
           container_internal::btree<container_internal::map_params<
               Key, Value, Compare, Alloc, /*TargetNodeSize=*/256,
@@ -525,7 +523,7 @@ typename btree_map<K, V, C, A>::size_type erase_if(
 //
 template <typename Key, typename Value, typename Compare = std::less<Key>,
           typename Alloc = std::allocator<std::pair<const Key, Value>>>
-class ABSL_ATTRIBUTE_OWNER btree_multimap
+class btree_multimap
     : public container_internal::btree_multimap_container<
           container_internal::btree<container_internal::map_params<
               Key, Value, Compare, Alloc, /*TargetNodeSize=*/256,

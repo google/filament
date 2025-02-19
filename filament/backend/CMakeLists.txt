@@ -470,7 +470,6 @@ if (APPLE AND NOT IOS)
     target_link_libraries(backend_test PRIVATE ${BACKEND_TEST_LIBS})
 
     set(BACKEND_TEST_DEPS
-            OGLCompiler
             OSDependent
             SPIRV
             SPIRV-Tools
