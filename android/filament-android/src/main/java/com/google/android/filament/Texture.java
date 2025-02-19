@@ -678,6 +678,20 @@ public class Texture {
     }
 
     /**
+     * Checks whether a given combination of texture format, pixel data and type is valid.
+     *
+     * @param internalFormat texture format
+     * @param pixelDataFormat pixel data format
+     * @param pixelDataType pixel data type
+     * @return <code>true</code> if the combination is valid
+     */
+    public static boolean validatePixelFormatAndType(@NonNull InternalFormat internalFormat,
+            @NonNull Format pixelDataFormat, @NonNull Type pixelDataType) {
+        return nValidatePixelFormatAndType(internalFormat.ordinal(), pixelDataFormat.ordinal(),
+                pixelDataType.ordinal());
+    }
+
+    /**
      * Use <code>Builder</code> to construct a <code>Texture</code> object instance.
      */
     public static class Builder {
@@ -1275,6 +1289,9 @@ public class Texture {
     private static native boolean nIsTextureFormatSupported(long nativeEngine, int internalFormat);
     private static native boolean nIsTextureFormatMipmappable(long nativeEngine, int internalFormat);
     private static native boolean nIsTextureSwizzleSupported(long nativeEngine);
+
+    private static native boolean nValidatePixelFormatAndType(long internalFormat, long pixelDataFormat,
+            long pixelDataType);
 
     private static native long nCreateBuilder();
     private static native void nDestroyBuilder(long nativeBuilder);
