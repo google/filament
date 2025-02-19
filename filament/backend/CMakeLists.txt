@@ -194,7 +194,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/utils/Spirv.h
             src/vulkan/utils/Spirv.cpp
             src/vulkan/utils/StaticVector.h
-            src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -216,6 +215,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
+            src/vulkan/VulkanQueryManager.cpp
+            src/vulkan/VulkanQueryManager.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp
