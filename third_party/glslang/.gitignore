@@ -2,6 +2,7 @@
 *.a
 *.so
 *.exe
+.cache/
 .vscode/
 tags
 TAGS
