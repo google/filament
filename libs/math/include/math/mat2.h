@@ -225,7 +225,7 @@ public:
      * Rotate by radians in the 2D plane
      */
     static TMat22<T> rotate(T radian) noexcept {
-        TMat22<T> r(TMat22<T>::NO_INIT);
+        TMat22<T> r(NO_INIT);
         T c = std::cos(radian);
         T s = std::sin(radian);
         r[0][0] = c;

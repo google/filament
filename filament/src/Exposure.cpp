@@ -28,7 +28,7 @@ float ev100(const Camera& c) noexcept {
     return ev100(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
-float ev100(float aperture, float shutterSpeed, float sensitivity) noexcept {
+float ev100(float const aperture, float const shutterSpeed, float const sensitivity) noexcept {
     // With N = aperture, t = shutter speed and S = sensitivity,
     // we can compute EV100 knowing that:
     //
@@ -46,7 +46,7 @@ float ev100(float aperture, float shutterSpeed, float sensitivity) noexcept {
     return std::log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 }
 
-float ev100FromLuminance(float luminance) noexcept {
+float ev100FromLuminance(float const luminance) noexcept {
     // With L the average scene luminance, S the sensitivity and K the
     // reflected-light meter calibration constant:
     //
@@ -61,7 +61,7 @@ float ev100FromLuminance(float luminance) noexcept {
     return std::log2(luminance * (100.0f / 12.5f));
 }
 
-float ev100FromIlluminance(float illuminance) noexcept {
+float ev100FromIlluminance(float const illuminance) noexcept {
     // With E the illuminance, S the sensitivity and C the incident-light meter
     // calibration constant, the exposure value can be computed as such:
     //
@@ -83,14 +83,14 @@ float exposure(const Camera& c) noexcept {
     return exposure(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
-float exposure(float aperture, float shutterSpeed, float sensitivity) noexcept {
+float exposure(float const aperture, float const shutterSpeed, float const sensitivity) noexcept {
     // This is equivalent to calling exposure(ev100(N, t, S))
     // By merging the two calls we can remove extra pow()/log2() calls
     const float e = (aperture * aperture) / shutterSpeed * 100.0f / sensitivity;
     return 1.0f / (1.2f * e);
 }
 
-float exposure(float ev100) noexcept {
+float exposure(float const ev100) noexcept {
     // The photometric exposure H is defined by:
     //
     // H = (q * t / (N^2)) * L
@@ -140,14 +140,14 @@ float luminance(const Camera& c) noexcept {
     return luminance(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
-float luminance(float aperture, float shutterSpeed, float sensitivity) noexcept {
+float luminance(float const aperture, float const shutterSpeed, float const sensitivity) noexcept {
     // This is equivalent to calling luminance(ev100(N, t, S))
     // By merging the two calls we can remove extra pow()/log2() calls
     const float e = (aperture * aperture) / shutterSpeed * 100.0f / sensitivity;
     return e * 0.125f;
 }
 
-float luminance(float ev100) noexcept {
+float luminance(float const ev100) noexcept {
     // With L the average scene luminance, S the sensitivity and K the
     // reflected-light meter calibration constant:
     //
@@ -172,14 +172,14 @@ float illuminance(const Camera& c) noexcept {
     return illuminance(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
-float illuminance(float aperture, float shutterSpeed, float sensitivity) noexcept {
+float illuminance(float const aperture, float const shutterSpeed, float const sensitivity) noexcept {
     // This is equivalent to calling illuminance(ev100(N, t, S))
     // By merging the two calls we can remove extra pow()/log2() calls
     const float e = (aperture * aperture) / shutterSpeed * 100.0f / sensitivity;
     return 2.5f * e;
 }
 
-float illuminance(float ev100) noexcept {
+float illuminance(float const ev100) noexcept {
     // With E the illuminance, S the sensitivity and C the incident-light meter
     // calibration constant, the exposure value can be computed as such:
     //

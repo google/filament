@@ -61,12 +61,6 @@ class FIndirectLight;
 class Froxelizer;
 class LightManager;
 
-/*
- * PerViewUniforms manages the UBO and samplers needed to render the color passes. Internally it
- * holds onto handles for the PER_VIEW UBO and SamplerGroup. This class maintains a shadow copy
- * of the UBO/sampler data, so it is possible to partially update it between commits.
- */
-
 class ColorPassDescriptorSet {
 
     using LightManagerInstance = utils::EntityInstance<LightManager>;
@@ -85,6 +79,7 @@ public:
             TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
 
     void init(
+            FEngine& engine,
             backend::BufferObjectHandle lights,
             backend::BufferObjectHandle recordBuffer,
             backend::BufferObjectHandle froxelBuffer) noexcept;
@@ -102,8 +97,8 @@ public:
      *                  Non-zero when we have guard bands.
      */
     void prepareViewport(
-            const filament::Viewport& physicalViewport,
-            const filament::Viewport& logicalViewport) noexcept;
+            const Viewport& physicalViewport,
+            const Viewport& logicalViewport) noexcept;
 
     void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(FEngine& engine, TemporalAntiAliasingOptions const& options) noexcept;
@@ -158,8 +153,10 @@ public:
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;
 
+    void unbindSamplers(backend::DriverApi& driver) noexcept;
+
     // bind this UBO
-    void bind(backend::DriverApi& driver, uint8_t index) const noexcept {
+    void bind(backend::DriverApi& driver, uint8_t const index) const noexcept {
         mDescriptorSet[index].bind(driver, DescriptorSetBindingPoints::PER_VIEW);
     }
 

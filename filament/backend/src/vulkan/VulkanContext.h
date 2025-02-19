@@ -18,8 +18,8 @@
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
 #include "VulkanConstants.h"
-#include "VulkanImageUtility.h"
-#include "VulkanUtility.h"
+#include "vulkan/utils/Image.h"
+#include "vulkan/utils/Definitions.h"
 
 #include "vulkan/memory/ResourcePointer.h"
 
@@ -27,6 +27,8 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
+
+#include <bluevk/BlueVK.h>
 
 #include <memory>
 
@@ -113,11 +115,11 @@ public:
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline VkFormatList const& getAttachmentDepthStencilFormats() const {
+    inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
         return mDepthStencilFormats;
     }
 
-    inline VkFormatList const& getBlittableDepthStencilFormats() const {
+    inline fvkutils::VkFormatList const& getBlittableDepthStencilFormats() const {
         return mBlittableDepthStencilFormats;
     }
 
@@ -161,13 +163,24 @@ public:
         return mProtectedMemorySupported;
     }
 
+    inline bool isImageView2DOn3DImageSupported() const noexcept {
+        return mPortabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
     };
     VkPhysicalDeviceFeatures2 mPhysicalDeviceFeatures = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+    };
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR mPortabilitySubsetFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR,
+        // By default, on platforms where we don't have portability subset, then this feature must
+        // exists.  We only fill this struct only when portability subset is needed (i.e.
+        // non-conformant vulkan implementation).
+        .imageView2DOn3DImage = VK_TRUE,
     };
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
@@ -175,8 +188,8 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
 
-    VkFormatList mDepthStencilFormats;
-    VkFormatList mBlittableDepthStencilFormats;
+    fvkutils::VkFormatList mDepthStencilFormats;
+    fvkutils::VkFormatList mBlittableDepthStencilFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

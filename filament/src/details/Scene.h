@@ -137,13 +137,13 @@ public:
     RenderableSoa& getRenderableData() noexcept { return mRenderableData; }
 
     static inline uint32_t getPrimitiveCount(RenderableSoa const& soa,
-            uint32_t first, uint32_t last) noexcept {
+            uint32_t const first, uint32_t const last) noexcept {
         // the caller must guarantee that last is dereferenceable
         return soa.elementAt<SUMMED_PRIMITIVE_COUNT>(last) -
                 soa.elementAt<SUMMED_PRIMITIVE_COUNT>(first);
     }
 
-    static inline uint32_t getPrimitiveCount(RenderableSoa const& soa, uint32_t last) noexcept {
+    static inline uint32_t getPrimitiveCount(RenderableSoa const& soa, uint32_t const last) noexcept {
         // the caller must guarantee that last is dereferenceable
         return soa.elementAt<SUMMED_PRIMITIVE_COUNT>(last);
     }
@@ -199,6 +199,7 @@ private:
     void addEntities(const utils::Entity* entities, size_t count);
     void remove(utils::Entity entity);
     void removeEntities(const utils::Entity* entities, size_t count);
+    void removeAllEntities() noexcept;
     size_t getEntityCount() const noexcept { return mEntities.size(); }
     size_t getRenderableCount() const noexcept;
     size_t getLightCount() const noexcept;

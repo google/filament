@@ -115,14 +115,15 @@ public:
             return true;
         }
 #endif
-        slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        slog.e << "[matdbg] DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
         return false;
     }
 private:
     DebugServer* mServer;
 };
 
-DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
+DebugServer::DebugServer(Backend backend, ShaderLanguage shaderLanguage, int port)
+        : mBackend(backend), mShaderLanguage(shaderLanguage) {
 
     #if !SERVE_FROM_SOURCE_TREE
     ASSET_MAP["/index.html"] = {
@@ -156,7 +157,7 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     if (!mServer->getContext()) {
         delete mServer;
         mServer = nullptr;
-        slog.e << "Unable to start DebugServer, see civetweb.txt for details." << io::endl;
+        slog.e << "[matdbg] Unable to start DebugServer, see civetweb.txt for details." << io::endl;
         return;
     }
 
@@ -166,7 +167,7 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     mServer->addHandler("/api", mApiHandler);
     mServer->addHandler("", mFileHandler);
 
-    slog.i << "DebugServer listening at http://localhost:" << port << io::endl;
+    slog.i << "[matdbg] DebugServer listening at http://localhost:" << port << io::endl;
     filamat::GLSLTools::init();
 }
 
@@ -189,12 +190,16 @@ MaterialKey
 DebugServer::addMaterial(const CString& name, const void* data, size_t size, void* userdata) {
     filaflat::ChunkContainer* container = new filaflat::ChunkContainer(data, size);
     if (!container->parse()) {
-        slog.e << "DebugServer: unable to parse material package: " << name.c_str() << io::endl;
+        slog.e << "[matdbg] DebugServer: unable to parse material package: " << name.c_str() << io::endl;
         return {};
     }
 
-    const uint32_t seed = 42;
-    const MaterialKey key = utils::hash::murmurSlow((const uint8_t*) data, size, seed);
+    // Note that it's possible to have two materials with the exact same content (however wasteful),
+    // but they refer to different instantiation of FMaterial. Hence we hash on userdata and the
+    // material data.
+    constexpr uint32_t seed = 42;
+    uint64_t dataSpace[2] = {(uint64_t) data, (uint64_t) userdata};
+    uint32_t const key = utils::hash::murmurSlow((uint8_t const*) dataSpace, sizeof(dataSpace), seed);
 
     // Retain a copy of the package to permit queries after the client application has
     // freed up the original material package.
@@ -236,7 +241,7 @@ void DebugServer::updateActiveVariants() {
 bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api, int shaderIndex,
             const char* source, size_t size) {
     const auto error = [](int line) {
-        slog.e << "DebugServer: Unable to apply shader edit at line " << line << io::endl;
+        slog.e << "[matdbg] DebugServer: Unable to apply shader edit at line " << line << io::endl;
         return false;
     };
 
@@ -250,47 +255,23 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
         return error(__LINE__);
     }
 
-    FixedCapacityVector<ShaderInfo> infos;
-    size_t shaderCount;
-    switch (api) {
-        case backend::Backend::OPENGL: {
-            shaderCount = getShaderCount(package, ChunkType::MaterialGlsl);
-            infos.reserve(shaderCount);
-            infos.resize(shaderCount);
-            if (!getShaderInfo(package, infos.data(), ChunkType::MaterialGlsl)) {
-                return error(__LINE__);
-            }
-            break;
-        }
-        case backend::Backend::VULKAN: {
-            shaderCount = getShaderCount(package, ChunkType::MaterialSpirv);
-            infos.reserve(shaderCount);
-            infos.resize(shaderCount);
-            if (!getShaderInfo(package, infos.data(), ChunkType::MaterialSpirv)) {
-                return error(__LINE__);
-            }
-            break;
-        }
-        case backend::Backend::METAL: {
-            shaderCount = getShaderCount(package, ChunkType::MaterialMetal);
-            infos.reserve(shaderCount);
-            infos.resize(shaderCount);
-            if (!getShaderInfo(package, infos.data(), ChunkType::MaterialMetal)) {
-                return error(__LINE__);
-            }
-            break;
-        }
-        default:
-            error(__LINE__);
-    }
+    ShaderReplacer editor(api, mShaderLanguage, package.getData(), package.getSize());
 
+    size_t shaderCount = getShaderCount(package, editor.getMaterialTag());
     if (shaderIndex < 0 || shaderIndex >= shaderCount) {
         return error(__LINE__);
     }
 
+    FixedCapacityVector<ShaderInfo> infos;
+    infos.reserve(shaderCount);
+    infos.resize(shaderCount);
+    if (!getShaderInfo(package, infos.data(), editor.getMaterialTag())) {
+        return error(__LINE__);
+    }
+
     const ShaderInfo info = infos[shaderIndex];
-    ShaderReplacer editor(api, package.getData(), package.getSize());
-    if (!editor.replaceShaderSource(info.shaderModel, info.variant, info.pipelineStage, source, size)) {
+    if (!editor.replaceShaderSource(info.shaderModel, info.variant, info.pipelineStage, source,
+            size)) {
         return error(__LINE__);
     }
 

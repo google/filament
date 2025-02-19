@@ -297,6 +297,19 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
     spv::spirvbin_t::registerErrorHandler([](const std::string& str) {
         slog.e << str << io::endl;
     });
+
+    // Similar to above, we need to do a no-op remap to init a static table in the remapper before
+    // the jobs start using remap().
+    spv::spirvbin_t remapper(0);
+    // We need to provide at least a valid header to not crash.
+    SpirvBlob spirv {
+        0x07230203,// MAGIC
+        0,         // VERSION
+        0,         // GENERATOR
+        0,         // BOUND
+        0          // SCHEMA, must be 0
+    };
+    remapper.remap(spirv, 0);
 }
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;

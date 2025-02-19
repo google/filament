@@ -252,6 +252,7 @@ set(MATERIAL_SRCS
         src/materials/fsr/fsr_easu_mobile.mat
         src/materials/fsr/fsr_easu_mobileF.mat
         src/materials/fsr/fsr_rcas.mat
+        src/materials/sgsr/sgsr1.mat
         src/materials/resolveDepth.mat
         src/materials/separableGaussianBlur.mat
         src/materials/skybox.mat
@@ -384,16 +385,16 @@ endforeach()
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGrading.filamat"
-        DEPENDS ../shaders/src/dithering.fs
-        DEPENDS ../shaders/src/vignette.fs
+        DEPENDS ../shaders/src/inline_dithering.fs
+        DEPENDS ../shaders/src/inline_vignette.fs
         DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/colorGradingAsSubpass.filamat"
-        DEPENDS ../shaders/src/dithering.fs
-        DEPENDS ../shaders/src/vignette.fs
+        DEPENDS ../shaders/src/inline_dithering.fs
+        DEPENDS ../shaders/src/inline_vignette.fs
         DEPENDS src/materials/colorGrading/colorGrading.fs
         APPEND
 )
@@ -505,6 +506,12 @@ add_custom_command(
 )
 
 add_custom_command(
+        OUTPUT "${MATERIAL_DIR}/sgsr1.filamat"
+        DEPENDS src/materials/sgsr/sgsr1_shader_mobile.fs
+        APPEND
+)
+
+add_custom_command(
         OUTPUT "${MATERIAL_DIR}/separableGaussianBlur.filamat"
         DEPENDS src/materials/separableGaussianBlur.vs
         DEPENDS src/materials/separableGaussianBlur.fs
@@ -560,6 +567,13 @@ target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC ibl-lite)
+
+if (FILAMENT_ENABLE_FGVIEWER)
+    target_link_libraries(${TARGET} PUBLIC fgviewer)
+    add_definitions(-DFILAMENT_ENABLE_FGVIEWER=1)
+else()
+    add_definitions(-DFILAMENT_ENABLE_FGVIEWER=0)
+endif()
 
 if (FILAMENT_ENABLE_MATDBG)
     target_link_libraries(${TARGET} PUBLIC matdbg)

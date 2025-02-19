@@ -60,6 +60,14 @@
 #include <utils/Range.h>
 #include <utils/Slice.h>
 
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/DebugServer.h>
+#else
+namespace filament::fgviewer {
+    using ViewHandle = uint32_t;
+}
+#endif
+
 #include <math/scalar.h>
 #include <math/mat4.h>
 
@@ -106,7 +114,7 @@ public:
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
     void prepare(FEngine& engine, backend::DriverApi& driver, RootArenaScope& rootArenaScope,
-            filament::Viewport viewport, CameraInfo cameraInfo,
+            Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
@@ -127,13 +135,13 @@ public:
     }
     bool isSkyboxVisible() const noexcept;
 
-    void setFrustumCullingEnabled(bool culling) noexcept { mCulling = culling; }
+    void setFrustumCullingEnabled(bool const culling) noexcept { mCulling = culling; }
     bool isFrustumCullingEnabled() const noexcept { return mCulling; }
 
-    void setFrontFaceWindingInverted(bool inverted) noexcept { mFrontFaceWindingInverted = inverted; }
+    void setFrontFaceWindingInverted(bool const inverted) noexcept { mFrontFaceWindingInverted = inverted; }
     bool isFrontFaceWindingInverted() const noexcept { return mFrontFaceWindingInverted; }
 
-    void setTransparentPickingEnabled(bool enabled) noexcept { mIsTransparentPickingEnabled = enabled; }
+    void setTransparentPickingEnabled(bool const enabled) noexcept { mIsTransparentPickingEnabled = enabled; }
     bool isTransparentPickingEnabled() const noexcept { return mIsTransparentPickingEnabled; }
 
 
@@ -158,7 +166,7 @@ public:
 
     void prepareViewport(
             const Viewport& physicalViewport,
-            const filament::Viewport& logicalViewport) const noexcept;
+            const Viewport& logicalViewport) const noexcept;
 
     void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
@@ -174,6 +182,7 @@ public:
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
     void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
+    void unbindSamplers(backend::DriverApi& driver) noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
@@ -207,17 +216,17 @@ public:
             FEngine const& engine, CameraInfo const& camera,
             Range visible) noexcept;
 
-    void setShadowingEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
+    void setShadowingEnabled(bool const enabled) noexcept { mShadowingEnabled = enabled; }
 
     bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }
 
-    void setScreenSpaceRefractionEnabled(bool enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
+    void setScreenSpaceRefractionEnabled(bool const enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
 
     bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
 
     bool isScreenSpaceReflectionEnabled() const noexcept { return mScreenSpaceReflectionsOptions.enabled; }
 
-    void setStencilBufferEnabled(bool enabled) noexcept { mStencilBufferEnabled = enabled; }
+    void setStencilBufferEnabled(bool const enabled) noexcept { mStencilBufferEnabled = enabled; }
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
@@ -248,7 +257,7 @@ public:
         return mMultiSampleAntiAliasingOptions.sampleCount;
     }
 
-    void setAntiAliasing(AntiAliasing type) noexcept {
+    void setAntiAliasing(AntiAliasing const type) noexcept {
         mAntiAliasing = type;
     }
 
@@ -288,7 +297,7 @@ public:
         return mColorGrading;
     }
 
-    void setDithering(Dithering dithering) noexcept {
+    void setDithering(Dithering const dithering) noexcept {
         mDithering = dithering;
     }
 
@@ -309,7 +318,7 @@ public:
             Renderer::FrameRateOptions const& frameRateOptions,
             Renderer::DisplayInfo const& displayInfo) noexcept;
 
-    void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
+    void setDynamicResolutionOptions(DynamicResolutionOptions const& options) noexcept;
 
     DynamicResolutionOptions getDynamicResolutionOptions() const noexcept {
         return mDynamicResolution;
@@ -325,11 +334,11 @@ public:
 
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
 
-    void setPostProcessingEnabled(bool enabled) noexcept {
+    void setPostProcessingEnabled(bool const enabled) noexcept {
         mHasPostProcessPass = enabled;
     }
 
-    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
+    void setAmbientOcclusion(AmbientOcclusion const ambientOcclusion) noexcept {
         mAmbientOcclusionOptions.enabled = ambientOcclusion == AmbientOcclusion::SSAO;
     }
 
@@ -343,7 +352,7 @@ public:
         return mShadowType;
     }
 
-    void setShadowType(ShadowType shadow) noexcept {
+    void setShadowType(ShadowType const shadow) noexcept {
         mShadowType = shadow;
     }
 
@@ -387,7 +396,7 @@ public:
         return mVignetteOptions;
     }
 
-    void setBlendMode(BlendMode blendMode) noexcept {
+    void setBlendMode(BlendMode const blendMode) noexcept {
         mBlendMode = blendMode;
     }
 
@@ -448,8 +457,8 @@ public:
     void clearFrameHistory(FEngine& engine) noexcept;
 
     // create the picking query
-    View::PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-            View::PickingQueryResultCallback callback) noexcept;
+    PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
+            PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
             backend::RenderTargetHandle handle, math::float2 scale) noexcept;
@@ -466,18 +475,22 @@ public:
         return mUniforms;
     }
 
+    fgviewer::ViewHandle getViewHandle() const noexcept {
+        return mFrameGraphViewerViewHandle;
+    }
+
 private:
     struct FPickingQuery : public PickingQuery {
     private:
-        FPickingQuery(uint32_t x, uint32_t y,
+        FPickingQuery(uint32_t const x, uint32_t const y,
                 backend::CallbackHandler* handler,
-                View::PickingQueryResultCallback callback) noexcept
+                PickingQueryResultCallback const callback) noexcept
                 : PickingQuery{}, x(x), y(y), handler(handler), callback(callback) {}
         ~FPickingQuery() noexcept = default;
     public:
         // TODO: use a small pool
-        static FPickingQuery* get(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-                View::PickingQueryResultCallback callback) noexcept {
+        static FPickingQuery* get(uint32_t const x, uint32_t const y, backend::CallbackHandler* handler,
+                PickingQueryResultCallback const callback) noexcept {
             return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
         static void put(FPickingQuery* pQuery) noexcept {
@@ -488,7 +501,7 @@ private:
         uint32_t const x;
         uint32_t const y;
         backend::CallbackHandler* const handler;
-        View::PickingQueryResultCallback const callback;
+        PickingQueryResultCallback const callback;
         // picking query result
         PickingQueryResult result;
     };
@@ -520,7 +533,7 @@ private:
     // these are accessed in the render loop, keep together
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
-    filament::DescriptorSet mCommonRenderableDescriptorSet;
+    DescriptorSet mCommonRenderableDescriptorSet;
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
@@ -598,6 +611,8 @@ private:
                                                             { 0, 0, 0, 1 },
                                                             { 0, 0, 0, 1 },
                                                     }};
+
+    fgviewer::ViewHandle mFrameGraphViewerViewHandle;
 
 #ifndef NDEBUG
     struct DebugState {

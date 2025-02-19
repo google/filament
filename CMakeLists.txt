@@ -457,10 +457,19 @@ if (NOT WEBGL)
     set(GC_SECTIONS "-Wl,--gc-sections")
 endif()
 
+# Prevents stacks from being made for executable by explicitly adding this linker flag. Otherwise,
+# it generates warnings newly introduced as of GNU LD 2.39. Modern security practices strongly
+# recommend marking the stack as non-executable using the -z noexecstack linker flag to prevent
+# stack-based buffer overflow exploits.
+# See: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ffcf9c5700e49c0aee42dcba9a12ba21338e8136
+if (LINUX)
+    set(NO_EXEC_STACK "-Wl,-z,noexecstack")
+endif()
+
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (ANDROID)
-set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
+    set(BINARY_ALIGNMENT "-Wl,-z,max-page-size=16384")
 endif()
 
 if (APPLE)
@@ -475,7 +484,7 @@ if (APPLE)
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
 
 if (WEBGL_PTHREADS)
@@ -525,11 +534,14 @@ else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
 endif()
 
-# By default, link in matdbg for Desktop + Debug only since it pulls in filamat and a web server.
+# By default, link in matdbg/fgviewer for Desktop + Debug only since it pulls in filamat and a web server.
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND IS_HOST_PLATFORM)
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" ON)
+    # TODO: Uncomment below when fgviewer is ready
+    # option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" ON)
 else()
     option(FILAMENT_ENABLE_MATDBG "Enable the material debugger" OFF)
+    option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
 endif()
 
 # Only optimize materials in Release mode (so error message lines match the source code)
@@ -655,10 +667,6 @@ function(list_licenses OUTPUT MODULES)
 endfunction()
 
 set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
-if (WIN32)
-    set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/windows/combine-static-libs.bat")
-    set(CMAKE_AR "lib.exe")
-endif()
 
 # Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
 function(combine_static_libs TARGET OUTPUT DEPS)
@@ -673,12 +681,22 @@ function(combine_static_libs TARGET OUTPUT DEPS)
         endif()
     endforeach()
 
-    add_custom_command(
-        TARGET ${TARGET} POST_BUILD
-        COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
-        COMMENT "Combining ${target} dependencies into single shared library"
-        VERBATIM
-    )
+    if (WIN32)
+        add_custom_command(
+            TARGET ${TARGET} POST_BUILD
+            COMMAND lib.exe /nologo /out:temp.lib ${DEPS_FILES}
+            COMMAND "${CMAKE_COMMAND}" -E rename temp.lib ${OUTPUT}
+            COMMENT "Combining ${target} dependencies into single shared library"
+            VERBATIM
+        )
+    else()
+        add_custom_command(
+            TARGET ${TARGET} POST_BUILD
+            COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${OUTPUT}" ${DEPS_FILES}
+            COMMENT "Combining ${target} dependencies into single shared library"
+            VERBATIM
+        )
+    endif()
 endfunction()
 
 # ==================================================================================================
@@ -749,6 +767,7 @@ add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
 add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
+add_subdirectory(${EXTERNAL}/abseil/tnt)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
 add_subdirectory(${EXTERNAL}/civetweb/tnt)
 add_subdirectory(${EXTERNAL}/imgui/tnt)
@@ -778,6 +797,11 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     if (FILAMENT_ENABLE_MATDBG OR IS_HOST_PLATFORM)
         add_subdirectory(${LIBRARIES}/matdbg)
     endif()
+
+    # TODO: Uncomment below when fgviewer is ready
+    # if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
+    #     add_subdirectory(${LIBRARIES}/fgviewer)
+    # endif()
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)

@@ -226,9 +226,11 @@ MetalShaderCompiler::program_token_t MetalShaderCompiler::createProgram(
             CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
             mCompilerThreadPool.queue(priorityQueue, token,
                     [this, name, device = mDevice, program = std::move(program), token]() {
-                        MetalFunctionBundle compiledProgram = compileProgram(program, device);
-                        token->set(compiledProgram);
-                        mCallbackManager.put(token->handle);
+                        @autoreleasepool {
+                            MetalFunctionBundle compiledProgram = compileProgram(program, device);
+                            token->set(compiledProgram);
+                            mCallbackManager.put(token->handle);
+                        }
                     });
 
             break;

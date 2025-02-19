@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
+
+#include <backend/Handle.h>
+
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -32,11 +39,15 @@ Dispatcher NoopDriver::getDispatcher() const noexcept {
 }
 
 ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(__ANDROID__) || defined(IOS) || defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(FILAMENT_IOS) || defined(__EMSCRIPTEN__)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
 #endif
+}
+
+ShaderLanguage NoopDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::ESSL3;
 }
 
 // explicit instantiation of the Dispatcher
@@ -258,17 +269,14 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
     scheduleDestroy(std::move(data));
 }
 
+void NoopDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+}
+
 void NoopDriver::setupExternalImage(void* image) {
 }
 
 TimerQueryResult NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     return TimerQueryResult::ERROR;
-}
-
-void NoopDriver::setExternalImage(Handle<HwTexture> th, void* image) {
-}
-
-void NoopDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
 }
 
 void NoopDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {

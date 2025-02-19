@@ -459,6 +459,13 @@ Java_com_google_android_filament_RenderableManager_nSetMaterialInstanceAt(JNIEnv
             materialInstance);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nClearMaterialInstanceAt(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint primitiveIndex) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->clearMaterialInstanceAt((RenderableManager::Instance) i, (size_t) primitiveIndex);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_RenderableManager_nGetMaterialInstanceAt(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex) {

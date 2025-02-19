@@ -408,6 +408,9 @@ void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
     const Sampler* samplers = dst.samplers.data();
     for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
         const cgltf_animation_channel& srcChannel = srcChannels[j];
+        if (!srcChannel.target_node) {
+            continue;
+        }
         Entity targetEntity = nodeMap[srcChannel.target_node - nodes];
         if (UTILS_UNLIKELY(!targetEntity)) {
             if (GLTFIO_VERBOSE) {

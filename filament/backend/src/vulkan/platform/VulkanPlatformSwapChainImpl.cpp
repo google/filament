@@ -17,7 +17,9 @@
 #include "VulkanPlatformSwapChainImpl.h"
 
 #include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanUtility.h"
+#include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/Helper.h"
+#include "vulkan/utils/Image.h"
 
 #include <backend/DriverEnums.h>
 
@@ -29,9 +31,8 @@ namespace filament::backend {
 namespace {
 
 std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& context,
-        VkDevice device, VkExtent2D extent, VkFormat format,
-        bool isProtected) {
-    bool const isDepth = isVkDepthFormat(format);
+        VkDevice device, VkExtent2D extent, VkFormat format, bool isProtected) {
+    bool const isDepth = fvkutils::isVkDepthFormat(format);
     // Filament expects blit() to work with any texture, so we almost always set these usage flags
     // (see copyFrame() and readPixels()).
     VkImageUsageFlags const blittable =
@@ -75,15 +76,17 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
             .memoryTypeIndex = memoryTypeIndex,
     };
     result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory."
+                                                       << " error=" << static_cast<int32_t>(result);
     result = vkBindImageMemory(device, image, imageMemory, 0);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image.";
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image."
+                                                       << " error=" << static_cast<int32_t>(result);
     return std::tuple(image, imageMemory);
 }
 
-VkFormat selectDepthFormat(VkFormatList const& depthFormats, bool hasStencil) {
+VkFormat selectDepthFormat(fvkutils::VkFormatList const& depthFormats, bool hasStencil) {
     auto const formatItr = std::find_if(depthFormats.begin(), depthFormats.end(),
-            hasStencil ? isVkStencilFormat : isVkDepthFormat);
+            hasStencil ? fvkutils::isVkStencilFormat : fvkutils::isVkDepthFormat);
     assert_invariant(
             formatItr != depthFormats.end() && "Cannot find suitable swapchain depth format");
     return *formatItr;
@@ -115,7 +118,7 @@ void VulkanPlatformSwapChainImpl::destroy() {
     mSwapChainBundle.colors.clear();
 }
 
-VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format, 
+VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format,
         bool isProtected) {
     auto [image, memory] = createImageAndMemory(mContext, mDevice, extent, format, isProtected);
     mMemory.insert({image, memory});
@@ -138,9 +141,8 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
 }
 
 VulkanPlatformSurfaceSwapChain::~VulkanPlatformSurfaceSwapChain() {
-    vkDestroySwapchainKHR(mDevice, mSwapchain, VKALLOC);
-    vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
     destroy();
+    vkDestroySurfaceKHR(mInstance, mSurface, VKALLOC);
 }
 
 VkResult VulkanPlatformSurfaceSwapChain::create() {
@@ -168,7 +170,7 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
 
     // Find a suitable surface format.
     FixedCapacityVector<VkSurfaceFormatKHR> const surfaceFormats
-            = enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
+            = fvkutils::enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
     std::array<VkFormat, 2> expectedFormats = {
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_FORMAT_B8G8R8A8_UNORM,
@@ -192,8 +194,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
     VkPresentModeKHR const desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    FixedCapacityVector<VkPresentModeKHR> presentModes
-            = enumerate(vkGetPhysicalDeviceSurfacePresentModesKHR, mPhysicalDevice, mSurface);
+    FixedCapacityVector<VkPresentModeKHR> presentModes = fvkutils::enumerate(
+            vkGetPhysicalDeviceSurfacePresentModesKHR, mPhysicalDevice, mSurface);
     bool foundSuitablePresentMode = false;
     for (VkPresentModeKHR mode: presentModes) {
         if (mode == desiredPresentMode) {
@@ -247,14 +249,14 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
             .oldSwapchain = mSwapchain,
     };
     VkResult result = vkCreateSwapchainKHR(mDevice, &createInfo, VKALLOC, &mSwapchain);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkCreateSwapchainKHR error: " << static_cast<int32_t>(result);
+    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "vkCreateSwapchainKHR failed."
+                                                       << " error=" << static_cast<int32_t>(result);
 
-    mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
+    mSwapChainBundle.colors = fvkutils::enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
     mSwapChainBundle.depthFormat =
             selectDepthFormat(mContext.getAttachmentDepthStencilFormats(), mHasStencil);
-    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, 
+    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent,
             mSwapChainBundle.depthFormat, mIsProtected);
     mSwapChainBundle.isProtected = mIsProtected;
 
@@ -274,7 +276,9 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         VkResult result = vkCreateSemaphore(mDevice, &semaphoreCreateInfo, nullptr,
                 mImageReady + i);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Failed to create semaphore";
+        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
+                << "Failed to create semaphore."
+                << " error=" << static_cast<int32_t>(result);
     }
 
     return result;
@@ -326,7 +330,7 @@ bool VulkanPlatformSurfaceSwapChain::hasResized() {
             || perceivedExtent.height == VULKAN_UNDEFINED_EXTENT) {
         perceivedExtent = mFallbackExtent;
     }
-    return !equivalent(mSwapChainBundle.extent, perceivedExtent);
+    return !fvkutils::equivalent(mSwapChainBundle.extent, perceivedExtent);
 }
 
 bool VulkanPlatformSurfaceSwapChain::isProtected() {
@@ -340,6 +344,22 @@ VkResult VulkanPlatformSurfaceSwapChain::recreate() {
 }
 
 void VulkanPlatformSurfaceSwapChain::destroy() {
+    // The next part is not ideal. We don't have a good signal on when it's ok to destroy
+    // a swapchain. This is a spec oversight and mentioned as much:
+    // https://github.com/KhronosGroup/Vulkan-Docs/issues/1678
+    //
+    // One workaround [1] is:
+    // https://docs.vulkan.org/samples/latest/samples/api/swapchain_recreation/README.html
+    //
+    // The proper fix is to use VK_EXT_swapchain_maintenance1, but availability of this extension is
+    // unknown (not yet ratified).
+    //
+    // Instead of adding too much mechanics, we're taking a hacksaw to the problem - just wait for
+    // the queue to be idle. The hope is that this only happens on resize, where performance
+    // degradation is less obvious (until, of course, people complain about lag when rotating their
+    // phone). If necessary, we can revisit and implement the workaround [1].
+    vkQueueWaitIdle(mQueue);
+
     VulkanPlatformSwapChainImpl::destroy();
 
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
@@ -347,6 +367,10 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
             vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
             mImageReady[i] = VK_NULL_HANDLE;
         }
+    }
+    if (mSwapchain) {
+        vkDestroySwapchainKHR(mDevice, mSwapchain, VKALLOC);
+        mSwapchain = VK_NULL_HANDLE;
     }
 }
 

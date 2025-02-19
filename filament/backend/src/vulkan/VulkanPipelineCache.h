@@ -19,7 +19,6 @@
 
 #include "VulkanCommands.h"
 #include "VulkanMemory.h"
-#include "VulkanUtility.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -68,8 +67,10 @@ public:
         VkSpecializationInfo* specializationInfos = nullptr;
     };
 
+#if defined(__clang__)
     #pragma clang diagnostic push
     #pragma clang diagnostic warning "-Wpadded"
+#endif
 
     // The RasterState POD contains standard graphics-related state like blending, culling, etc.
     // The following states are omitted because Filament never changes them:
@@ -212,7 +213,9 @@ private:
         bool operator()(const PipelineKey& k1, const PipelineKey& k2) const;
     };
 
+#if defined(__clang__)
     #pragma clang diagnostic pop
+#endif
 
     // CACHE ENTRY STRUCTS
     // -------------------

@@ -661,6 +661,7 @@ class_<View>("View")
     .function("getViewport", &View::getViewport)
     .function("setVisibleLayers", &View::setVisibleLayers)
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
+    .function("setDithering", &View::setDithering)
     .function("_setAmbientOcclusionOptions", &View::setAmbientOcclusionOptions)
     .function("_setDepthOfFieldOptions", &View::setDepthOfFieldOptions)
     .function("_setMultiSampleAntiAliasingOptions", &View::setMultiSampleAntiAliasingOptions)
@@ -1050,7 +1051,7 @@ class_<RenderableManager>("RenderableManager")
 
     .class_function("Builder", (RenderableBuilder (*)(int)) [] (int n) {
         return RenderableBuilder(n);
-    })
+    }, return_value_policy::take_ownership())
 
     .function("destroy", &RenderableManager::destroy)
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
@@ -1100,6 +1101,7 @@ class_<RenderableManager>("RenderableManager")
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
+    .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)
     .function("getMaterialInstanceAt", &RenderableManager::getMaterialInstanceAt,
             allow_raw_pointers())
 
@@ -1390,8 +1392,14 @@ class_<MaterialInstance>("MaterialInstance")
     .function("isDoubleSided", &MaterialInstance::isDoubleSided)
     .function("setTransparencyMode", &MaterialInstance::setTransparencyMode)
     .function("getTransparencyMode", &MaterialInstance::getTransparencyMode)
-    .function("setCullingMode", &MaterialInstance::setCullingMode)
+    .function("setCullingMode", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::CullingMode mode), {
+        self->setCullingMode(mode); }), allow_raw_pointers())
+    .function("setCullingModeSeparate", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, MaterialInstance::CullingMode color, MaterialInstance::CullingMode shadows), {
+        self->setCullingMode(color, shadows); }), allow_raw_pointers())
     .function("getCullingMode", &MaterialInstance::getCullingMode)
+    .function("getShadowCullingMode", &MaterialInstance::getShadowCullingMode)
     .function("setColorWrite", &MaterialInstance::setColorWrite)
     .function("isColorWriteEnabled", &MaterialInstance::isColorWriteEnabled)
     .function("setDepthWrite", &MaterialInstance::setDepthWrite)
@@ -1445,6 +1453,8 @@ class_<TextureSampler>("TextureSampler")
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
+    .class_function("isTextureFormatMipmappable", &Texture::isTextureFormatMipmappable)
+    .class_function("validatePixelFormatAndType", &Texture::validatePixelFormatAndType)
     .function("generateMipmaps", &Texture::generateMipmaps)
     .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
@@ -1489,6 +1499,8 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->sampler(target); })
     .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
         return &builder->format(fmt); })
+    .BUILDER_FUNCTION("external", TexBuilder, (TexBuilder* builder), {
+        return &builder->external(); })
 
     // This takes a bitfield that can be composed by or'ing constants.
     // - JS clients should use the value member, as in: "Texture$Usage.SAMPLEABLE.value".

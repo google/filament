@@ -194,7 +194,7 @@ inline sRGBColorA Color::toSRGB<ACCURATE>(LinearColorA const& color) {
 }
 
 inline LinearColor Color::toLinear(RgbType type, math::float3 color) {
-    return (type == RgbType::LINEAR) ? color : Color::toLinear<ACCURATE>(color);
+    return (type == RgbType::LINEAR) ? color : toLinear<ACCURATE>(color);
 }
 
 // converts an RGBA color to linear space
@@ -202,11 +202,11 @@ inline LinearColor Color::toLinear(RgbType type, math::float3 color) {
 inline LinearColorA Color::toLinear(RgbaType type, math::float4 color) {
     switch (type) {
         case RgbaType::sRGB:
-            return Color::toLinear<ACCURATE>(color) * math::float4{color.a, color.a, color.a, 1.0f};
+            return toLinear<ACCURATE>(color) * math::float4{color.a, color.a, color.a, 1.0f};
         case RgbaType::LINEAR:
             return color * math::float4{color.a, color.a, color.a, 1.0f};
         case RgbaType::PREMULTIPLIED_sRGB:
-            return Color::toLinear<ACCURATE>(color);
+            return toLinear<ACCURATE>(color);
         case RgbaType::PREMULTIPLIED_LINEAR:
             return color;
     }

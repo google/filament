@@ -75,7 +75,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
         mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
         driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
@@ -141,7 +141,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms.setUniforms(other->getUniformBuffer());
         mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
         driver.setDebugTag(mUbHandle.getId(), material->getName());
     }
 
@@ -196,10 +196,10 @@ void FMaterialInstance::commit(DriverApi& driver) const {
         for (auto const& [binding, p]: mTextureParameters) {
             assert_invariant(p.texture);
             // TODO: figure out a way to do this more efficiently (isValid() is a hashmap lookup)
-            FEngine& engine = mMaterial->getEngine();
+            FEngine const& engine = mMaterial->getEngine();
             FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
                     << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
-            Handle<HwTexture> handle = p.texture->getHwHandleForSampling();
+            Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
             assert_invariant(handle);
             mDescriptorSet.setSampler(binding, handle, p.params);
         }
@@ -214,13 +214,13 @@ void FMaterialInstance::commit(DriverApi& driver) const {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::setParameter(std::string_view name,
-        backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) {
-    auto binding = mMaterial->getSamplerBinding(name);
+void FMaterialInstance::setParameter(std::string_view const name,
+        Handle<HwTexture> texture, SamplerParams const params) {
+    auto const binding = mMaterial->getSamplerBinding(name);
     mDescriptorSet.setSampler(binding, texture, params);
 }
 
-void FMaterialInstance::setParameterImpl(std::string_view name,
+void FMaterialInstance::setParameterImpl(std::string_view const name,
         FTexture const* texture, TextureSampler const& sampler) {
 
 #ifndef NDEBUG
@@ -243,7 +243,7 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
     }
 #endif
 
-    auto binding = mMaterial->getSamplerBinding(name);
+    auto const binding = mMaterial->getSamplerBinding(name);
     if (texture && texture->textureHandleCanMutate()) {
         mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
     } else {
@@ -258,34 +258,34 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
     }
 }
 
-void FMaterialInstance::setMaskThreshold(float threshold) noexcept {
-    setParameter("_maskThreshold", math::saturate(threshold));
-    mMaskThreshold = math::saturate(threshold);
+void FMaterialInstance::setMaskThreshold(float const threshold) noexcept {
+    setParameter("_maskThreshold", saturate(threshold));
+    mMaskThreshold = saturate(threshold);
 }
 
 float FMaterialInstance::getMaskThreshold() const noexcept {
     return mMaskThreshold;
 }
 
-void FMaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
-    setParameter("_specularAntiAliasingVariance", math::saturate(variance));
-    mSpecularAntiAliasingVariance = math::saturate(variance);
+void FMaterialInstance::setSpecularAntiAliasingVariance(float const variance) noexcept {
+    setParameter("_specularAntiAliasingVariance", saturate(variance));
+    mSpecularAntiAliasingVariance = saturate(variance);
 }
 
 float FMaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
     return mSpecularAntiAliasingVariance;
 }
 
-void FMaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
-    setParameter("_specularAntiAliasingThreshold", math::saturate(threshold * threshold));
-    mSpecularAntiAliasingThreshold = std::sqrt(math::saturate(threshold * threshold));
+void FMaterialInstance::setSpecularAntiAliasingThreshold(float const threshold) noexcept {
+    setParameter("_specularAntiAliasingThreshold", saturate(threshold * threshold));
+    mSpecularAntiAliasingThreshold = std::sqrt(saturate(threshold * threshold));
 }
 
 float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
     return mSpecularAntiAliasingThreshold;
 }
 
-void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
+void FMaterialInstance::setDoubleSided(bool const doubleSided) noexcept {
     if (UTILS_UNLIKELY(!mMaterial->hasDoubleSidedCapability())) {
         slog.w << "Parent material does not have double-sided capability." << io::endl;
         return;
@@ -301,11 +301,11 @@ bool FMaterialInstance::isDoubleSided() const noexcept {
     return mIsDoubleSided;
 }
 
-void FMaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
+void FMaterialInstance::setTransparencyMode(TransparencyMode const mode) noexcept {
     mTransparencyMode = mode;
 }
 
-void FMaterialInstance::setDepthCulling(bool enable) noexcept {
+void FMaterialInstance::setDepthCulling(bool const enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 }
 
@@ -328,13 +328,13 @@ const char* FMaterialInstance::getName() const noexcept {
 void FMaterialInstance::use(FEngine::DriverApi& driver) const {
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
-        std::call_once(mMissingSamplersFlag, [this]() {
+        std::call_once(mMissingSamplersFlag, [this] {
             auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
             slog.w << "sampler parameters not set in MaterialInstance \""
                    << mName.c_str_safe() << "\" or Material \""
                    << mMaterial->getName().c_str_safe() << "\":\n";
             mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
-                auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+                auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                     return item.binding == binding;
                 });
                 // just safety-check, should never fail
@@ -368,7 +368,7 @@ void FMaterialInstance::fixMissingSamplers() const {
         // here we need to set the samplers that are missing
         auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
         missingSamplerDescriptors.forEachSetBit([this, &list](descriptor_binding_t binding) {
-            auto pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
+            auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                 return item.binding == binding;
             });
 

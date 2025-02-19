@@ -38,11 +38,12 @@ bool initBinder() {
         }
     }
     if (!g_driver.library) {
-        return false;
+        // The library has been linked explicitly during compile.
+        g_driver.OSMesaGetProcAddress = (ProcAddressFunc) dlsym(RTLD_LOCAL, "OSMesaGetProcAddress");
+    } else {
+        g_driver.OSMesaGetProcAddress =
+                (ProcAddressFunc) dlsym(g_driver.library, "OSMesaGetProcAddress");
     }
-
-    g_driver.OSMesaGetProcAddress = (ProcAddressFunc)
-            dlsym(g_driver.library, "OSMesaGetProcAddress");
 
     return g_driver.OSMesaGetProcAddress;
 }
@@ -52,7 +53,9 @@ void* loadFunction(const char* name) {
 }
 
 void shutdownBinder() {
-    dlclose(g_driver.library);
+    if (g_driver.library) {
+        dlclose(g_driver.library);
+    }
     memset(&g_driver, 0, sizeof(g_driver));
 }
 

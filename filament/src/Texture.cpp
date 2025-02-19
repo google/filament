@@ -21,15 +21,15 @@
 
 namespace filament {
 
-size_t Texture::getWidth(size_t level) const noexcept {
+size_t Texture::getWidth(size_t const level) const noexcept {
     return downcast(this)->getWidth(level);
 }
 
-size_t Texture::getHeight(size_t level) const noexcept {
+size_t Texture::getHeight(size_t const level) const noexcept {
     return downcast(this)->getHeight(level);
 }
 
-size_t Texture::getDepth(size_t level) const noexcept {
+size_t Texture::getDepth(size_t const level) const noexcept {
     return downcast(this)->getDepth(level);
 }
 
@@ -45,24 +45,28 @@ Texture::InternalFormat Texture::getFormat() const noexcept {
     return downcast(this)->getFormat();
 }
 
-void Texture::setImage(Engine& engine, size_t level,
-        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
+void Texture::setImage(Engine& engine, size_t const level,
+        uint32_t const xoffset, uint32_t const yoffset, uint32_t const zoffset,
+        uint32_t const width, uint32_t const height, uint32_t const depth,
         PixelBufferDescriptor&& buffer) const {
     downcast(this)->setImage(downcast(engine),
             level, xoffset, yoffset, zoffset, width, height, depth, std::move(buffer));
 }
 
-void Texture::setImage(Engine& engine, size_t level,
-        Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
+void Texture::setImage(Engine& engine, size_t const level,
+        PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const {
     downcast(this)->setImage(downcast(engine), level, std::move(buffer), faceOffsets);
+}
+
+void Texture::setExternalImage(Engine& engine, ExternalImageHandleRef image) noexcept {
+    downcast(this)->setExternalImage(downcast(engine), image);
 }
 
 void Texture::setExternalImage(Engine& engine, void* image) noexcept {
     downcast(this)->setExternalImage(downcast(engine), image);
 }
 
-void Texture::setExternalImage(Engine& engine, void* image, size_t plane) noexcept {
+void Texture::setExternalImage(Engine& engine, void* image, size_t const plane) noexcept {
     downcast(this)->setExternalImage(downcast(engine), image, plane);
 }
 
@@ -74,8 +78,12 @@ void Texture::generateMipmaps(Engine& engine) const noexcept {
     downcast(this)->generateMipmaps(downcast(engine));
 }
 
-bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept {
+bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat const format) noexcept {
     return FTexture::isTextureFormatSupported(downcast(engine), format);
+}
+
+bool Texture::isTextureFormatMipmappable(Engine& engine, InternalFormat const format) noexcept {
+    return FTexture::isTextureFormatMipmappable(downcast(engine), format);
 }
 
 bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
@@ -86,14 +94,18 @@ bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
     return FTexture::isTextureSwizzleSupported(downcast(engine));
 }
 
-size_t Texture::computeTextureDataSize(Texture::Format format, Texture::Type type, size_t stride,
-        size_t height, size_t alignment) noexcept {
+size_t Texture::computeTextureDataSize(Format const format, Type const type, size_t const stride,
+        size_t const height, size_t const alignment) noexcept {
     return FTexture::computeTextureDataSize(format, type, stride, height, alignment);
 }
 
-void Texture::generatePrefilterMipmap(Engine& engine, Texture::PixelBufferDescriptor&& buffer,
-        const Texture::FaceOffsets& faceOffsets, PrefilterOptions const* options) {
+void Texture::generatePrefilterMipmap(Engine& engine, PixelBufferDescriptor&& buffer,
+        const FaceOffsets& faceOffsets, PrefilterOptions const* options) {
     downcast(this)->generatePrefilterMipmap(downcast(engine), std::move(buffer), faceOffsets, options);
+}
+
+bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept {
+    return FTexture::validatePixelFormatAndType(internalFormat, format, type);
 }
 
 } // namespace filament

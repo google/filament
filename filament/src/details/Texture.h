@@ -66,16 +66,17 @@ public:
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
             PrefilterOptions const* options);
 
+    void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
     void setExternalStream(FEngine& engine, FStream* stream) noexcept;
 
     void generateMipmaps(FEngine& engine) const noexcept;
 
-    void setSampleCount(size_t sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
+    void setSampleCount(size_t const sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
     size_t getSampleCount() const noexcept { return mSampleCount; }
     bool isMultisample() const noexcept { return mSampleCount > 1; }
-    bool isCompressed() const noexcept { return backend::isCompressedFormat(mFormat); }
+    bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
 
@@ -88,6 +89,9 @@ public:
     // Synchronous call to the backend. Returns whether a backend supports a particular format.
     static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
 
+    // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
+    static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
+
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
     static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
 
@@ -95,24 +99,24 @@ public:
     static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
 
     // storage needed on the CPU side for texture data uploads
-    static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
+    static size_t computeTextureDataSize(Format format, Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
     // Size a of a pixel in bytes for the given format
     static size_t getFormatSize(InternalFormat format) noexcept;
 
     // Returns the with or height for a given mipmap level from the base value.
-    static inline size_t valueForLevel(uint8_t level, size_t baseLevelValue) {
+    static inline size_t valueForLevel(uint8_t const level, size_t const baseLevelValue) {
         return std::max(size_t(1), baseLevelValue >> level);
     }
 
     // Returns the max number of levels for a texture of given max dimensions
-    static inline uint8_t maxLevelCount(uint32_t maxDimension) noexcept {
+    static inline uint8_t maxLevelCount(uint32_t const maxDimension) noexcept {
         return std::max(1, std::ilogbf(float(maxDimension)) + 1);
     }
 
     // Returns the max number of levels for a texture of given dimensions
-    static inline uint8_t maxLevelCount(uint32_t width, uint32_t height) noexcept {
+    static inline uint8_t maxLevelCount(uint32_t const width, uint32_t const height) noexcept {
         uint32_t const maxDimension = std::max(width, height);
         return maxLevelCount(maxDimension);
     }
@@ -173,7 +177,8 @@ private:
     // Indicates whether the user has set the TextureUsage::BLIT_SRC usage. This will be used to
     // temporarily validate whether this texture can be used for readPixels.
     bool mHasBlitSrc = false;
-    // there is 5 bytes of padding here
+    bool mExternal = false;
+    // there is 4 bytes of padding here
 
     FStream* mStream = nullptr; // only needed for streaming textures
 };

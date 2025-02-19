@@ -46,7 +46,7 @@ public:
     backend::Handle<backend::HwTexture> getIrradianceHwHandle() const noexcept;
     math::float3 const* getSH() const noexcept{ return mIrradianceCoefs.data(); }
     float getIntensity() const noexcept { return mIntensity; }
-    void setIntensity(float intensity) noexcept { mIntensity = intensity; }
+    void setIntensity(float const intensity) noexcept { mIntensity = intensity; }
     void setRotation(math::mat3f const& rotation) noexcept { mRotation = rotation; }
     const math::mat3f& getRotation() const noexcept { return mRotation; }
     FTexture const* getReflectionsTexture() const noexcept { return mReflectionsTexture; }

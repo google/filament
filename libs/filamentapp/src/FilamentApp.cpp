@@ -645,7 +645,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
         // This mirrors the logic for choosing a backend given compile-time flags and client having
         // provided DEFAULT as the backend (see PlatformFactory.cpp)
-        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(IOS) && \
+        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(FILAMENT_IOS) && \
             !defined(__APPLE__) && defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             if (backend == Engine::Backend::DEFAULT) {
                 backend = Engine::Backend::VULKAN;
@@ -704,18 +704,11 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         ::prepareNativeWindow(mWindow);
 
         void* metalLayer = nullptr;
-        if (config.backend == filament::Engine::Backend::METAL) {
+        if (config.backend == filament::Engine::Backend::METAL || config.backend == filament::Engine::Backend::VULKAN) {
             metalLayer = setUpMetalLayer(nativeWindow);
-            // The swap chain on Metal is a CAMetalLayer.
+            // The swap chain on both native Metal and MoltenVK is a CAMetalLayer.
             nativeSwapChain = metalLayer;
         }
-
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        if (config.backend == filament::Engine::Backend::VULKAN) {
-            // We request a Metal layer for rendering via MoltenVK.
-            setUpMetalLayer(nativeWindow);
-        }
-#endif
 
 #endif
 

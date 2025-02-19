@@ -61,6 +61,8 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/CountDownLatch.h>
@@ -86,6 +88,14 @@ namespace filament::matdbg {
 class DebugServer;
 using MaterialKey = uint32_t;
 } // namespace filament::matdbg
+#endif
+
+#if FILAMENT_ENABLE_FGVIEWER
+#include <fgviewer/DebugServer.h>
+#else
+namespace filament::fgviewer {
+    class DebugServer;
+} // namespace filament::fgviewer
 #endif
 
 namespace filament {
@@ -114,12 +124,11 @@ class ResourceAllocator;
  */
 class FEngine : public Engine {
 public:
-
-    inline void* operator new(std::size_t size) noexcept {
+    void* operator new(std::size_t const size) noexcept {
         return utils::aligned_alloc(size, alignof(FEngine));
     }
 
-    inline void operator delete(void* p) noexcept {
+    void operator delete(void* p) noexcept {
         utils::aligned_free(p);
     }
 
@@ -247,23 +256,17 @@ public:
         return mPlatform;
     }
 
+    size_t getMaxShadowMapCount() const noexcept;
+
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
         switch (mBackend) {
-            case Backend::DEFAULT:
-            case Backend::NOOP:
             default:
-                return { backend::ShaderLanguage::ESSL3 };
-            case Backend::OPENGL:
-                return { getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
-                                ? backend::ShaderLanguage::ESSL1
-                                : backend::ShaderLanguage::ESSL3 };
-            case Backend::VULKAN:
-                return { backend::ShaderLanguage::SPIRV };
+                return { getDriver().getShaderLanguage() };
             case Backend::METAL:
                 const auto& lang = mConfig.preferredShaderLanguage;
                 if (lang == Config::ShaderLanguage::MSL) {
-                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
+                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY};
                 }
                 return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
         }
@@ -392,6 +395,7 @@ public:
     void setPaused(bool paused);
 
     void flushAndWait();
+    bool flushAndWait(uint64_t timeout);
 
     // flush the current buffer
     void flush();
@@ -451,7 +455,7 @@ public:
 
     void unprotected() noexcept;
 
-    void setAutomaticInstancingEnabled(bool enable) noexcept {
+    void setAutomaticInstancingEnabled(bool const enable) noexcept {
         // instancing is not allowed at feature level 0
         if (hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1)) {
             mAutomaticInstancingEnabled = enable;
@@ -487,7 +491,7 @@ public:
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
 
-    static constexpr const size_t MiB = 1024u * 1024u;
+    static constexpr size_t MiB = 1024u * 1024u;
     size_t getMinCommandBufferSize() const noexcept { return mConfig.minCommandBufferSizeMB * MiB; }
     size_t getCommandBufferSize() const noexcept { return mConfig.commandBufferSizeMB * MiB; }
     size_t getPerFrameCommandsSize() const noexcept { return mConfig.perFrameCommandsSizeMB * MiB; }
@@ -495,23 +499,27 @@ public:
     size_t getRequestedDriverHandleArenaSize() const noexcept { return mConfig.driverHandleArenaSizeMB * MiB; }
     Config const& getConfig() const noexcept { return mConfig; }
 
-    bool hasFeatureLevel(backend::FeatureLevel neededFeatureLevel) const noexcept {
-        return FEngine::getActiveFeatureLevel() >= neededFeatureLevel;
+    bool hasFeatureLevel(backend::FeatureLevel const neededFeatureLevel) const noexcept {
+        return getActiveFeatureLevel() >= neededFeatureLevel;
+    }
+
+    auto const& getMaterialInstanceResourceList() const noexcept {
+        return mMaterialInstances;
     }
 
 #if defined(__EMSCRIPTEN__)
     void resetBackendState() noexcept;
 #endif
 
+    backend::Driver& getDriver() const noexcept { return *mDriver; }
+
 private:
-    explicit FEngine(Engine::Builder const& builder);
+    explicit FEngine(Builder const& builder);
     void init();
     void shutdown();
 
     int loop();
-    void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue);
-
-    backend::Driver& getDriver() const noexcept { return *mDriver; }
+    void flushCommandBuffer(backend::CommandBufferQueue& commandBufferQueue) const;
 
     template<typename T>
     bool isValid(const T* ptr, ResourceList<T> const& list) const;
@@ -596,7 +604,7 @@ private:
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
-    static uint32_t getJobSystemThreadPoolSize(Engine::Config const& config) noexcept;
+    static uint32_t getJobSystemThreadPoolSize(Config const& config) noexcept;
 
     std::default_random_engine mRandomEngine;
 
@@ -674,9 +682,20 @@ public:
             bool combine_multiview_images = false;
         } stereo;
         matdbg::DebugServer* server = nullptr;
+        fgviewer::DebugServer* fgviewerServer = nullptr;
     } debug;
 
     struct {
+        struct {
+            struct {
+                bool use_shadow_atlas = false;
+            } shadows;
+            struct {
+                // TODO: default the following two flags to true.
+                bool assert_material_instance_in_use = false;
+                bool assert_destroy_material_before_material_instance = false;
+            } debug;
+        } engine;
         struct {
             struct {
                 bool assert_native_window_is_valid = false;
@@ -686,7 +705,7 @@ public:
         } backend;
     } features;
 
-    std::array<Engine::FeatureFlag, sizeof(features)> const mFeatures{{
+    std::array<FeatureFlag, sizeof(features)> const mFeatures{{
             { "backend.disable_parallel_shader_compile",
               "Disable parallel shader compilation in GL and Metal backends.",
               &features.backend.disable_parallel_shader_compile, true },
@@ -695,14 +714,23 @@ public:
               &features.backend.disable_handle_use_after_free_check, true },
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
-              &features.backend.opengl.assert_native_window_is_valid, true }
+              &features.backend.opengl.assert_native_window_is_valid, true },
+            { "engine.shadows.use_shadow_atlas",
+              "Uses an array of atlases to store shadow maps.",
+              &features.engine.shadows.use_shadow_atlas, false },
+            { "features.engine.debug.assert_material_instance_in_use",
+              "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
+              &features.engine.debug.assert_material_instance_in_use, false },
+            { "features.engine.debug.assert_destroy_material_before_material_instance",
+              "Assert when a Material is destroyed but its instances are still alive.",
+              &features.engine.debug.assert_destroy_material_before_material_instance, false },
     }};
 
-    utils::Slice<const Engine::FeatureFlag> getFeatureFlags() const noexcept {
+    utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
         return { mFeatures.data(), mFeatures.size() };
     }
 
-    bool setFeatureFlag(char const* name, bool value) noexcept;
+    bool setFeatureFlag(char const* name, bool value) const noexcept;
     std::optional<bool> getFeatureFlag(char const* name) const noexcept;
     bool* getFeatureFlagPtr(std::string_view name, bool allowConstant = false) const noexcept;
 };

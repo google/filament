@@ -39,7 +39,7 @@ class ImportedRenderTarget;
  */
 class ResourceEdgeBase : public DependencyGraph::Edge {
 public:
-    using DependencyGraph::Edge::Edge;
+    using Edge::Edge;
 };
 
 /*
@@ -199,7 +199,7 @@ protected:
      */
 
     void resolveUsage(DependencyGraph& graph,
-            ResourceEdgeBase const* const* edges, size_t count,
+            ResourceEdgeBase const* const* edges, size_t const count,
             ResourceEdgeBase const* writer) noexcept override {
         for (size_t i = 0; i < count; i++) {
             if (graph.isEdgeValid(edges[i])) {

@@ -30,7 +30,8 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
-#include "MetalPlatform.h"
+#include <backend/platforms/PlatformMetal.h>
+#include <backend/platforms/PlatformMetal-ObjC.h>
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -57,7 +58,7 @@
 namespace filament {
 namespace backend {
 
-Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+Driver* MetalDriverFactory::create(PlatformMetal* const platform, const Platform::DriverConfig& driverConfig) {
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
@@ -96,7 +97,7 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform
 }
 
 UTILS_NOINLINE
-Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+Driver* MetalDriver::create(PlatformMetal* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -109,7 +110,7 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 }
 
 MetalDriver::MetalDriver(
-        MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
+        PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept
     : mPlatform(*platform),
       mContext(new MetalContext),
       mHandleAllocator(
@@ -120,8 +121,11 @@ MetalDriver::MetalDriver(
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
 
-    mContext->device = mPlatform.createDevice();
-    assert_invariant(mContext->device);
+    MetalDevice device;
+    device.device = nil;
+    mPlatform.createDevice(device);
+    mContext->device = device.device;
+    FILAMENT_CHECK_POSTCONDITION(mContext->device) << "Could not obtain Metal device.";
 
     mContext->emptyBuffer = [mContext->device newBufferWithLength:16
                                                           options:MTLResourceStorageModePrivate];
@@ -186,7 +190,13 @@ MetalDriver::MetalDriver(
             [mContext->device.name containsString:@"Apple A8 GPU"] ||
             [mContext->device.name containsString:@"Apple A7 GPU"];
 
-    mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
+    MetalCommandQueue commandQueue;
+    commandQueue.commandQueue = nil;
+    mPlatform.createCommandQueue(device, commandQueue);
+    FILAMENT_CHECK_POSTCONDITION(commandQueue.commandQueue)
+            << "Could not create Metal command queue.";
+
+    mContext->commandQueue = commandQueue.commandQueue;
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
@@ -246,6 +256,7 @@ void MetalDriver::tick(int) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
+    mContext->currentFrame = frameId;
     DEBUG_LOG("beginFrame(monotonic_clock_ns = %lld, refreshIntervalNs = %lld, frameId = %d)\n",
             monotonic_clock_ns, refreshIntervalNs, frameId);
 #if defined(FILAMENT_METAL_PROFILING)
@@ -452,6 +463,36 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
     }
 }
 
+// fixme: TextureUsage is a bitfield
+inline const char* stringify(TextureUsage usage) {
+    switch (usage) {
+        case TextureUsage::NONE: return "NONE";
+        case TextureUsage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
+        case TextureUsage::DEPTH_ATTACHMENT: return "DEPTH_ATTACHMENT";
+        case TextureUsage::STENCIL_ATTACHMENT: return "STENCIL_ATTACHMENT";
+        case TextureUsage::UPLOADABLE: return "UPLOADABLE";
+        case TextureUsage::SAMPLEABLE: return "SAMPLEABLE";
+        case TextureUsage::SUBPASS_INPUT: return "SUBPASS_INPUT";
+        case TextureUsage::BLIT_SRC: return "BLIT_SRC";
+        case TextureUsage::BLIT_DST: return "BLIT_DST";
+        case TextureUsage::PROTECTED: return "PROTECTED";
+        case TextureUsage::DEFAULT: return "DEFAULT";
+        default: return "UNKNOWN";
+    }
+}
+
+inline const char* stringify(SamplerType samplerType) {
+    switch (samplerType) {
+        case SamplerType::SAMPLER_2D: return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY: return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP: return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL: return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D: return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "SAMPLER_CUBEMAP_ARRAY";
+    }
+    return "UNKNOWN";
+}
+
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
@@ -482,7 +523,17 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
 }
 
-void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::TextureFormat format,
+void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
+        uint32_t width, uint32_t height, backend::TextureUsage usage,
+        Platform::ExternalImageHandleRef image) {
+    // FIXME: implement createTextureExternalImage2R
+}
+
+void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th,
+        backend::SamplerType target,
+        backend::TextureFormat format,
         uint32_t width, uint32_t height, backend::TextureUsage usage, void* image) {
     mContext->textures.insert(construct_handle<MetalTexture>(
             th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
@@ -599,19 +650,19 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
-        construct_handle<MetalSwapChain>(sch, *mContext, pixelBuffer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, pixelBuffer, flags);
         // This release matches the retain call in setupExternalImage. The MetalSwapchain will have
         // retained the buffer by now.
         CVPixelBufferRelease((CVPixelBufferRef)pixelBuffer);
     } else {
         auto* metalLayer = (__bridge CAMetalLayer*) nativeWindow;
-        construct_handle<MetalSwapChain>(sch, *mContext, metalLayer, flags);
+        construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, metalLayer, flags);
     }
 }
 
 void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
-    construct_handle<MetalSwapChain>(sch, *mContext, width, height, flags);
+    construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, width, height, flags);
 }
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
@@ -711,6 +762,10 @@ Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureViewSwizzleS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureExternalImage2S() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
@@ -907,11 +962,15 @@ void MetalDriver::terminate() {
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     return ShaderModel::MOBILE;
 #else
     return ShaderModel::DESKTOP;
 #endif
+}
+
+ShaderLanguage MetalDriver::getShaderLanguage() const noexcept {
+    return ShaderLanguage::MSL;
 }
 
 Handle<HwStream> MetalDriver::createStreamNative(void* stream) {
@@ -981,7 +1040,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
         case MTLPixelFormatRGBA16Float:
             return true;
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
         // Mipmappable only on desktop:
         case MTLPixelFormatR32Float:
         case MTLPixelFormatRG32Float:
@@ -989,7 +1048,7 @@ bool MetalDriver::isTextureFormatMipmappable(TextureFormat format) {
             return true;
 #endif
 
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         // Mipmappable only on iOS:
         case MTLPixelFormatRGB9E5Float:
             return true;
@@ -1102,8 +1161,8 @@ FeatureLevel MetalDriver::getFeatureLevel() {
 
 math::float2 MetalDriver::getClipSpaceParams() {
     // virtual and physical z-coordinate of clip-space is in [-w, 0]
-    // Note: this is actually never used (see: main.vs), but it's a backend API so we implement it
-    // properly.
+    // Note: this is actually never used (see: surface_main.vs), but it's a backend API so we
+    // implement it properly.
     return math::float2{ 1.0f, 0.0f };
 }
 
@@ -1181,6 +1240,10 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
 }
 
+void MetalDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+    // FIXME: implement setupExternalImage2
+}
+
 void MetalDriver::setupExternalImage(void* image) {
     // setupExternalImage is called on the Filament thread when creating a Texture or SwapChain from
     // a CVPixelBuffer external image. Here we take ownership of the passed in buffer by calling
@@ -1190,10 +1253,6 @@ void MetalDriver::setupExternalImage(void* image) {
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
 }
-
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {}
-
-void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {}
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
@@ -1239,6 +1298,13 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
     renderTarget->setUpRenderPassAttachments(descriptor, params);
+
+    if (renderTarget->involvesAbandonedSwapChain()) {
+        mContext->currentRenderPassAbandoned = true;
+        return;
+    } else {
+        mContext->currentRenderPassAbandoned = false;
+    }
 
     mContext->currentRenderPassEncoder =
             [getPendingCommandBuffer(mContext) renderCommandEncoderWithDescriptor:descriptor];
@@ -1300,6 +1366,10 @@ void MetalDriver::endRenderPass(int dummy) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, OS_SIGNPOST_ID_EXCLUSIVE, "Render pass");
 #endif
+
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
 
     [mContext->currentRenderPassEncoder endEncoding];
 
@@ -1366,7 +1436,7 @@ void MetalDriver::startCapture(int) {
     if (@available(iOS 13, *)) {
         MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
         descriptor.captureObject = mContext->device;
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
         descriptor.destination = MTLCaptureDestinationDeveloperTools;
 #else
         descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
@@ -1430,7 +1500,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                                                                width:srcTextureSize.width
                                                               height:srcTextureSize.height
                                                            mipmapped:NO];
-#if defined(IOS)
+#if defined(FILAMENT_IOS)
     textureDescriptor.storageMode = MTLStorageModeShared;
 #else
     textureDescriptor.storageMode = MTLStorageModeManaged;
@@ -1449,7 +1519,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
 
-#if !defined(IOS)
+#if !defined(FILAMENT_IOS)
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
     id <MTLBlitCommandEncoder> blitEncoder = [getPendingCommandBuffer(mContext) blitCommandEncoder];
     [blitEncoder synchronizeResource:readPixelsTexture];
@@ -1601,6 +1671,11 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
     auto srcTarget = handle_cast<MetalRenderTarget>(src);
     auto dstTarget = handle_cast<MetalRenderTarget>(dst);
 
+    if (UTILS_UNLIKELY(srcTarget->involvesAbandonedSwapChain() ||
+                dstTarget->involvesAbandonedSwapChain())) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
             << "blitDEPRECATED only supports COLOR0";
 
@@ -1657,6 +1732,7 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     // during the draw call when the program is invalid. The shader compile error has already been
     // dumped to the console at this point, so it's fine to simply return early.
     if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!functions)) {
+        mContext->validPipelineBound = false;
         return;
     }
 
@@ -1789,6 +1865,8 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
                                                    clamp:0.0];
         mContext->currentPolygonOffset = ps.polygonOffset;
     }
+
+    mContext->validPipelineBound = true;
 }
 
 void MetalDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1882,9 +1960,17 @@ void MetalDriver::bindDescriptorSet(
 }
 
 void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
+
     FILAMENT_CHECK_PRECONDITION(mContext->currentRenderPassEncoder != nullptr)
             << "draw() without a valid command encoder.";
     DEBUG_LOG("draw2(...)\n");
+
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!mContext->validPipelineBound)) {
+        return;
+    }
 
     // Bind the offset data.
     if (mContext->dynamicOffsets.isDirty()) {
@@ -1921,6 +2007,9 @@ void MetalDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t inst
 
 void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
         uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+    if (UTILS_UNLIKELY(mContext->currentRenderPassAbandoned)) {
+        return;
+    }
     MetalRenderPrimitive const* const rp = handle_cast<MetalRenderPrimitive>(rph);
     ps.primitiveType = rp->type;
     ps.vertexBufferInfo = rp->vertexBuffer->vbih;

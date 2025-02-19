@@ -43,7 +43,7 @@ class UserPanicHandler {
     struct CallBack {
         Panic::PanicHandlerCallback handler = nullptr;
         void* user = nullptr;
-        void call(Panic const& panic) const noexcept {
+        void call(Panic const& panic) const {
             if (UTILS_UNLIKELY(handler)) {
                 handler(user, panic);
             }
@@ -64,7 +64,7 @@ public:
         return data;
     }
 
-    void call(Panic const& panic) const noexcept {
+    void call(Panic const& panic) const {
         getCallback().call(panic);
     }
 

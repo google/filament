@@ -50,8 +50,8 @@ using namespace backend;
 using namespace filament::math;
 
 struct VertexBuffer::BuilderDetails {
-    struct AttributeData : backend::Attribute {
-        AttributeData() : backend::Attribute{ .type = backend::ElementType::FLOAT4 } {
+    struct AttributeData : Attribute {
+        AttributeData() : Attribute{ .type = ElementType::FLOAT4 } {
             static_assert(sizeof(Attribute) == sizeof(AttributeData),
                     "Attribute and Builder::Attribute must match");
         }
@@ -67,30 +67,30 @@ struct VertexBuffer::BuilderDetails {
 using BuilderType = VertexBuffer;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const& rhs) noexcept = default;
-BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder const& rhs) noexcept = default;
+BuilderType::Builder::Builder(Builder&& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder const& rhs) noexcept = default;
+BuilderType::Builder& BuilderType::Builder::operator=(Builder&& rhs) noexcept = default;
 
-VertexBuffer::Builder& VertexBuffer::Builder::vertexCount(uint32_t vertexCount) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::vertexCount(uint32_t const vertexCount) noexcept {
     mImpl->mVertexCount = vertexCount;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::enableBufferObjects(bool enabled) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::enableBufferObjects(bool const enabled) noexcept {
     mImpl->mBufferObjectsEnabled = enabled;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::bufferCount(uint8_t bufferCount) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::bufferCount(uint8_t const bufferCount) noexcept {
     mImpl->mBufferCount = bufferCount;
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribute,
-        uint8_t bufferIndex,
-        AttributeType attributeType,
-        uint32_t byteOffset,
+VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const attribute,
+        uint8_t const bufferIndex,
+        AttributeType const attributeType,
+        uint32_t const byteOffset,
         uint8_t byteStride) noexcept {
 
     size_t const attributeSize = Driver::getElementTypeSize(attributeType);
@@ -117,7 +117,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         entry.offset = byteOffset;
         entry.stride = byteStride;
         entry.type = attributeType;
-        if (attribute == VertexAttribute::BONE_INDICES) {
+        if (attribute == BONE_INDICES) {
             // BONE_INDICES must always be an integer type
             entry.flags |= Attribute::FLAG_INTEGER_TARGET;
         }
@@ -130,8 +130,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute,
-        bool normalized) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute const attribute,
+        bool const normalized) noexcept {
     if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT) {
         auto& entry = mImpl->mAttributes[attribute];
         if (normalized) {
@@ -143,9 +143,13 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool enabled) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool const enabled) noexcept {
     mImpl->mAdvancedSkinningEnabled = enabled;
     return *this;
+}
+
+VertexBuffer::Builder& VertexBuffer::Builder::name(const char* name, size_t const len) noexcept {
+    return BuilderNameMixin::name(name, len);
 }
 
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
@@ -160,11 +164,11 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     auto const& attributes = mImpl->mAttributes;
     utils::bitset32 attributedBuffers;
 
-    declaredAttributes.forEachSetBit([&](size_t j){
+    declaredAttributes.forEachSetBit([&](size_t const j){
         // update set of used buffers
         attributedBuffers.set(attributes[j].buffer);
 
-        if (engine.getActiveFeatureLevel() == backend::FeatureLevel::FEATURE_LEVEL_0) {
+        if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
             FILAMENT_CHECK_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET))
                     << "Attribute::FLAG_INTEGER_TARGET not supported at FEATURE_LEVEL_0";
         }
@@ -205,7 +209,7 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& builder)
+FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount),
           mBufferObjectsEnabled(builder->mBufferObjectsEnabled),
           mAdvancedSkinningEnabled(builder->mAdvancedSkinningEnabled){
@@ -213,24 +217,24 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     mDeclaredAttributes = builder->mDeclaredAttributes;
 
     if (mAdvancedSkinningEnabled) {
-        mAttributes[VertexAttribute::BONE_INDICES] = {
+        mAttributes[BONE_INDICES] = {
                 .offset = 0,
                 .stride = 8,
                 .buffer = mBufferCount,
-                .type = VertexBuffer::AttributeType::USHORT4,
+                .type = AttributeType::USHORT4,
                 .flags = Attribute::FLAG_INTEGER_TARGET,
         };
-        mDeclaredAttributes.set(VertexAttribute::BONE_INDICES);
+        mDeclaredAttributes.set(BONE_INDICES);
         mBufferCount++;
 
-        mAttributes[VertexAttribute::BONE_WEIGHTS] = {
+        mAttributes[BONE_WEIGHTS] = {
                 .offset = 0,
                 .stride = 16,
                 .buffer = mBufferCount,
-                .type = VertexBuffer::AttributeType::FLOAT4,
+                .type = AttributeType::FLOAT4,
                 .flags = 0,
         };
-        mDeclaredAttributes.set(VertexAttribute::BONE_WEIGHTS);
+        mDeclaredAttributes.set(BONE_WEIGHTS);
         mBufferCount++;
     } else {
         // Because the Material's SKN variant supports both skinning and morphing, it expects
@@ -289,7 +293,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
                 assert_invariant(bufferSizes[i] > 0);
                 if (!mBufferObjects[i]) {
                     BufferObjectHandle bo = driver.createBufferObject(bufferSizes[i],
-                            backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+                            BufferObjectBinding::VERTEX, BufferUsage::STATIC);
                     if (auto name = builder.getName(); !name.empty()) {
                         driver.setDebugTag(bo.getId(), name);
                     }
@@ -302,13 +306,13 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
         // in advanced skinning mode, we manage the BONE_INDICES and BONE_WEIGHTS arrays ourselves,
         // so we have to set the corresponding buffer objects.
         if (mAdvancedSkinningEnabled) {
-            for (auto index : { VertexAttribute::BONE_INDICES, VertexAttribute::BONE_WEIGHTS }) {
+            for (auto index : { BONE_INDICES, BONE_WEIGHTS }) {
                 size_t const i = mAttributes[index].buffer;
                 assert_invariant(i != Attribute::BUFFER_UNUSED);
                 assert_invariant(bufferSizes[i] > 0);
                 if (!mBufferObjects[i]) {
                     BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
-                            backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+                            BufferObjectBinding::VERTEX, BufferUsage::STATIC);
                     if (auto name = builder.getName(); !name.empty()) {
                         driver.setDebugTag(bo.getId(), name);
                     }
@@ -335,8 +339,8 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
     return mVertexCount;
 }
 
-void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
-        backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
+void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
+        backend::BufferDescriptor&& buffer, uint32_t const byteOffset) {
     FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled) << "Please use setBufferObjectAt()";
     if (bufferIndex < mBufferCount) {
         assert_invariant(mBufferObjects[bufferIndex]);
@@ -348,7 +352,7 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
     }
 }
 
-void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
+void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex,
         FBufferObject const * bufferObject) {
     FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled) << "Please use setBufferAt()";
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
@@ -370,14 +374,14 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
         std::unique_ptr<float[]> skinWeights) {
     FILAMENT_CHECK_PRECONDITION(mAdvancedSkinningEnabled) << "No advanced skinning enabled";
     auto jointsData = skinJoints.release();
-    uint8_t const indicesIndex = mAttributes[VertexAttribute::BONE_INDICES].buffer;
+    uint8_t const indicesIndex = mAttributes[BONE_INDICES].buffer;
     engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex],
             {jointsData, mVertexCount * 8,
                     [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); }},
             0);
 
     auto weightsData = skinWeights.release();
-    uint8_t const weightsIndex = mAttributes[VertexAttribute::BONE_WEIGHTS].buffer;
+    uint8_t const weightsIndex = mAttributes[BONE_WEIGHTS].buffer;
     engine.getDriverApi().updateBufferObject(mBufferObjects[weightsIndex],
             {weightsData, mVertexCount * 16,
                     [](void* buffer, size_t, void*) { delete[] static_cast<float*>(buffer); }},

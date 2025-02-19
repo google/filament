@@ -75,7 +75,7 @@ public:
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
 
-    void setScissor(uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) noexcept {
+    void setScissor(uint32_t const left, uint32_t const bottom, uint32_t const width, uint32_t const height) noexcept {
         constexpr uint32_t maxvalu = std::numeric_limits<int32_t>::max();
         mScissorRect = { int32_t(left), int32_t(bottom),
                 std::min(width, maxvalu), std::min(height, maxvalu) };
@@ -94,6 +94,8 @@ public:
 
     backend::CullingMode getCullingMode() const noexcept { return mCulling; }
 
+    backend::CullingMode getShadowCullingMode() const noexcept { return mShadowCulling; }
+
     bool isColorWriteEnabled() const noexcept { return mColorWrite; }
 
     bool isDepthWriteEnabled() const noexcept { return mDepthWrite; }
@@ -106,11 +108,11 @@ public:
 
     backend::RasterState::DepthFunc getDepthFunc() const noexcept { return mDepthFunc; }
 
-    void setDepthFunc(backend::RasterState::DepthFunc depthFunc) noexcept {
+    void setDepthFunc(backend::RasterState::DepthFunc const depthFunc) noexcept {
         mDepthFunc = depthFunc;
     }
 
-    void setPolygonOffset(float scale, float constant) noexcept {
+    void setPolygonOffset(float const scale, float const constant) noexcept {
         // handle reversed Z
         mPolygonOffset = { -scale, -constant };
     }
@@ -135,19 +137,24 @@ public:
 
     void setTransparencyMode(TransparencyMode mode) noexcept;
 
-    void setCullingMode(CullingMode culling) noexcept { mCulling = culling; }
+    void setCullingMode(CullingMode const culling) noexcept { mCulling = culling; }
 
-    void setColorWrite(bool enable) noexcept { mColorWrite = enable; }
+    void setCullingMode(CullingMode const color, CullingMode const shadow) noexcept {
+        mCulling = color;
+        mShadowCulling = shadow;
+    }
 
-    void setDepthWrite(bool enable) noexcept { mDepthWrite = enable; }
+    void setColorWrite(bool const enable) noexcept { mColorWrite = enable; }
 
-    void setStencilWrite(bool enable) noexcept { mStencilState.stencilWrite = enable; }
+    void setDepthWrite(bool const enable) noexcept { mDepthWrite = enable; }
+
+    void setStencilWrite(bool const enable) noexcept { mStencilState.stencilWrite = enable; }
 
     void setDepthCulling(bool enable) noexcept;
 
     bool isDepthCullingEnabled() const noexcept;
 
-    void setStencilCompareFunction(StencilCompareFunc func, StencilFace face) noexcept {
+    void setStencilCompareFunction(StencilCompareFunc const func, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.stencilFunc = func;
         }
@@ -156,7 +163,7 @@ public:
         }
     }
 
-    void setStencilOpStencilFail(StencilOperation op, StencilFace face) noexcept {
+    void setStencilOpStencilFail(StencilOperation const op, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.stencilOpStencilFail = op;
         }
@@ -165,7 +172,7 @@ public:
         }
     }
 
-    void setStencilOpDepthFail(StencilOperation op, StencilFace face) noexcept {
+    void setStencilOpDepthFail(StencilOperation const op, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.stencilOpDepthFail = op;
         }
@@ -174,7 +181,7 @@ public:
         }
     }
 
-    void setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) noexcept {
+    void setStencilOpDepthStencilPass(StencilOperation const op, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.stencilOpDepthStencilPass = op;
         }
@@ -183,7 +190,7 @@ public:
         }
     }
 
-    void setStencilReferenceValue(uint8_t value, StencilFace face) noexcept {
+    void setStencilReferenceValue(uint8_t const value, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.ref = value;
         }
@@ -192,7 +199,7 @@ public:
         }
     }
 
-    void setStencilReadMask(uint8_t readMask, StencilFace face) noexcept {
+    void setStencilReadMask(uint8_t const readMask, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.readMask = readMask;
         }
@@ -201,7 +208,7 @@ public:
         }
     }
 
-    void setStencilWriteMask(uint8_t writeMask, StencilFace face) noexcept {
+    void setStencilWriteMask(uint8_t const writeMask, StencilFace const face) noexcept {
         if (any(face & StencilFace::FRONT)) {
             mStencilState.front.writeMask = writeMask;
         }
@@ -210,7 +217,7 @@ public:
         }
     }
 
-    void setDefaultInstance(bool value) noexcept {
+    void setDefaultInstance(bool const value) noexcept {
         mIsDefaultInstance = value;
     }
 
@@ -260,7 +267,7 @@ private:
 
     backend::Handle<backend::HwBufferObject> mUbHandle;
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
-    mutable filament::DescriptorSet mDescriptorSet;
+    mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
 
     backend::PolygonOffset mPolygonOffset{};
@@ -271,7 +278,9 @@ private:
     float mSpecularAntiAliasingThreshold = 0.0f;
 
     backend::CullingMode mCulling : 2;
+    backend::CullingMode mShadowCulling : 2;
     backend::RasterState::DepthFunc mDepthFunc : 3;
+
     bool mColorWrite : 1;
     bool mDepthWrite : 1;
     bool mHasScissor : 1;
@@ -283,8 +292,8 @@ private:
 
     // Scissor rectangle is specified as: Left Bottom Width Height.
     backend::Viewport mScissorRect = { 0, 0,
-            (uint32_t)std::numeric_limits<int32_t>::max(),
-            (uint32_t)std::numeric_limits<int32_t>::max()
+            uint32_t(std::numeric_limits<int32_t>::max()),
+            uint32_t(std::numeric_limits<int32_t>::max())
     };
 
     utils::CString mName;
