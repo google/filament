@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2002-2005  3Dlabs Inc. Ltd.
+// Copyright (C) 2024 The Khronos Group Inc.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-namespace glslang {
-
-} // end namespace glslang
+// This empty source file exists to support building stubbed versions of
+// deprecated libraries which have been integrated into the main glslang
+// library. It should be deleted once the stub libraries are fully removed.

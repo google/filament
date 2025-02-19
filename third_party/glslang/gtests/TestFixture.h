@@ -35,6 +35,7 @@
 #ifndef GLSLANG_GTESTS_TEST_FIXTURE_H
 #define GLSLANG_GTESTS_TEST_FIXTURE_H
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <sstream>
@@ -48,6 +49,7 @@
 #include "SPIRV/disassemble.h"
 #include "SPIRV/doc.h"
 #include "SPIRV/SPVRemapper.h"
+#include "glslang/Include/Types.h"
 #include "glslang/Public/ResourceLimits.h"
 #include "glslang/Public/ShaderLang.h"
 
@@ -198,9 +200,42 @@ public:
         } else
             shader->setStringsWithLengths(&shaderStrings, &shaderLengths, 1);
         if (!entryPointName.empty()) shader->setEntryPoint(entryPointName.c_str());
-        return shader->parse(
-                (resources ? resources : GetDefaultResources()),
-                defaultVersion, isForwardCompatible, controls);
+
+        // A includer that always assumes header name is a relative path to the test folder.
+        class GlslangTestIncluder : public glslang::TShader::Includer {
+        public:
+            virtual IncludeResult* includeLocal(const char* headerName, const char* /*includerName*/,
+                                                size_t /*inclusionDepth*/) override
+            {
+                std::string path = GLSLANG_TEST_DIRECTORY;
+                path += '/';
+                path += headerName;
+                std::replace(path.begin(), path.end(), '\\', '/');
+
+                auto [success, fileContent] = ReadFile(path);
+                if (success) {
+                    auto buffer = new char[fileContent.size() + 1];
+                    std::copy(fileContent.begin(), fileContent.end(), buffer);
+                    buffer[fileContent.size()] = '\0';
+
+                    return new IncludeResult(headerName, buffer, fileContent.size(), buffer);
+                }
+
+                return nullptr;
+            }
+
+            virtual void releaseInclude(IncludeResult* result) override
+            {
+                if (result != nullptr) {
+                    delete[] static_cast<char*>(result->userData);
+                    delete result;
+                }
+            }
+        };
+
+        GlslangTestIncluder includer;
+        return shader->parse((resources ? resources : GetDefaultResources()), defaultVersion, isForwardCompatible,
+                             controls, includer);
     }
 
     // Compiles and links the given source |code| of the given shader
@@ -227,6 +262,14 @@ public:
             shader.setAutoMapLocations(true);
             shader.setAutoMapBindings(true);
         }
+
+        if (enableDebug) {
+            shader.setDebugInfo(true);
+        }
+        if (enableNonSemanticShaderDebugInfo) {
+            assert(enableDebug && "Debug must be on for non-semantic debug info");
+        }
+
         shader.setTextureSamplerTransformMode(texSampTransMode);
 #ifdef ENABLE_HLSL
         shader.setFlattenUniformArrays(flattenUniformArrays);
@@ -289,7 +332,6 @@ public:
         }
 
         std::ostringstream disassembly_stream;
-        spv::Parameterize();
         spv::Disassemble(disassembly_stream, spirv_binary);
         bool validation_result = !options().validate || logger.getAllMessages().empty();
         return {{
@@ -349,7 +391,6 @@ public:
                                   spirv_binary, &logger, &options());
 
             std::ostringstream disassembly_stream;
-            spv::Parameterize();
             spv::Disassemble(disassembly_stream, spirv_binary);
             bool validation_result = !options().validate || logger.getAllMessages().empty();
             return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
@@ -394,7 +435,6 @@ public:
             spv::spirvbin_t(0 /*verbosity*/).remap(spirv_binary, whiteListStrings, remapOptions);
 
             std::ostringstream disassembly_stream;
-            spv::Parameterize();
             spv::Disassemble(disassembly_stream, spirv_binary);
             bool validation_result = !options().validate || logger.getAllMessages().empty();
             return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
@@ -418,7 +458,6 @@ public:
             spv::spirvbin_t(0 /*verbosity*/).remap(spirv_binary, whiteListStrings, remapOptions);
 
             std::ostringstream disassembly_stream;
-            spv::Parameterize();
             spv::Disassemble(disassembly_stream, spirv_binary);
 
             return {{{shaderName, "", ""},},
@@ -656,8 +695,8 @@ public:
         std::string ppShader;
         glslang::TShader::ForbidIncluder includer;
         const bool success = shader.preprocess(
-            GetDefaultResources(), defaultVersion, defaultProfile,
-            forceVersionProfile, isForwardCompatible, (EShMessages)(EShMsgOnlyPreprocessor | EShMsgCascadingErrors),
+            GetDefaultResources(), defaultVersion, defaultProfile, forceVersionProfile, isForwardCompatible,
+            (EShMessages)(EShMsgOnlyPreprocessor | EShMsgCascadingErrors),
             &ppShader, includer);
 
         std::string log = shader.getInfoLog();
