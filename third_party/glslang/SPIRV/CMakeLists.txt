@@ -31,46 +31,58 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-set(SOURCES
-    GlslangToSpv.cpp
-    InReadableOrder.cpp
-    Logger.cpp
-    SpvBuilder.cpp
-    SpvPostProcess.cpp
-    doc.cpp
-    SpvTools.cpp
-    disassemble.cpp
-    CInterface/spirv_c_interface.cpp)
+set(SPIRV_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/GlslangToSpv.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/InReadableOrder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SpvBuilder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SpvPostProcess.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/doc.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SpvTools.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/disassemble.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CInterface/spirv_c_interface.cpp
+    PARENT_SCOPE)
 
 set(SPVREMAP_SOURCES
     SPVRemapper.cpp
     doc.cpp)
 
-set(HEADERS
-    bitutils.h
-    spirv.hpp
-    GLSL.std.450.h
-    GLSL.ext.EXT.h
-    GLSL.ext.KHR.h
-    GlslangToSpv.h
-    hex_float.h
-    Logger.h
-    SpvBuilder.h
-    spvIR.h
-    doc.h
-    SpvTools.h
-    disassemble.h
-    GLSL.ext.AMD.h
-    GLSL.ext.NV.h
-    GLSL.ext.ARM.h
-    NonSemanticDebugPrintf.h
-    NonSemanticShaderDebugInfo100.h)
+set(SPIRV_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/bitutils.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/spirv.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.std.450.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.ext.EXT.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.ext.KHR.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GlslangToSpv.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/hex_float.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Logger.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/SpvBuilder.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/spvIR.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/doc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/SpvTools.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/disassemble.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.ext.AMD.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.ext.NV.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.ext.ARM.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GLSL.ext.QCOM.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/NonSemanticDebugPrintf.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/NonSemanticShaderDebugInfo100.h
+    PARENT_SCOPE)
 
 set(SPVREMAP_HEADERS
     SPVRemapper.h
     doc.h)
 
-add_library(SPIRV ${LIB_TYPE} ${SOURCES} ${HEADERS})
+set(PUBLIC_HEADERS
+    GlslangToSpv.h
+    disassemble.h
+    Logger.h
+    spirv.hpp
+    SPVRemapper.h
+    SpvTools.h)
+
+add_library(SPIRV ${LIB_TYPE} ${CMAKE_CURRENT_SOURCE_DIR}/../glslang/stub.cpp)
+add_library(glslang::SPIRV ALIAS SPIRV)
 set_target_properties(SPIRV PROPERTIES
     FOLDER glslang
     POSITION_INDEPENDENT_CODE ON
@@ -80,15 +92,15 @@ target_include_directories(SPIRV PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-glslang_add_build_info_dependency(SPIRV)
-
 if (ENABLE_SPVREMAPPER)
     add_library(SPVRemapper ${LIB_TYPE} ${SPVREMAP_SOURCES} ${SPVREMAP_HEADERS})
+    add_library(glslang::SPVRemapper ALIAS SPVRemapper)
     set_target_properties(SPVRemapper PROPERTIES
         FOLDER glslang
         POSITION_INDEPENDENT_CODE ON
         VERSION   "${GLSLANG_VERSION}"
         SOVERSION "${GLSLANG_VERSION_MAJOR}")
+    glslang_only_export_explicit_symbols(SPVRemapper)
 endif()
 
 if(WIN32 AND BUILD_SHARED_LIBS)
@@ -99,16 +111,11 @@ if(WIN32 AND BUILD_SHARED_LIBS)
 endif()
 
 if(ENABLE_OPT)
-    target_include_directories(SPIRV
-        PRIVATE ${spirv-tools_SOURCE_DIR}/include
-        PRIVATE ${spirv-tools_SOURCE_DIR}/source
-    )
-    target_link_libraries(SPIRV PRIVATE MachineIndependent SPIRV-Tools-opt)
+    target_link_libraries(SPIRV INTERFACE glslang PUBLIC SPIRV-Tools-opt)
     target_include_directories(SPIRV PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/External>)
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>)
 else()
-    target_link_libraries(SPIRV PRIVATE MachineIndependent)
+    target_link_libraries(SPIRV INTERFACE glslang)
 endif()
 
 if(WIN32)
@@ -116,37 +123,12 @@ if(WIN32)
     source_group("Source" FILES ${SPVREMAP_SOURCES} ${SPVREMAP_HEADERS})
 endif()
 
-if(ENABLE_GLSLANG_INSTALL)
+if(GLSLANG_ENABLE_INSTALL)
     if (ENABLE_SPVREMAPPER)
         install(TARGETS SPVRemapper EXPORT glslang-targets)
     endif()
 
     install(TARGETS SPIRV EXPORT glslang-targets)
 
-    # Backward compatibility
-    if (ENABLE_SPVREMAPPER)
-        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/SPVRemapperTargets.cmake" "
-            message(WARNING \"Using `SPVRemapperTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
-
-            if (NOT TARGET glslang::SPVRemapper)
-                include(\"${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}/glslang-targets.cmake\")
-            endif()
-
-            add_library(SPVRemapper ALIAS glslang::SPVRemapper)
-        ")
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/SPVRemapperTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-    endif()
-
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/SPIRVTargets.cmake" "
-        message(WARNING \"Using `SPIRVTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
-
-        if (NOT TARGET glslang::SPIRV)
-            include(\"${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}/glslang-targets.cmake\")
-        endif()
-
-        add_library(SPIRV ALIAS glslang::SPIRV)
-    ")
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/SPIRVTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-
-    install(FILES ${HEADERS} ${SPVREMAP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/glslang/SPIRV/)
+    install(FILES ${PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/glslang/SPIRV/)
 endif()
