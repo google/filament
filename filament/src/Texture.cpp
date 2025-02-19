@@ -104,4 +104,8 @@ void Texture::generatePrefilterMipmap(Engine& engine, PixelBufferDescriptor&& bu
     downcast(this)->generatePrefilterMipmap(downcast(engine), std::move(buffer), faceOffsets, options);
 }
 
+bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept {
+    return FTexture::validatePixelFormatAndType(internalFormat, format, type);
+}
+
 } // namespace filament
