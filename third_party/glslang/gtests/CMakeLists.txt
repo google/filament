@@ -1,4 +1,4 @@
-# Copyright (C) 2020 The Khronos Group Inc.
+# Copyright (C) 2020-2023 The Khronos Group Inc.
 #
 # All rights reserved.
 #
@@ -31,7 +31,7 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-if(BUILD_TESTING)
+if(GLSLANG_TESTS)
     if(TARGET gmock)
         message(STATUS "Google Mock found - building tests")
 
@@ -68,21 +68,6 @@ if(BUILD_TESTING)
         glslang_pch(glslangtests ${CMAKE_CURRENT_SOURCE_DIR}/pch.h)
         set_property(TARGET glslangtests PROPERTY FOLDER tests)
         glslang_set_link_args(glslangtests)
-        if(ENABLE_GLSLANG_INSTALL)
-            install(TARGETS glslangtests EXPORT glslang-targets)
-
-            # Backward compatibility
-            file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/glslangtestsTargets.cmake" "
-                message(WARNING \"Using `glslangtestsTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
-
-                if (NOT TARGET glslang::glslangtests)
-                    include(\"${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}/glslang-targets.cmake\")
-                endif()
-
-                add_library(glslangtests ALIAS glslang::glslangtests)
-            ")
-            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/glslangtestsTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-        endif()
 
         set(GLSLANG_TEST_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../Test")
         # Supply a default test root directory, so that manual testing
@@ -97,25 +82,31 @@ if(BUILD_TESTING)
                                    ${gtest_SOURCE_DIR}/include)
 
         if(ENABLE_OPT)
-            target_include_directories(glslangtests
-                PRIVATE ${spirv-tools_SOURCE_DIR}/include
+            target_link_libraries(glslangtests
+                PRIVATE SPIRV-Tools-opt
             )
         endif()
 
         set(LIBRARIES
-            glslang OSDependent OGLCompiler glslang
-            SPIRV glslang-default-resource-limits)
+            glslang glslang-default-resource-limits)
 
         if(ENABLE_SPVREMAPPER)
             set(LIBRARIES ${LIBRARIES} SPVRemapper)
         endif()
 
-        if(ENABLE_HLSL)
-            set(LIBRARIES ${LIBRARIES} HLSL)
-        endif()
         target_link_libraries(glslangtests PRIVATE ${LIBRARIES} gmock)
 
-        add_test(NAME glslang-gtests
-                 COMMAND glslangtests --test-root "${GLSLANG_TEST_DIRECTORY}")
+        # The TARGET_RUNTIME_DLL_DIRS feature requires CMake 3.27 or greater.
+        if(WIN32 AND BUILD_SHARED_LIBS AND CMAKE_VERSION VERSION_LESS "3.27")
+            message(WARNING "The Windows shared library test configuration requires CMake 3.27 or greater")
+        else()
+            add_test(NAME glslang-gtests
+                     COMMAND glslangtests --test-root "${GLSLANG_TEST_DIRECTORY}")
+
+            # Prepend paths to shared libraries.
+            if (BUILD_SHARED_LIBS)
+                set_tests_properties(glslang-gtests PROPERTIES ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<JOIN:$<TARGET_RUNTIME_DLL_DIRS:glslangtests>,\;>")
+            endif()
+        endif()
     endif()
 endif()

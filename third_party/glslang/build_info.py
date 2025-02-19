@@ -49,6 +49,24 @@ tokens substituted:
    ommitted then the string is printed to stdout.
 """
 
+try:
+    utc = datetime.timezone.utc
+except AttributeError:
+    # Python 2? In datetime.date.today().year? Yes.
+    class UTC(datetime.tzinfo):
+        ZERO = datetime.timedelta(0)
+
+        def utcoffset(self, dt):
+            return self.ZERO
+
+        def tzname(self, dt):
+            return "UTC"
+
+        def dst(self, dt):
+            return self.ZERO
+    utc = UTC()
+
+
 def mkdir_p(directory):
     """Make the directory, and all its ancestors as required.  Any of the
     directories are allowed to already exist."""
@@ -139,7 +157,7 @@ def describe(directory):
             # clock time with environment variable SOURCE_DATE_EPOCH
             # containing a (presumably) fixed timestamp.
             timestamp = int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))
-            formatted = datetime.datetime.utcfromtimestamp(timestamp).isoformat()
+            formatted = datetime.datetime.fromtimestamp(timestamp, utc).isoformat()
             return 'unknown hash, {}'.format(formatted)
 
 def parse_args():
