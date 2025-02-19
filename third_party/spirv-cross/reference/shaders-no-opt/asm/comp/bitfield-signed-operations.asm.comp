@@ -5,23 +5,23 @@ layout(binding = 0, std430) buffer SSBO
 {
     ivec4 ints;
     uvec4 uints;
-} _3;
+} _4;
 
 void main()
 {
-    ivec4 _19 = _3.ints;
-    uvec4 _20 = _3.uints;
-    _3.ints = bitCount(_19);
-    _3.uints = uvec4(bitCount(_19));
-    _3.ints = bitCount(_20);
-    _3.uints = uvec4(bitCount(_20));
-    _3.ints = bitfieldReverse(_19);
-    _3.uints = bitfieldReverse(_20);
-    _3.ints = bitfieldExtract(_19, 1, int(11u));
-    _3.uints = uvec4(bitfieldExtract(ivec4(_20), int(11u), 1));
-    _3.ints = ivec4(bitfieldExtract(uvec4(_19), 1, int(11u)));
-    _3.uints = bitfieldExtract(_20, int(11u), 1);
-    _3.ints = bitfieldInsert(_19, _19.wzyx, 1, int(11u));
-    _3.uints = bitfieldInsert(_20, _20.wzyx, int(11u), 1);
+    ivec4 _19 = _4.ints;
+    uvec4 _20 = _4.uints;
+    _4.ints = bitCount(_19);
+    _4.uints = uvec4(bitCount(_19));
+    _4.ints = bitCount(_20);
+    _4.uints = uvec4(bitCount(_20));
+    _4.ints = bitfieldReverse(_19);
+    _4.uints = bitfieldReverse(_20);
+    _4.ints = bitfieldExtract(_19, 1, int(11u));
+    _4.uints = uvec4(bitfieldExtract(ivec4(_20), int(11u), 1));
+    _4.ints = ivec4(bitfieldExtract(uvec4(_19), 1, int(11u)));
+    _4.uints = bitfieldExtract(_20, int(11u), 1);
+    _4.ints = bitfieldInsert(_19, _19.wzyx, 1, int(11u));
+    _4.uints = bitfieldInsert(_20, _20.wzyx, int(11u), 1);
 }
 

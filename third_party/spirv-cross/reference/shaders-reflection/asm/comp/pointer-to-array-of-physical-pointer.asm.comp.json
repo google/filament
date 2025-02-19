@@ -16,7 +16,7 @@
         }
     ],
     "types" : {
-        "_3" : {
+        "_4" : {
             "name" : "Params",
             "members" : [
                 {
@@ -26,13 +26,13 @@
                 },
                 {
                     "name" : "y",
-                    "type" : "_6",
+                    "type" : "_8",
                     "offset" : 16,
                     "physical_pointer" : true
                 }
             ]
         },
-        "_4" : {
+        "_6" : {
             "name" : "IntBuf",
             "members" : [
                 {
@@ -42,12 +42,12 @@
                 }
             ]
         },
-        "_11" : {
+        "_12" : {
             "name" : "IntBuf",
-            "type" : "_4",
+            "type" : "_6",
             "physical_pointer" : true
         },
-        "_6" : {
+        "_8" : {
             "name" : "IntBuf",
             "array" : [
                 3
@@ -55,13 +55,13 @@
             "array_size_is_literal" : [
                 true
             ],
-            "type" : "_11",
+            "type" : "_12",
             "array_stride" : 16
         }
     },
     "ubos" : [
         {
-            "type" : "_3",
+            "type" : "_4",
             "name" : "Params",
             "block_size" : 24,
             "set" : 0,

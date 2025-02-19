@@ -41,7 +41,7 @@ TEST_F(OpTypePipeStorageTest, ArgumentCount) {
       Eq(MakeInstruction(spv::Op::OpTypePipeStorage, {1})));
   EXPECT_THAT(CompileFailure("%res = OpTypePipeStorage %1 %2 %3 %4 %5",
                              SPV_ENV_UNIVERSAL_1_1),
-              Eq("'=' expected after result id."));
+              Eq("'=' expected after result id but found '%2'."));
 }
 
 using OpConstantPipeStorageTest = spvtest::TextToBinaryTest;
@@ -72,7 +72,7 @@ TEST_F(OpConstantPipeStorageTest, ArgumentCount) {
       Eq(MakeInstruction(spv::Op::OpConstantPipeStorage, {1, 2, 3, 4, 5})));
   EXPECT_THAT(CompileFailure("%1 = OpConstantPipeStorage %2 3 4 5 %6 %7",
                              SPV_ENV_UNIVERSAL_1_1),
-              Eq("'=' expected after result id."));
+              Eq("'=' expected after result id but found '%7'."));
 }
 
 TEST_F(OpConstantPipeStorageTest, ArgumentTypes) {
@@ -118,7 +118,7 @@ TEST_F(OpCreatePipeFromPipeStorageTest, ArgumentCount) {
       Eq(MakeInstruction(spv::Op::OpCreatePipeFromPipeStorage, {1, 2, 3})));
   EXPECT_THAT(CompileFailure("%1 = OpCreatePipeFromPipeStorage %2 %3 %4 %5",
                              SPV_ENV_UNIVERSAL_1_1),
-              Eq("'=' expected after result id."));
+              Eq("'=' expected after result id but found '%5'."));
 }
 
 TEST_F(OpCreatePipeFromPipeStorageTest, ArgumentTypes) {

@@ -213,6 +213,19 @@ uint32_t InlinePass::CreateReturnVar(
         {(uint32_t)spv::StorageClass::Function}}}));
   new_vars->push_back(std::move(var_inst));
   get_decoration_mgr()->CloneDecorations(calleeFn->result_id(), returnVarId);
+
+  // Decorate the return var with AliasedPointer if the storage class of the
+  // pointee type is PhysicalStorageBuffer.
+  auto const pointee_type =
+      type_mgr->GetType(returnVarTypeId)->AsPointer()->pointee_type();
+  if (pointee_type->AsPointer() != nullptr) {
+    if (pointee_type->AsPointer()->storage_class() ==
+        spv::StorageClass::PhysicalStorageBuffer) {
+      get_decoration_mgr()->AddDecoration(
+          returnVarId, uint32_t(spv::Decoration::AliasedPointer));
+    }
+  }
+
   return returnVarId;
 }
 

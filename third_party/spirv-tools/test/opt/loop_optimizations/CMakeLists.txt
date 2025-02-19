@@ -21,6 +21,7 @@ add_spvtools_unittest(TARGET opt_loops
        fusion_illegal.cpp
        fusion_legal.cpp
        fusion_pass.cpp
+       hoist_access_chains.cpp
        hoist_all_loop_types.cpp
        hoist_double_nested_loops.cpp
        hoist_from_independent_loops.cpp

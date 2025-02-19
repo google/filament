@@ -10,11 +10,11 @@ struct Foo
     float d;
 };
 
-static const Vert _11 = { 0.0f, 0.0f };
-static const Foo _13 = { 0.0f, 0.0f };
+static const Vert _12 = { 0.0f, 0.0f };
+static const Foo _14 = { 0.0f, 0.0f };
 
-static Vert _3 = { 0.0f, 0.0f };
-static Foo foo = _13;
+static Vert _4 = { 0.0f, 0.0f };
+static Foo foo = _14;
 
 struct SPIRV_Cross_Output
 {
@@ -31,8 +31,8 @@ SPIRV_Cross_Output main()
 {
     vert_main();
     SPIRV_Cross_Output stage_output;
-    stage_output.Vert_a = _3.a;
-    stage_output.Vert_b = _3.b;
+    stage_output.Vert_a = _4.a;
+    stage_output.Vert_b = _4.b;
     stage_output.foo = foo;
     return stage_output;
 }

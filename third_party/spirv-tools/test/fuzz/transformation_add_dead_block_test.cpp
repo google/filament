@@ -295,11 +295,16 @@ TEST(TransformationAddDeadBlockTest, TargetBlockMustNotBeLoopMergeOrContinue) {
                OpBranch %8
           %8 = OpLabel
                OpLoopMerge %12 %11 None
+               OpBranch %13
+         %13 = OpLabel
+               OpSelectionMerge %14 None
                OpBranchConditional %5 %9 %10
           %9 = OpLabel
                OpBranch %11
          %10 = OpLabel
                OpBranch %12
+         %14 = OpLabel
+               OpUnreachable
          %11 = OpLabel
                OpBranch %8
          %12 = OpLabel

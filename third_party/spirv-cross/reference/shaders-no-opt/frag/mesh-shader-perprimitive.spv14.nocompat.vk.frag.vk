@@ -1,0 +1,11 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+
+layout(location = 0) out vec4 FragColor;
+layout(location = 0) flat perprimitiveEXT in uvec4 v;
+
+void main()
+{
+    FragColor = vec4(v);
+}
+

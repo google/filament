@@ -14,13 +14,10 @@
 
 // Validates literal numbers.
 
-#include "source/val/validate.h"
-
 #include <cassert>
 
-#include "source/diagnostic.h"
-#include "source/opcode.h"
 #include "source/val/instruction.h"
+#include "source/val/validate.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {

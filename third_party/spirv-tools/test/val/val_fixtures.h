@@ -76,6 +76,8 @@ class ValidateBase : public ::testing::Test,
     diagnostic_ = nullptr;
   }
 
+  void SetAssembleOptions(uint32_t options) { assemble_options_ = options; }
+
   std::string getDiagnosticString();
   spv_position_t getErrorPosition();
   spv_validator_options getValidatorOptions();
@@ -84,6 +86,7 @@ class ValidateBase : public ::testing::Test,
   spv_diagnostic diagnostic_;
   spv_validator_options options_;
   std::unique_ptr<spvtools::val::ValidationState_t> vstate_;
+  uint32_t assemble_options_ = SPV_TEXT_TO_BINARY_OPTION_NONE;
 };
 
 template <typename T>
@@ -132,8 +135,9 @@ void ValidateBase<T>::CompileSuccessfully(std::string code,
   DestroyBinary();
   spv_diagnostic diagnostic = nullptr;
   ScopedContext context(env);
-  auto status = spvTextToBinary(context.context, code.c_str(), code.size(),
-                                &binary_, &diagnostic);
+  auto status =
+      spvTextToBinaryWithOptions(context.context, code.c_str(), code.size(),
+                                 assemble_options_, &binary_, &diagnostic);
   EXPECT_EQ(SPV_SUCCESS, status)
       << "ERROR: " << diagnostic->error
       << "\nSPIR-V could not be compiled into binary:\n"

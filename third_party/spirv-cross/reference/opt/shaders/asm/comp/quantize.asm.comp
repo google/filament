@@ -7,13 +7,13 @@ layout(binding = 0, std430) buffer SSBO0
     vec2 vec2_val;
     vec3 vec3_val;
     vec4 vec4_val;
-} _4;
+} _12;
 
 void main()
 {
-    _4.scalar = unpackHalf2x16(packHalf2x16(vec2(_4.scalar))).x;
-    _4.vec2_val = unpackHalf2x16(packHalf2x16(_4.vec2_val));
-    _4.vec3_val = vec3(unpackHalf2x16(packHalf2x16(_4.vec3_val.xy)), unpackHalf2x16(packHalf2x16(_4.vec3_val.zz)).x);
-    _4.vec4_val = vec4(unpackHalf2x16(packHalf2x16(_4.vec4_val.xy)), unpackHalf2x16(packHalf2x16(_4.vec4_val.zw)));
+    _12.scalar = unpackHalf2x16(packHalf2x16(vec2(_12.scalar))).x;
+    _12.vec2_val = unpackHalf2x16(packHalf2x16(_12.vec2_val));
+    _12.vec3_val = vec3(unpackHalf2x16(packHalf2x16(_12.vec3_val.xy)), unpackHalf2x16(packHalf2x16(_12.vec3_val.zz)).x);
+    _12.vec4_val = vec4(unpackHalf2x16(packHalf2x16(_12.vec4_val.xy)), unpackHalf2x16(packHalf2x16(_12.vec4_val.zw)));
 }
 

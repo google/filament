@@ -16,14 +16,14 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    int _39 = 0;
+    int _27 = 0;
     if (vColor.x > 10.0)
     {
-        _39 = 10;
+        _27 = 10;
     }
     else
     {
-        _39 = 20;
+        _27 = 20;
     }
     FragColor = vColor;
 }

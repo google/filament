@@ -111,13 +111,15 @@ class TextToBinaryTestBase : public T {
   std::string EncodeAndDecodeSuccessfully(
       const std::string& txt,
       uint32_t disassemble_options = SPV_BINARY_TO_TEXT_OPTION_NONE,
+      uint32_t assemble_options = SPV_TEXT_TO_BINARY_OPTION_NONE,
       spv_target_env env = SPV_ENV_UNIVERSAL_1_0, bool flip_words = false) {
     DestroyBinary();
     DestroyDiagnostic();
     ScopedContext context(env);
     disassemble_options |= SPV_BINARY_TO_TEXT_OPTION_NO_HEADER;
-    spv_result_t error = spvTextToBinary(context.context, txt.c_str(),
-                                         txt.size(), &binary, &diagnostic);
+    spv_result_t error =
+        spvTextToBinaryWithOptions(context.context, txt.c_str(), txt.size(),
+                                   assemble_options, &binary, &diagnostic);
     if (error) {
       spvDiagnosticPrint(diagnostic);
       spvDiagnosticDestroy(diagnostic);

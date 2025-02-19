@@ -92,16 +92,19 @@ void EliminateDeadOutputStoresPass::KillAllDeadStoresOfLocRef(
       });
   // Compute offset and final type of reference. If no location found
   // or any stored locations are live, return without removing stores.
-  auto ptr_type = type_mgr->GetType(var->type_id())->AsPointer();
+
+  Instruction* ptr_type = get_def_use_mgr()->GetDef(var->type_id());
   assert(ptr_type && "unexpected var type");
-  auto var_type = ptr_type->pointee_type();
+  const uint32_t kPointerTypePointeeIdx = 1;
+  uint32_t var_type_id =
+      ptr_type->GetSingleWordInOperand(kPointerTypePointeeIdx);
   uint32_t ref_loc = start_loc;
-  auto curr_type = var_type;
   if (ref->opcode() == spv::Op::OpAccessChain ||
       ref->opcode() == spv::Op::OpInBoundsAccessChain) {
-    live_mgr->AnalyzeAccessChainLoc(ref, &curr_type, &ref_loc, &no_loc,
-                                    is_patch, /* input */ false);
+    var_type_id = live_mgr->AnalyzeAccessChainLoc(
+        ref, var_type_id, &ref_loc, &no_loc, is_patch, /* input */ false);
   }
+  const analysis::Type* curr_type = type_mgr->GetType(var_type_id);
   if (no_loc || AnyLocsAreLive(ref_loc, live_mgr->GetLocSize(curr_type)))
     return;
   // Kill all stores based on this reference
@@ -219,7 +222,7 @@ Pass::Status EliminateDeadOutputStoresPass::DoDeadOutputStoreElimination() {
         var_id, [this, &var, is_builtin](Instruction* user) {
           auto op = user->opcode();
           if (op == spv::Op::OpEntryPoint || op == spv::Op::OpName ||
-              op == spv::Op::OpDecorate)
+              op == spv::Op::OpDecorate || user->IsNonSemanticInstruction())
             return;
           if (is_builtin)
             KillAllDeadStoresOfBuiltinRef(user, &var);

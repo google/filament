@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/propagator.h"
+
 #include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -22,8 +23,6 @@
 #include "source/opt/build_module.h"
 #include "source/opt/cfg.h"
 #include "source/opt/ir_context.h"
-#include "source/opt/pass.h"
-#include "source/opt/propagator.h"
 
 namespace spvtools {
 namespace opt {
@@ -185,7 +184,7 @@ TEST_F(PropagatorTest, PropagateThroughPhis) {
       }
     } else if (instr->opcode() == spv::Op::OpPhi) {
       phi_instr = instr;
-      SSAPropagator::PropStatus retval;
+      SSAPropagator::PropStatus retval = SSAPropagator::kNotInteresting;
       for (uint32_t i = 2; i < instr->NumOperands(); i += 2) {
         uint32_t phi_arg_id = instr->GetSingleWordOperand(i);
         auto it = values_.find(phi_arg_id);

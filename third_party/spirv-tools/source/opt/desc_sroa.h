@@ -32,9 +32,16 @@ namespace opt {
 // Documented in optimizer.hpp
 class DescriptorScalarReplacement : public Pass {
  public:
-  DescriptorScalarReplacement() {}
+  DescriptorScalarReplacement(bool flatten_composites, bool flatten_arrays)
+      : flatten_composites_(flatten_composites),
+        flatten_arrays_(flatten_arrays) {}
 
-  const char* name() const override { return "descriptor-scalar-replacement"; }
+  const char* name() const override {
+    if (flatten_composites_ && flatten_arrays_)
+      return "descriptor-scalar-replacement";
+    if (flatten_composites_) return "descriptor-compososite-scalar-replacement";
+    return "descriptor-array-scalar-replacement";
+  }
 
   Status Process() override;
 
@@ -63,6 +70,11 @@ class DescriptorScalarReplacement : public Pass {
   // instructions, one index at a time. Returns true on success, and false
   // otherwise.
   bool ReplaceLoadedValue(Instruction* var, Instruction* value);
+
+  // Replaces the given composite variable |var| in the OpEntryPoint with the
+  // new replacement variables, one for each element of the array |var|. Returns
+  // |true| if successful, and |false| otherwise.
+  bool ReplaceEntryPoint(Instruction* var, Instruction* use);
 
   // Replaces the given OpCompositeExtract |extract| and all of its references
   // with an OpLoad of a replacement variable. |var| is the variable with
@@ -136,6 +148,9 @@ class DescriptorScalarReplacement : public Pass {
   // array |var|. If the entry is |0|, then the variable has not been
   // created yet.
   std::map<Instruction*, std::vector<uint32_t>> replacement_variables_;
+
+  bool flatten_composites_;
+  bool flatten_arrays_;
 };
 
 }  // namespace opt

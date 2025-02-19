@@ -5,8 +5,8 @@ struct Test
 
 void vert_main()
 {
-    Test _14 = { 0 };
-    Test t = _14;
+    Test _13 = { 0 };
+    Test t = _13;
 }
 
 void main()

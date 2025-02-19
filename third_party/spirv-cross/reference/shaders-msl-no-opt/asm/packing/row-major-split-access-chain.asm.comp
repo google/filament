@@ -9,8 +9,8 @@ struct SSBORow
     float4x4 row_major0;
 };
 
-kernel void main0(device SSBORow& _4 [[buffer(0)]])
+kernel void main0(device SSBORow& _6 [[buffer(0)]])
 {
-    _4.v = ((device float*)&_4.row_major0[2u])[1];
+    _6.v = ((device float*)&_6.row_major0[2u])[1];
 }
 

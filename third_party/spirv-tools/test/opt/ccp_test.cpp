@@ -14,7 +14,6 @@
 
 #include <string>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/ccp_pass.h"
 #include "test/opt/pass_fixture.h"

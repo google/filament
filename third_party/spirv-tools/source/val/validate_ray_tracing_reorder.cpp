@@ -26,6 +26,17 @@ namespace val {
 
 static const uint32_t KRayParamInvalidId = std::numeric_limits<uint32_t>::max();
 
+uint32_t GetArrayLength(ValidationState_t& _, const Instruction* array_type) {
+  assert(array_type->opcode() == spv::Op::OpTypeArray);
+  uint32_t const_int_id = array_type->GetOperandAs<uint32_t>(2U);
+  Instruction* array_length_inst = _.FindDef(const_int_id);
+  uint32_t array_length = 0;
+  if (array_length_inst->opcode() == spv::Op::OpConstant) {
+    array_length = array_length_inst->GetOperandAs<uint32_t>(2);
+  }
+  return array_length;
+}
+
 spv_result_t ValidateHitObjectPointer(ValidationState_t& _,
                                       const Instruction* inst,
                                       uint32_t hit_object_index) {
@@ -614,6 +625,102 @@ spv_result_t RayReorderNVPass(ValidationState_t& _, const Instruction* inst) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "bits must be a 32-bit int scalar";
       }
+      break;
+    }
+
+    case spv::Op::OpHitObjectGetClusterIdNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      if (!_.IsIntScalarType(result_type) || _.GetBitWidth(result_type) != 32)
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 32-bit integer type scalar as Result Type: "
+               << spvOpcodeString(opcode);
+      break;
+    }
+
+    case spv::Op::OpHitObjectGetSpherePositionNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      if (!_.IsFloatVectorType(result_type) ||
+          _.GetDimension(result_type) != 3 ||
+          _.GetBitWidth(result_type) != 32) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 32-bit floating point 2 component vector type as "
+                  "Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpHitObjectGetSphereRadiusNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      if (!_.IsFloatScalarType(result_type) ||
+          _.GetBitWidth(result_type) != 32) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 32-bit floating point scalar as Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpHitObjectGetLSSPositionsNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      auto result_id = _.FindDef(result_type);
+      if ((result_id->opcode() != spv::Op::OpTypeArray) ||
+          (GetArrayLength(_, result_id) != 2) ||
+          !_.IsFloatVectorType(_.GetComponentType(result_type)) ||
+          _.GetDimension(_.GetComponentType(result_type)) != 3) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 2 element array of 32-bit 3 component float point "
+                  "vector as Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpHitObjectGetLSSRadiiNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      if (!_.IsFloatArrayType(result_type) ||
+          (GetArrayLength(_, _.FindDef(result_type)) != 2) ||
+          !_.IsFloatScalarType(_.GetComponentType(result_type))) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected 2 element array of 32-bit floating point scalar as "
+                  "Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpHitObjectIsSphereHitNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      if (!_.IsBoolScalarType(result_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected Boolean scalar as Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
+    }
+
+    case spv::Op::OpHitObjectIsLSSHitNV: {
+      RegisterOpcodeForValidModel(_, inst);
+      if (auto error = ValidateHitObjectPointer(_, inst, 2)) return error;
+
+      if (!_.IsBoolScalarType(result_type)) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Expected Boolean scalar as Result Type: "
+               << spvOpcodeString(opcode);
+      }
+      break;
     }
 
     default:

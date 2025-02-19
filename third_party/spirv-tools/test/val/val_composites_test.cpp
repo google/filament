@@ -1486,8 +1486,7 @@ OpFunctionEnd
 }
 
 TEST_F(ValidateComposites, CoopMatConstantCompositeMismatchFail) {
-  const std::string body =
-      R"(
+  const std::string body = R"(
 OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeMatrixNV
@@ -1525,8 +1524,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateComposites, CoopMatCompositeConstructMismatchFail) {
-  const std::string body =
-      R"(
+  const std::string body = R"(
 OpCapability Shader
 OpCapability Float16
 OpCapability CooperativeMatrixNV
@@ -1544,6 +1542,86 @@ OpEntryPoint GLCompute %main "main"
 %subgroup = OpConstant %u32 3
 
 %f16mat = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %u32_8
+
+%f32_1 = OpConstant %f32 1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%f16mat_1 = OpCompositeConstruct %f16mat %f32_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Expected Constituent type to be equal to the component type"));
+}
+
+TEST_F(ValidateComposites, CoopMatKHRConstantCompositeMismatchFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useA
+
+%f32_1 = OpConstant %f32 1
+
+%f16mat_1 = OpConstantComposite %f16mat %f32_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "OpConstantComposite Constituent <id> '12[%float_1]' type "
+          "does not match the Result Type <id> '11[%11]'s component type."));
+}
+
+TEST_F(ValidateComposites, CoopMatKHRCompositeConstructMismatchFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16mat = OpTypeCooperativeMatrixKHR %f16 %subgroup %u32_16 %u32_16 %useA
 
 %f32_1 = OpConstant %f32 1
 
@@ -2022,6 +2100,196 @@ TEST_F(ValidateComposites, CopyObjectVoid) {
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("OpCopyObject cannot have void result type"));
+}
+
+TEST_F(ValidateComposites, CoopVecConstantCompositePass) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeVectorNV
+OpExtension "SPV_NV_cooperative_vector"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16vec = OpTypeCooperativeVectorNV %f16 %u32_16
+
+%f16_1 = OpConstant %f16 1
+
+%f16vec_1 = OpConstantComposite %f16vec %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CoopVecConstantCompositeMismatchFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeVectorNV
+OpExtension "SPV_NV_cooperative_vector"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16vec = OpTypeCooperativeVectorNV %f16 %u32_16
+
+%f32_1 = OpConstant %f32 1
+
+%f16vec_1 = OpConstantComposite %f16vec %f32_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("OpConstantComposite Constituent <id> count does not match "
+                "Result Type <id> '11[%11]'s vector component count"));
+}
+
+TEST_F(ValidateComposites, CoopVecCompositeConstructPass) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeVectorNV
+OpExtension "SPV_NV_cooperative_vector"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16vec = OpTypeCooperativeVectorNV %f16 %u32_16
+
+%f16_1 = OpConstant %f16 1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%f16vec_1 = OpCompositeConstruct %f16vec %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateComposites, CoopVecCompositeConstructMismatchFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeVectorNV
+OpExtension "SPV_NV_cooperative_vector"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16vec = OpTypeCooperativeVectorNV %f16 %u32_16
+
+%f32_1 = OpConstant %f32 1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%f16vec_1 = OpCompositeConstruct %f16vec %f32_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Constituents to be scalars or vectors of the "
+                        "same type as Result Type components"));
+}
+
+TEST_F(ValidateComposites, CoopVecInsertExtractDynamicPass) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability CooperativeVectorNV
+OpExtension "SPV_NV_cooperative_vector"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%f32 = OpTypeFloat 32
+%u32 = OpTypeInt 32 0
+
+%u32_1 = OpConstant %u32 1
+%u32_16 = OpConstant %u32 16
+%useA = OpConstant %u32 0
+%subgroup = OpConstant %u32 3
+
+%f16vec = OpTypeCooperativeVectorNV %f16 %u32_16
+
+%f16_1 = OpConstant %f16 1
+%f16vec_1 = OpConstantComposite %f16vec %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1 %f16_1
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+%insert = OpVectorInsertDynamic %f16vec %f16vec_1 %f16_1 %u32_1
+%extract = OpVectorExtractDynamic %f16 %insert %u32_1
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
 }  // namespace

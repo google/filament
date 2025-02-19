@@ -1348,6 +1348,56 @@ OpFunctionEnd
                                                      true);
 }
 
+TEST_F(LocalAccessChainConvertTest, VkMemoryModelTest) {
+  const std::string text =
+      R"(
+; CHECK: OpCapability Shader
+; CHECK: OpCapability VulkanMemoryModel
+; CHECK: OpExtension "SPV_KHR_vulkan_memory_model"
+               OpCapability Shader
+               OpCapability VulkanMemoryModel
+               OpExtension "SPV_KHR_vulkan_memory_model"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical Vulkan
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+               OpSourceExtension "GL_GOOGLE_include_directive"
+               OpName %main "main"
+               OpName %a "a"
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+%_ptr_Function_float = OpTypePointer Function %float
+    %float_1 = OpConstant %float 1
+; CHECK: OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[a:%\w+]] = OpVariable
+; Make sure the access chains were removed.
+; CHECK: [[ld:%\w+]] = OpLoad {{%\w+}} [[a]]
+; CHECK: [[ex:%\w+]] = OpCompositeExtract {{%\w+}} [[ld]] 0
+; CHECK: [[ld2:%\w+]] = OpLoad {{%\w+}} [[a]]
+; CHECK: [[v:%\w+]] = OpCompositeInsert {{%\w+}} [[ex]] [[ld2]] 0
+; CHECK: OpStore [[a]] [[v]]
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function_v4float Function
+         %13 = OpAccessChain %_ptr_Function_float %a %uint_0
+         %14 = OpLoad %float %13
+         %17 = OpAccessChain %_ptr_Function_float %a %uint_0
+               OpStore %17 %14
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<LocalAccessChainConvertPass>(text, false);
+}
+
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //
 //    Assorted vector and matrix types

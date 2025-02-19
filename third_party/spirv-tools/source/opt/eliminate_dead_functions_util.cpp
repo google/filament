@@ -37,7 +37,9 @@ Module::iterator EliminateFunction(IRContext* context,
               assert(inst->IsNonSemanticInstruction());
               if (to_kill.find(inst) != to_kill.end()) return;
               std::unique_ptr<Instruction> clone(inst->Clone(context));
-              context->ForgetUses(inst);
+              // Clear uses of "inst" to in case this moves a dependent chain of
+              // instructions.
+              context->get_def_use_mgr()->ClearInst(inst);
               context->AnalyzeDefUse(clone.get());
               if (first_func) {
                 context->AddGlobalValue(std::move(clone));

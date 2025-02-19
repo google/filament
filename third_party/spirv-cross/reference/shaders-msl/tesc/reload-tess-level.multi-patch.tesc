@@ -10,8 +10,8 @@ struct main0_out
 
 struct main0_in
 {
-    uint3 m_82;
-    ushort2 m_86;
+    uint3 m_83;
+    ushort2 m_88;
     float4 gl_Position;
 };
 

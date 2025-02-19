@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <algorithm>
-#include <cstdarg>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
 

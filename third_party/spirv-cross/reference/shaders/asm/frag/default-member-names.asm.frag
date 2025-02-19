@@ -1,11 +1,11 @@
 #version 450
 
-struct _9
+struct _10
 {
     float _m0;
 };
 
-struct _10
+struct _11
 {
     float _m0;
     float _m1;
@@ -19,14 +19,14 @@ struct _10
     float _m9;
     float _m10;
     float _m11;
-    _9 _m12;
+    _10 _m12;
 };
 
 layout(location = 0) out vec4 _3;
 
 void main()
 {
-    _10 _21;
-    _3 = vec4(_21._m0, _21._m1, _21._m2, _21._m3);
+    _11 _23;
+    _3 = vec4(_23._m0, _23._m1, _23._m2, _23._m3);
 }
 

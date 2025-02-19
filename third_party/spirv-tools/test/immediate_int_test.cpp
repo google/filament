@@ -136,19 +136,25 @@ TEST_F(ImmediateIntTest, IntegerFollowingImmediate) {
 }
 
 // Literal floats after !<integer> are handled correctly.
+// Insert OpNop to avoid reading the immediate value as the extra FP encoding
+// operand to OpTypeFloat.
 TEST_F(ImmediateIntTest, FloatFollowingImmediate) {
-  EXPECT_EQ(
-      CompiledInstructions("%1 = OpTypeFloat 32\n%2 = OpConstant %1 0.123"),
-      CompiledInstructions("%1 = OpTypeFloat 32\n!0x0004002b %1 !2 0.123"));
-  EXPECT_EQ(
-      CompiledInstructions("%1 = OpTypeFloat 32\n%2 = OpConstant %1 -0.5"),
-      CompiledInstructions("%1 = OpTypeFloat 32\n!0x0004002b %1 !2 -0.5"));
-  EXPECT_EQ(
-      CompiledInstructions("%1 = OpTypeFloat 32\n%2 = OpConstant %1 0.123"),
-      CompiledInstructions("%1 = OpTypeFloat 32\n!0x0004002b %1 %2 0.123"));
-  EXPECT_EQ(
-      CompiledInstructions("%1 = OpTypeFloat 32\n%2 = OpConstant  %1 -0.5"),
-      CompiledInstructions("%1 = OpTypeFloat 32\n!0x0004002b %1 %2 -0.5"));
+  EXPECT_EQ(CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop %2 = OpConstant %1 0.123"),
+            CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop !0x0004002b %1 !2 0.123"));
+  EXPECT_EQ(CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop %2 = OpConstant %1 -0.5"),
+            CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop !0x0004002b %1 !2 -0.5"));
+  EXPECT_EQ(CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop %2 = OpConstant %1 0.123"),
+            CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop !0x0004002b %1 %2 0.123"));
+  EXPECT_EQ(CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop %2 = OpConstant  %1 -0.5"),
+            CompiledInstructions(
+                "%1 = OpTypeFloat 32\nOpNop !0x0004002b %1 %2 -0.5"));
 
   EXPECT_EQ(Concatenate({
                 MakeInstruction(spv::Op::OpTypeInt, {1, 64, 0}),
@@ -203,9 +209,9 @@ TEST_F(ImmediateIntTest, InvalidStatement) {
 
 TEST_F(ImmediateIntTest, InvalidStatementBetweenValidOnes) {
   EXPECT_THAT(Subvector(CompileSuccessfully(
-                            "%10 = OpTypeFloat 32 !5 !6 !7 OpEmitVertex"),
+                            "%10 = OpTypeInt 32 0 !5 !6 !7 OpEmitVertex"),
                         kFirstInstruction),
-              ElementsAre(spvOpcodeMake(3, spv::Op::OpTypeFloat), 1, 32, 5, 6,
+              ElementsAre(spvOpcodeMake(4, spv::Op::OpTypeInt), 1, 32, 0, 5, 6,
                           7, spvOpcodeMake(1, spv::Op::OpEmitVertex)));
 }
 

@@ -14,9 +14,7 @@
 
 // Validation tests for Logical Layout
 
-#include <algorithm>
 #include <functional>
-#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -56,13 +54,6 @@ struct Range {
  private:
   bool inverse_;
 };
-
-template <typename... T>
-spv_result_t InvalidSet(int order) {
-  for (spv_result_t val : {T(true)(order)...})
-    if (val != SPV_SUCCESS) return val;
-  return SPV_SUCCESS;
-}
 
 // SPIRV source used to test the logical layout
 const std::vector<std::string>& getInstructions() {

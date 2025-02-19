@@ -21,8 +21,8 @@ void copy_out(device float& A, device const float& B)
     A = B;
 }
 
-kernel void main0(device SSBO& _7 [[buffer(0)]], const device SSBORead& _9 [[buffer(1)]])
+kernel void main0(device SSBO& _10 [[buffer(0)]], const device SSBORead& _14 [[buffer(1)]])
 {
-    copy_out(_7.a, _9.b);
+    copy_out(_10.a, _14.b);
 }
 

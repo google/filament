@@ -10,37 +10,37 @@ layout(set = 0, binding = 0, std430) buffer SSBO
     int16_t s16;
     uint16_t u16;
     float f32;
-} _4;
+} _6;
 
 void main()
 {
-    int _29 = _4.s32;
-    uint _30 = _4.u32;
-    int16_t _31 = _4.s16;
-    uint16_t _32 = _4.u16;
-    float _33 = _4.f32;
-    _4.s32 = int(_31);
-    _4.u32 = uint(_31);
-    _4.s32 = int(int16_t(_32));
-    _4.u32 = uint(int16_t(_32));
-    _4.u32 = uint(uint16_t(_31));
-    _4.u32 = uint(_32);
-    _4.s16 = int16_t(_29);
-    _4.u16 = uint16_t(_29);
-    _4.s16 = int16_t(_30);
-    _4.u16 = uint16_t(_30);
-    _4.u16 = uint16_t(_29);
-    _4.u16 = uint16_t(_30);
-    _4.f32 = float(_31);
-    _4.f32 = float(int16_t(_32));
-    _4.f32 = float(_29);
-    _4.f32 = float(int(_30));
-    _4.f32 = float(uint16_t(_31));
-    _4.f32 = float(_32);
-    _4.f32 = float(uint(_29));
-    _4.f32 = float(_30);
-    _4.s16 = int16_t(_33);
-    _4.u16 = uint16_t(int16_t(_33));
-    _4.u16 = uint16_t(_33);
+    int _29 = _6.s32;
+    uint _30 = _6.u32;
+    int16_t _31 = _6.s16;
+    uint16_t _32 = _6.u16;
+    float _33 = _6.f32;
+    _6.s32 = int(_31);
+    _6.u32 = uint(_31);
+    _6.s32 = int(int16_t(_32));
+    _6.u32 = uint(int16_t(_32));
+    _6.u32 = uint(uint16_t(_31));
+    _6.u32 = uint(_32);
+    _6.s16 = int16_t(_29);
+    _6.u16 = uint16_t(_29);
+    _6.s16 = int16_t(_30);
+    _6.u16 = uint16_t(_30);
+    _6.u16 = uint16_t(_29);
+    _6.u16 = uint16_t(_30);
+    _6.f32 = float(_31);
+    _6.f32 = float(int16_t(_32));
+    _6.f32 = float(_29);
+    _6.f32 = float(int(_30));
+    _6.f32 = float(uint16_t(_31));
+    _6.f32 = float(_32);
+    _6.f32 = float(uint(_29));
+    _6.f32 = float(_30);
+    _6.s16 = int16_t(_33);
+    _6.u16 = uint16_t(int16_t(_33));
+    _6.u16 = uint16_t(_33);
 }
 

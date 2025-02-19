@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -ex
+
 python3 bin/makeExtinstHeaders.py
 
 cd ../../include/spirv/unified1
