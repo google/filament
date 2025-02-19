@@ -14,7 +14,6 @@
 
 #include "source/opt/dataflow.h"
 
-#include <algorithm>
 #include <cstdint>
 
 namespace spvtools {

@@ -94,6 +94,7 @@ struct ShaderResources
 	SmallVector<Resource> sampled_images;
 	SmallVector<Resource> atomic_counters;
 	SmallVector<Resource> acceleration_structures;
+	SmallVector<Resource> gl_plain_uniforms;
 
 	// There can only be one push constant block,
 	// but keep the vector in case this restriction is lifted in the future.
@@ -682,6 +683,10 @@ protected:
 	bool is_vector(const SPIRType &type) const;
 	bool is_matrix(const SPIRType &type) const;
 	bool is_array(const SPIRType &type) const;
+	bool is_pointer(const SPIRType &type) const;
+	bool is_physical_pointer(const SPIRType &type) const;
+	bool is_physical_pointer_to_buffer_block(const SPIRType &type) const;
+	static bool is_runtime_size_array(const SPIRType &type);
 	uint32_t expression_type_id(uint32_t id) const;
 	const SPIRType &expression_type(uint32_t id) const;
 	bool expression_is_lvalue(uint32_t id) const;
@@ -1143,11 +1148,11 @@ protected:
 	bool has_extended_member_decoration(uint32_t type, uint32_t index, ExtendedDecorations decoration) const;
 	void unset_extended_member_decoration(uint32_t type, uint32_t index, ExtendedDecorations decoration);
 
+	bool check_internal_recursion(const SPIRType &type, std::unordered_set<uint32_t> &checked_ids);
+	bool type_contains_recursion(const SPIRType &type);
 	bool type_is_array_of_pointers(const SPIRType &type) const;
-	bool type_is_top_level_physical_pointer(const SPIRType &type) const;
-	bool type_is_top_level_pointer(const SPIRType &type) const;
-	bool type_is_top_level_array(const SPIRType &type) const;
 	bool type_is_block_like(const SPIRType &type) const;
+	bool type_is_top_level_block(const SPIRType &type) const;
 	bool type_is_opaque_value(const SPIRType &type) const;
 
 	bool reflection_ssbo_instance_name_is_significant() const;

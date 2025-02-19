@@ -29,10 +29,10 @@ struct SSBO2
     T_2 bar[1];
 };
 
-kernel void main0(device SSBO1& _7 [[buffer(0)]], device SSBO2& _10 [[buffer(1)]])
+kernel void main0(device SSBO1& _9 [[buffer(0)]], device SSBO2& _13 [[buffer(1)]])
 {
     T v = T{ 40.0 };
-    _7.foo[10].b = v.a;
-    _10.bar[30].c = v.a;
+    _9.foo[10].b = v.a;
+    _13.bar[30].c = v.a;
 }
 

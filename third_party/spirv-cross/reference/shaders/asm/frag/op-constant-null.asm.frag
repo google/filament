@@ -8,7 +8,7 @@ struct D
     float b;
 };
 
-const vec4 _14[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
+const vec4 _41[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
 
 layout(location = 0) out float FragColor;
 

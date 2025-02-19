@@ -165,8 +165,8 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
     float3 _625;
     if (_Globals.OutputDevice >= 3u)
     {
-        float3 _617 = pow(_603, float3(0.0126833133399486541748046875));
-        _625 = pow(fast::max(float3(0.0), _617 - float3(0.8359375)) / (float3(18.8515625) - (float3(18.6875) * _617)), float3(6.277394771575927734375)) * float3(10000.0);
+        float3 _617 = powr(_603, float3(0.0126833133399486541748046875));
+        _625 = powr(fast::max(float3(0.0), _617 - float3(0.8359375)) / (float3(18.8515625) - (float3(18.6875) * _617)), float3(6.277394771575927734375)) * float3(10000.0);
     }
     else
     {
@@ -226,7 +226,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
     float4 _887 = _Globals.ColorGammaMidtones * _Globals.ColorGamma;
     float4 _890 = _Globals.ColorGainMidtones * _Globals.ColorGain;
     float4 _893 = _Globals.ColorOffsetMidtones + _Globals.ColorOffset;
-    float3 _931 = ((((pow(pow(fast::max(float3(0.0), mix(_798, _771, _777.xyz * float3(_777.w))) * float3(5.5555553436279296875), _782.xyz * float3(_782.w)) * float3(0.180000007152557373046875), float3(1.0) / (_787.xyz * float3(_787.w))) * (_792.xyz * float3(_792.w))) + (_797.xyz + float3(_797.w))) * float3(1.0 - _830)) + (((pow(pow(fast::max(float3(0.0), mix(_798, _771, _881.xyz * float3(_881.w))) * float3(5.5555553436279296875), _884.xyz * float3(_884.w)) * float3(0.180000007152557373046875), float3(1.0) / (_887.xyz * float3(_887.w))) * (_890.xyz * float3(_890.w))) + (_893.xyz + float3(_893.w))) * float3(_830 - _878))) + (((pow(pow(fast::max(float3(0.0), mix(_798, _771, _834.xyz * float3(_834.w))) * float3(5.5555553436279296875), _837.xyz * float3(_837.w)) * float3(0.180000007152557373046875), float3(1.0) / (_840.xyz * float3(_840.w))) * (_843.xyz * float3(_843.w))) + (_846.xyz + float3(_846.w))) * float3(_878));
+    float3 _931 = ((((powr(powr(fast::max(float3(0.0), mix(_798, _771, _777.xyz * float3(_777.w))) * float3(5.5555553436279296875), _782.xyz * float3(_782.w)) * float3(0.180000007152557373046875), float3(1.0) / (_787.xyz * float3(_787.w))) * (_792.xyz * float3(_792.w))) + (_797.xyz + float3(_797.w))) * float3(1.0 - _830)) + (((powr(powr(fast::max(float3(0.0), mix(_798, _771, _881.xyz * float3(_881.w))) * float3(5.5555553436279296875), _884.xyz * float3(_884.w)) * float3(0.180000007152557373046875), float3(1.0) / (_887.xyz * float3(_887.w))) * (_890.xyz * float3(_890.w))) + (_893.xyz + float3(_893.w))) * float3(_830 - _878))) + (((powr(powr(fast::max(float3(0.0), mix(_798, _771, _834.xyz * float3(_834.w))) * float3(5.5555553436279296875), _837.xyz * float3(_837.w)) * float3(0.180000007152557373046875), float3(1.0) / (_840.xyz * float3(_840.w))) * (_843.xyz * float3(_843.w))) + (_846.xyz + float3(_846.w))) * float3(_878));
     float3 _932 = _931 * _575;
     float3 _940 = float3(_Globals.BlueCorrection);
     float3 _942 = mix(_931, _931 * ((_577 * float3x3(float3(0.940437257289886474609375, -0.01830687932670116424560546875, 0.07786960899829864501953125), float3(0.008378696627914905548095703125, 0.82866001129150390625, 0.162961304187774658203125), float3(0.0005471261101774871349334716796875, -0.00088337459601461887359619140625, 1.00033628940582275390625))) * _576), _940) * _577;
@@ -344,7 +344,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
             _1229 = _1217 * 12.9200000762939453125;
             break;
         }
-        _1229 = (pow(_1217, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
+        _1229 = (powr(_1217, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
         break;
     }
     float _1230 = _1216.y;
@@ -356,7 +356,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
             _1242 = _1230 * 12.9200000762939453125;
             break;
         }
-        _1242 = (pow(_1230, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
+        _1242 = (powr(_1230, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
         break;
     }
     float _1243 = _1216.z;
@@ -368,7 +368,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
             _1255 = _1243 * 12.9200000762939453125;
             break;
         }
-        _1255 = (pow(_1243, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
+        _1255 = (powr(_1243, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
         break;
     }
     float3 _1256 = float3(_1229, _1242, _1255);
@@ -380,8 +380,8 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
     float4 _1279 = Texture1.sample(Texture1Sampler, float2(_1275, _1276));
     float4 _1283 = Texture1.sample(Texture1Sampler, float2(_1275 + 0.0625, _1276));
     float3 _1289 = fast::max(float3(6.1035199905745685100555419921875e-05), (float3(_Globals.LUTWeights[0].x) * _1256) + (float3(_Globals.LUTWeights[1].x) * mix(_1279, _1283, float4(_1270 - _1271)).xyz));
-    float3 _1295 = select(_1289 * float3(0.077399380505084991455078125), pow((_1289 * float3(0.94786727428436279296875)) + float3(0.0521326996386051177978515625), float3(2.400000095367431640625)), _1289 > float3(0.040449999272823333740234375));
-    float3 _1324 = pow(fast::max(float3(0.0), mix((((float3(_Globals.MappingPolynomial.x) * (_1295 * _1295)) + (float3(_Globals.MappingPolynomial.y) * _1295)) + float3(_Globals.MappingPolynomial.z)) * _Globals.ColorScale, _Globals.OverlayColor.xyz, float3(_Globals.OverlayColor.w))), float3(_Globals.InverseGamma.y));
+    float3 _1295 = select(_1289 * float3(0.077399380505084991455078125), powr((_1289 * float3(0.94786727428436279296875)) + float3(0.0521326996386051177978515625), float3(2.400000095367431640625)), _1289 > float3(0.040449999272823333740234375));
+    float3 _1324 = powr(fast::max(float3(0.0), mix((((float3(_Globals.MappingPolynomial.x) * (_1295 * _1295)) + (float3(_Globals.MappingPolynomial.y) * _1295)) + float3(_Globals.MappingPolynomial.z)) * _Globals.ColorScale, _Globals.OverlayColor.xyz, float3(_Globals.OverlayColor.w))), float3(_Globals.InverseGamma.y));
     float3 _3103;
     if (_Globals.OutputDevice == 0u)
     {
@@ -393,7 +393,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                 _3075 = _1324.x * 12.9200000762939453125;
                 break;
             }
-            _3075 = (pow(_1324.x, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
+            _3075 = (powr(_1324.x, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
             break;
         }
         float _3088;
@@ -404,7 +404,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                 _3088 = _1324.y * 12.9200000762939453125;
                 break;
             }
-            _3088 = (pow(_1324.y, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
+            _3088 = (powr(_1324.y, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
             break;
         }
         float _3101;
@@ -415,7 +415,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                 _3101 = _1324.z * 12.9200000762939453125;
                 break;
             }
-            _3101 = (pow(_1324.z, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
+            _3101 = (powr(_1324.z, 0.4166666567325592041015625) * 1.05499994754791259765625) - 0.054999999701976776123046875;
             break;
         }
         _3103 = float3(_3075, _3088, _3101);
@@ -426,7 +426,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
         if (_Globals.OutputDevice == 1u)
         {
             float3 _3055 = fast::max(float3(6.1035199905745685100555419921875e-05), (_1324 * _573) * _602);
-            _3062 = fast::min(_3055 * float3(4.5), (pow(fast::max(_3055, float3(0.017999999225139617919921875)), float3(0.449999988079071044921875)) * float3(1.09899997711181640625)) - float3(0.098999999463558197021484375));
+            _3062 = fast::min(_3055 * float3(4.5), (powr(fast::max(_3055, float3(0.017999999225139617919921875)), float3(0.449999988079071044921875)) * float3(1.09899997711181640625)) - float3(0.098999999463558197021484375));
         }
         else
         {
@@ -588,7 +588,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     _2431 = _2428;
                 }
                 float3 _2433;
-                _2433.x = pow(10.0, _2431);
+                _2433.x = powr(10.0, _2431);
                 float _2434 = _2352.y;
                 float _2438 = log((_2434 <= 0.0) ? _2359 : _2434) / _1091;
                 float _2505;
@@ -626,7 +626,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     }
                     _2505 = _2502;
                 }
-                _2433.y = pow(10.0, _2505);
+                _2433.y = powr(10.0, _2505);
                 float _2508 = _2352.z;
                 float _2512 = log((_2508 <= 0.0) ? _2359 : _2508) / _1091;
                 float _2579;
@@ -664,9 +664,9 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     }
                     _2579 = _2576;
                 }
-                _2433.z = pow(10.0, _2579);
+                _2433.z = powr(10.0, _2579);
                 float3 _2583 = (_2433 * float3x3(float3(0.695452213287353515625, 0.140678703784942626953125, 0.16386906802654266357421875), float3(0.0447945632040500640869140625, 0.859671115875244140625, 0.095534317195415496826171875), float3(-0.0055258828215301036834716796875, 0.0040252101607620716094970703125, 1.00150072574615478515625))) * float3x3(float3(1.45143926143646240234375, -0.236510753631591796875, -0.214928567409515380859375), float3(-0.07655377686023712158203125, 1.1762297153472900390625, -0.0996759235858917236328125), float3(0.0083161480724811553955078125, -0.0060324496589601039886474609375, 0.99771630764007568359375));
-                float _2585 = 0.17999999225139617919921875 * pow(2.0, -12.0);
+                float _2585 = 0.17999999225139617919921875 * powr(2.0, -12.0);
                 float _2589 = log((_2585 <= 0.0) ? _2359 : _2585) / _1091;
                 float _2656;
                 if (_2589 <= _2364)
@@ -735,8 +735,8 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     }
                     _2713 = _2710;
                 }
-                float _2714 = pow(10.0, _2713);
-                float _2716 = 0.17999999225139617919921875 * pow(2.0, 10.0);
+                float _2714 = powr(10.0, _2713);
+                float _2716 = 0.17999999225139617919921875 * powr(2.0, 10.0);
                 float _2720 = log((_2716 <= 0.0) ? _2359 : _2716) / _1091;
                 float _2785;
                 if (_2720 <= _2364)
@@ -772,10 +772,10 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     }
                     _2785 = _2782;
                 }
-                float _2786 = pow(10.0, _2785);
+                float _2786 = powr(10.0, _2785);
                 float _2787 = _2583.x;
                 float _2791 = log((_2787 <= 0.0) ? 9.9999997473787516355514526367188e-05 : _2787) / _1091;
-                float _2792 = log(pow(10.0, _2656));
+                float _2792 = log(powr(10.0, _2656));
                 float _2793 = _2792 / _1091;
                 float _2870;
                 if (_2791 <= _2793)
@@ -814,7 +814,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     _2870 = _2862;
                 }
                 float3 _2872;
-                _2872.x = pow(10.0, _2870);
+                _2872.x = powr(10.0, _2870);
                 float _2873 = _2583.y;
                 float _2877 = log((_2873 <= 0.0) ? 9.9999997473787516355514526367188e-05 : _2873) / _1091;
                 float _2954;
@@ -853,7 +853,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     }
                     _2954 = _2946;
                 }
-                _2872.y = pow(10.0, _2954);
+                _2872.y = powr(10.0, _2954);
                 float _2957 = _2583.z;
                 float _2961 = log((_2957 <= 0.0) ? 9.9999997473787516355514526367188e-05 : _2957) / _1091;
                 float _3038;
@@ -892,9 +892,9 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                     }
                     _3038 = _3030;
                 }
-                _2872.z = pow(10.0, _3038);
-                float3 _3044 = pow(((_2872 - float3(3.5073844628641381859779357910156e-05)) * _602) * float3(9.9999997473787516355514526367188e-05), float3(0.1593017578125));
-                _3052 = pow((float3(0.8359375) + (float3(18.8515625) * _3044)) * (float3(1.0) / (float3(1.0) + (float3(18.6875) * _3044))), float3(78.84375));
+                _2872.z = powr(10.0, _3038);
+                float3 _3044 = powr(((_2872 - float3(3.5073844628641381859779357910156e-05)) * _602) * float3(9.9999997473787516355514526367188e-05), float3(0.1593017578125));
+                _3052 = powr((float3(0.8359375) + (float3(18.8515625) * _3044)) * (float3(1.0) / (float3(1.0) + (float3(18.6875) * _3044))), float3(78.84375));
             }
             else
             {
@@ -1056,7 +1056,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         _1596 = _1593;
                     }
                     float3 _1598;
-                    _1598.x = pow(10.0, _1596);
+                    _1598.x = powr(10.0, _1596);
                     float _1599 = _1517.y;
                     float _1603 = log((_1599 <= 0.0) ? _1524 : _1599) / _1091;
                     float _1670;
@@ -1094,7 +1094,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         }
                         _1670 = _1667;
                     }
-                    _1598.y = pow(10.0, _1670);
+                    _1598.y = powr(10.0, _1670);
                     float _1673 = _1517.z;
                     float _1677 = log((_1673 <= 0.0) ? _1524 : _1673) / _1091;
                     float _1744;
@@ -1132,9 +1132,9 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         }
                         _1744 = _1741;
                     }
-                    _1598.z = pow(10.0, _1744);
+                    _1598.z = powr(10.0, _1744);
                     float3 _1748 = (_1598 * float3x3(float3(0.695452213287353515625, 0.140678703784942626953125, 0.16386906802654266357421875), float3(0.0447945632040500640869140625, 0.859671115875244140625, 0.095534317195415496826171875), float3(-0.0055258828215301036834716796875, 0.0040252101607620716094970703125, 1.00150072574615478515625))) * float3x3(float3(1.45143926143646240234375, -0.236510753631591796875, -0.214928567409515380859375), float3(-0.07655377686023712158203125, 1.1762297153472900390625, -0.0996759235858917236328125), float3(0.0083161480724811553955078125, -0.0060324496589601039886474609375, 0.99771630764007568359375));
-                    float _1750 = 0.17999999225139617919921875 * pow(2.0, -12.0);
+                    float _1750 = 0.17999999225139617919921875 * powr(2.0, -12.0);
                     float _1754 = log((_1750 <= 0.0) ? _1524 : _1750) / _1091;
                     float _1821;
                     if (_1754 <= _1529)
@@ -1203,8 +1203,8 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         }
                         _1878 = _1875;
                     }
-                    float _1879 = pow(10.0, _1878);
-                    float _1881 = 0.17999999225139617919921875 * pow(2.0, 11.0);
+                    float _1879 = powr(10.0, _1878);
+                    float _1881 = 0.17999999225139617919921875 * powr(2.0, 11.0);
                     float _1885 = log((_1881 <= 0.0) ? _1524 : _1881) / _1091;
                     float _1950;
                     if (_1885 <= _1529)
@@ -1240,10 +1240,10 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         }
                         _1950 = _1947;
                     }
-                    float _1951 = pow(10.0, _1950);
+                    float _1951 = powr(10.0, _1950);
                     float _1952 = _1748.x;
                     float _1956 = log((_1952 <= 0.0) ? 9.9999997473787516355514526367188e-05 : _1952) / _1091;
-                    float _1958 = log(pow(10.0, _1821)) / _1091;
+                    float _1958 = log(powr(10.0, _1821)) / _1091;
                     float _2030;
                     if (_1956 <= _1958)
                     {
@@ -1281,7 +1281,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         _2030 = _2027;
                     }
                     float3 _2032;
-                    _2032.x = pow(10.0, _2030);
+                    _2032.x = powr(10.0, _2030);
                     float _2033 = _1748.y;
                     float _2037 = log((_2033 <= 0.0) ? 9.9999997473787516355514526367188e-05 : _2033) / _1091;
                     float _2109;
@@ -1320,7 +1320,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         }
                         _2109 = _2106;
                     }
-                    _2032.y = pow(10.0, _2109);
+                    _2032.y = powr(10.0, _2109);
                     float _2112 = _1748.z;
                     float _2116 = log((_2112 <= 0.0) ? 9.9999997473787516355514526367188e-05 : _2112) / _1091;
                     float _2188;
@@ -1359,21 +1359,21 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_Globals& _Globa
                         }
                         _2188 = _2185;
                     }
-                    _2032.z = pow(10.0, _2188);
-                    float3 _2193 = pow((_2032 * _602) * float3(9.9999997473787516355514526367188e-05), float3(0.1593017578125));
-                    _2201 = pow((float3(0.8359375) + (float3(18.8515625) * _2193)) * (float3(1.0) / (float3(1.0) + (float3(18.6875) * _2193))), float3(78.84375));
+                    _2032.z = powr(10.0, _2188);
+                    float3 _2193 = powr((_2032 * _602) * float3(9.9999997473787516355514526367188e-05), float3(0.1593017578125));
+                    _2201 = powr((float3(0.8359375) + (float3(18.8515625) * _2193)) * (float3(1.0) / (float3(1.0) + (float3(18.6875) * _2193))), float3(78.84375));
                 }
                 else
                 {
                     float3 _1366;
                     if (_Globals.OutputDevice == 7u)
                     {
-                        float3 _1358 = pow(((_932 * _573) * _602) * float3(9.9999997473787516355514526367188e-05), float3(0.1593017578125));
-                        _1366 = pow((float3(0.8359375) + (float3(18.8515625) * _1358)) * (float3(1.0) / (float3(1.0) + (float3(18.6875) * _1358))), float3(78.84375));
+                        float3 _1358 = powr(((_932 * _573) * _602) * float3(9.9999997473787516355514526367188e-05), float3(0.1593017578125));
+                        _1366 = powr((float3(0.8359375) + (float3(18.8515625) * _1358)) * (float3(1.0) / (float3(1.0) + (float3(18.6875) * _1358))), float3(78.84375));
                     }
                     else
                     {
-                        _1366 = pow((_1324 * _573) * _602, float3(_Globals.InverseGamma.z));
+                        _1366 = powr((_1324 * _573) * _602, float3(_Globals.InverseGamma.z));
                     }
                     _2201 = _1366;
                 }

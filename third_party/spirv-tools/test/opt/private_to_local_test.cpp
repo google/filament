@@ -15,7 +15,6 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "source/opt/build_module.h"
 #include "source/opt/value_number_table.h"
 #include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"

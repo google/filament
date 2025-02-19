@@ -9,20 +9,20 @@ void main()
 {
     int i = 0;
     float phi;
-    vec4 _36;
+    vec4 _45;
     phi = 1.0;
-    _36 = vec4(1.0, 2.0, 1.0, 2.0);
+    _45 = vec4(1.0, 2.0, 1.0, 2.0);
     for (;;)
     {
-        FragColor = _36;
+        FragColor = _45;
         if (i < 4)
         {
             if (v0[i] > 0.0)
             {
-                vec2 _48 = vec2(phi);
+                vec2 _43 = vec2(phi);
                 i++;
                 phi += 2.0;
-                _36 = textureLod(uImage, _48, 0.0);
+                _45 = textureLod(uImage, _43, 0.0);
                 continue;
             }
             else

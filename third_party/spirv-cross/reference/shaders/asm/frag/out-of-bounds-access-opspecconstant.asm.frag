@@ -2,7 +2,7 @@
 precision mediump float;
 precision highp int;
 
-const uint _15 = 3u;
+const uint _18 = 3u;
 
 void main()
 {

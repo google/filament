@@ -83,7 +83,6 @@ uint32_t Pass::GetNullId(uint32_t type_id) {
 
 uint32_t Pass::GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
                             Instruction* insertion_position) {
-  analysis::TypeManager* type_mgr = context()->get_type_mgr();
   analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
 
   uint32_t original_type_id = object_to_copy->type_id();
@@ -95,57 +94,63 @@ uint32_t Pass::GenerateCopy(Instruction* object_to_copy, uint32_t new_type_id,
       context(), insertion_position,
       IRContext::kAnalysisInstrToBlockMapping | IRContext::kAnalysisDefUse);
 
-  analysis::Type* original_type = type_mgr->GetType(original_type_id);
-  analysis::Type* new_type = type_mgr->GetType(new_type_id);
+  Instruction* original_type = get_def_use_mgr()->GetDef(original_type_id);
+  Instruction* new_type = get_def_use_mgr()->GetDef(new_type_id);
 
-  if (const analysis::Array* original_array_type = original_type->AsArray()) {
-    uint32_t original_element_type_id =
-        type_mgr->GetId(original_array_type->element_type());
-
-    analysis::Array* new_array_type = new_type->AsArray();
-    assert(new_array_type != nullptr && "Can't copy an array to a non-array.");
-    uint32_t new_element_type_id =
-        type_mgr->GetId(new_array_type->element_type());
-
-    std::vector<uint32_t> element_ids;
-    const analysis::Constant* length_const =
-        const_mgr->FindDeclaredConstant(original_array_type->LengthId());
-    assert(length_const->AsIntConstant());
-    uint32_t array_length = length_const->AsIntConstant()->GetU32();
-    for (uint32_t i = 0; i < array_length; i++) {
-      Instruction* extract = ir_builder.AddCompositeExtract(
-          original_element_type_id, object_to_copy->result_id(), {i});
-      element_ids.push_back(
-          GenerateCopy(extract, new_element_type_id, insertion_position));
-    }
-
-    return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
-        ->result_id();
-  } else if (const analysis::Struct* original_struct_type =
-                 original_type->AsStruct()) {
-    analysis::Struct* new_struct_type = new_type->AsStruct();
-
-    const std::vector<const analysis::Type*>& original_types =
-        original_struct_type->element_types();
-    const std::vector<const analysis::Type*>& new_types =
-        new_struct_type->element_types();
-    std::vector<uint32_t> element_ids;
-    for (uint32_t i = 0; i < original_types.size(); i++) {
-      Instruction* extract = ir_builder.AddCompositeExtract(
-          type_mgr->GetId(original_types[i]), object_to_copy->result_id(), {i});
-      element_ids.push_back(GenerateCopy(extract, type_mgr->GetId(new_types[i]),
-                                         insertion_position));
-    }
-    return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
-        ->result_id();
-  } else {
-    // If we do not have an aggregate type, then we have a problem.  Either we
-    // found multiple instances of the same type, or we are copying to an
-    // incompatible type.  Either way the code is illegal.
-    assert(false &&
-           "Don't know how to copy this type.  Code is likely illegal.");
+  if (new_type->opcode() != original_type->opcode()) {
+    return 0;
   }
-  return 0;
+
+  switch (original_type->opcode()) {
+    case spv::Op::OpTypeArray: {
+      uint32_t original_element_type_id =
+          original_type->GetSingleWordInOperand(0);
+      uint32_t new_element_type_id = new_type->GetSingleWordInOperand(0);
+
+      std::vector<uint32_t> element_ids;
+      uint32_t length_id = original_type->GetSingleWordInOperand(1);
+      const analysis::Constant* length_const =
+          const_mgr->FindDeclaredConstant(length_id);
+      assert(length_const->AsIntConstant());
+      uint32_t array_length = length_const->AsIntConstant()->GetU32();
+      for (uint32_t i = 0; i < array_length; i++) {
+        Instruction* extract = ir_builder.AddCompositeExtract(
+            original_element_type_id, object_to_copy->result_id(), {i});
+        uint32_t new_id =
+            GenerateCopy(extract, new_element_type_id, insertion_position);
+        if (new_id == 0) {
+          return 0;
+        }
+        element_ids.push_back(new_id);
+      }
+
+      return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
+          ->result_id();
+    }
+    case spv::Op::OpTypeStruct: {
+      std::vector<uint32_t> element_ids;
+      for (uint32_t i = 0; i < original_type->NumInOperands(); i++) {
+        uint32_t orig_member_type_id = original_type->GetSingleWordInOperand(i);
+        uint32_t new_member_type_id = new_type->GetSingleWordInOperand(i);
+        Instruction* extract = ir_builder.AddCompositeExtract(
+            orig_member_type_id, object_to_copy->result_id(), {i});
+        uint32_t new_id =
+            GenerateCopy(extract, new_member_type_id, insertion_position);
+        if (new_id == 0) {
+          return 0;
+        }
+        element_ids.push_back(new_id);
+      }
+      return ir_builder.AddCompositeConstruct(new_type_id, element_ids)
+          ->result_id();
+    }
+    default:
+      // If we do not have an aggregate type, then we have a problem.  Either we
+      // found multiple instances of the same type, or we are copying to an
+      // incompatible type.  Either way the code is illegal. Leave the code as
+      // is and let the caller deal with it.
+      return 0;
+  }
 }
 
 }  // namespace opt

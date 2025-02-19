@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "source/opt/ir_builder.h"
 #include "source/opt/loop_descriptor.h"
 #include "source/opt/loop_peeling.h"
 #include "test/opt/pass_fixture.h"

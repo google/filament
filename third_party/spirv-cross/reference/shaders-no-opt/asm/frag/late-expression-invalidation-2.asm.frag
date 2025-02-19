@@ -17,17 +17,17 @@ precision highp int;
 layout(binding = 0, std140) uniform buf0
 {
     highp vec2 resolution;
-} _7;
+} _9;
 
 layout(location = 0) out highp vec4 _GLF_color;
 int map[256];
-highp mat2x4 _60 = mat2x4(vec4(0.0), vec4(0.0));
+highp mat2x4 _558 = mat2x4(vec4(0.0), vec4(0.0));
 
 void main()
 {
-    int _65 = 256 - 14;
-    int _68 = -_65;
-    highp vec2 pos = gl_FragCoord.xy / _7.resolution;
+    int _564 = 256 - 14;
+    int _566 = -_564;
+    highp vec2 pos = gl_FragCoord.xy / _9.resolution;
     ivec2 ipos = ivec2(int(pos.x * 16.0), int(pos.y * 16.0));
     int i = 0;
     for (; i < 256; i++)
@@ -41,60 +41,60 @@ void main()
     {
         v++;
         int directions = 0;
-        bool _98 = p.x > 0;
-        bool _111;
-        if (_98)
+        bool _77 = p.x > 0;
+        bool _92;
+        if (_77)
         {
-            _111 = map[(p.x - 2) + (p.y * 16)] == 0;
+            _92 = map[(p.x - 2) + (p.y * 16)] == 0;
         }
         else
         {
-            _111 = _98;
+            _92 = _77;
         }
-        if (_111)
+        if (_92)
         {
             directions++;
         }
-        bool _118 = p.y > 0;
-        bool _131;
-        if (_118)
+        bool _99 = p.y > 0;
+        bool _112;
+        if (_99)
         {
-            _131 = map[p.x + ((p.y - 2) * 16)] == 0;
+            _112 = map[p.x + ((p.y - 2) * 16)] == 0;
         }
         else
         {
-            _131 = _118;
+            _112 = _99;
         }
-        if (_131)
+        if (_112)
         {
             directions++;
         }
-        bool _138 = p.x < 14;
-        bool _151;
-        if (_138)
+        bool _120 = p.x < 14;
+        bool _133;
+        if (_120)
         {
-            _151 = map[(p.x + 2) + (p.y * 16)] == 0;
+            _133 = map[(p.x + 2) + (p.y * 16)] == 0;
         }
         else
         {
-            _151 = _138;
+            _133 = _120;
         }
-        if (_151)
+        if (_133)
         {
             directions++;
         }
-        int _156 = 256 - _68;
-        bool _159 = p.y < 14;
-        bool _172;
-        if (_159)
+        int _594 = 256 - _566;
+        bool _140 = p.y < 14;
+        bool _153;
+        if (_140)
         {
-            _172 = map[p.x + ((p.y + 2) * 16)] == 0;
+            _153 = map[p.x + ((p.y + 2) * 16)] == 0;
         }
         else
         {
-            _172 = _159;
+            _153 = _140;
         }
-        if (_172)
+        if (_153)
         {
             directions++;
         }
@@ -104,15 +104,15 @@ void main()
             i = 0;
             for (;;)
             {
-                int _186 = i;
-                if (_186 < 8)
+                int _168 = i;
+                if (_168 < 8)
                 {
                     int j = 0;
-                    _60 = mat2x4(vec4(0.0), vec4(0.0));
+                    _558 = mat2x4(vec4(0.0), vec4(0.0));
                     if (false)
                     {
-                        int _216 = i;
-                        i = _216 + 1;
+                        int _198 = i;
+                        i = _198 + 1;
                         continue;
                     }
                     else
@@ -127,8 +127,8 @@ void main()
                                 canwalk = true;
                             }
                         }
-                        int _216 = i;
-                        i = _216 + 1;
+                        int _198 = i;
+                        i = _198 + 1;
                         continue;
                     }
                 }
@@ -143,26 +143,26 @@ void main()
         {
             int d = v % directions;
             v += directions;
-            bool _232 = d >= 0;
-            bool _238;
-            if (_232)
+            bool _216 = d >= 0;
+            bool _222;
+            if (_216)
             {
-                _238 = p.x > 0;
+                _222 = p.x > 0;
             }
             else
             {
-                _238 = _232;
+                _222 = _216;
             }
-            bool _251;
-            if (_238)
+            bool _235;
+            if (_222)
             {
-                _251 = map[(p.x - 2) + (p.y * 16)] == 0;
+                _235 = map[(p.x - 2) + (p.y * 16)] == 0;
             }
             else
             {
-                _251 = _238;
+                _235 = _222;
             }
-            if (_251)
+            if (_235)
             {
                 d--;
                 map[p.x + (p.y * 16)] = 1;
@@ -170,26 +170,26 @@ void main()
                 map[(p.x - 2) + (p.y * 16)] = 1;
                 p.x -= 2;
             }
-            bool _284 = d >= 0;
-            bool _290;
-            if (_284)
+            bool _268 = d >= 0;
+            bool _274;
+            if (_268)
             {
-                _290 = p.y > 0;
+                _274 = p.y > 0;
             }
             else
             {
-                _290 = _284;
+                _274 = _268;
             }
-            bool _303;
-            if (_290)
+            bool _287;
+            if (_274)
             {
-                _303 = map[p.x + ((p.y - 2) * 16)] == 0;
+                _287 = map[p.x + ((p.y - 2) * 16)] == 0;
             }
             else
             {
-                _303 = _290;
+                _287 = _274;
             }
-            if (_303)
+            if (_287)
             {
                 d--;
                 map[p.x + (p.y * 16)] = 1;
@@ -197,26 +197,26 @@ void main()
                 map[p.x + ((p.y - 2) * 16)] = 1;
                 p.y -= 2;
             }
-            bool _336 = d >= 0;
-            bool _342;
-            if (_336)
+            bool _320 = d >= 0;
+            bool _326;
+            if (_320)
             {
-                _342 = p.x < 14;
+                _326 = p.x < 14;
             }
             else
             {
-                _342 = _336;
+                _326 = _320;
             }
-            bool _355;
-            if (_342)
+            bool _339;
+            if (_326)
             {
-                _355 = map[(p.x + 2) + (p.y * 16)] == 0;
+                _339 = map[(p.x + 2) + (p.y * 16)] == 0;
             }
             else
             {
-                _355 = _342;
+                _339 = _326;
             }
-            if (_355)
+            if (_339)
             {
                 d--;
                 map[p.x + (p.y * 16)] = 1;
@@ -224,26 +224,26 @@ void main()
                 map[(p.x + 2) + (p.y * 16)] = 1;
                 p.x += 2;
             }
-            bool _388 = d >= 0;
-            bool _394;
-            if (_388)
+            bool _372 = d >= 0;
+            bool _378;
+            if (_372)
             {
-                _394 = p.y < 14;
+                _378 = p.y < 14;
             }
             else
             {
-                _394 = _388;
+                _378 = _372;
             }
-            bool _407;
-            if (_394)
+            bool _391;
+            if (_378)
             {
-                _407 = map[p.x + ((p.y + 2) * 16)] == 0;
+                _391 = map[p.x + ((p.y + 2) * 16)] == 0;
             }
             else
             {
-                _407 = _394;
+                _391 = _378;
             }
-            if (_407)
+            if (_391)
             {
                 d--;
                 map[p.x + (p.y * 16)] = 1;

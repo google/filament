@@ -643,6 +643,32 @@ TEST_F(ValidateBitwise, OpBitCountNot32Vulkan) {
               HasSubstr("Expected 32-bit int type for Base operand: BitCount"));
 }
 
+TEST_F(ValidateBitwise, OpBitCountPointer) {
+  const std::string body = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%ptr_int = OpTypePointer Function %int
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+%var = OpVariable %ptr_int Function
+%count = OpBitCount %int %var
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(body);
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr(
+          "Expected int scalar or vector type for Base operand: BitCount"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

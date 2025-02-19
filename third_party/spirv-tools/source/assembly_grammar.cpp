@@ -21,6 +21,7 @@
 #include "source/ext_inst.h"
 #include "source/opcode.h"
 #include "source/operand.h"
+#include "source/spirv_target_env.h"
 #include "source/table.h"
 
 namespace spvtools {
@@ -154,11 +155,12 @@ const SpecConstantOpcodeEntry kOpSpecConstantOpcodes[] = {
     CASE(InBoundsAccessChain),
     CASE(PtrAccessChain),
     CASE(InBoundsPtrAccessChain),
-    CASE(CooperativeMatrixLengthNV)
+    CASE(CooperativeMatrixLengthNV),
+    CASE(CooperativeMatrixLengthKHR)
 };
 
 // The 60 is determined by counting the opcodes listed in the spec.
-static_assert(60 == sizeof(kOpSpecConstantOpcodes)/sizeof(kOpSpecConstantOpcodes[0]),
+static_assert(61 == sizeof(kOpSpecConstantOpcodes)/sizeof(kOpSpecConstantOpcodes[0]),
               "OpSpecConstantOp opcode table is incomplete");
 #undef CASE
 // clang-format on
@@ -175,15 +177,18 @@ bool AssemblyGrammar::isValid() const {
 CapabilitySet AssemblyGrammar::filterCapsAgainstTargetEnv(
     const spv::Capability* cap_array, uint32_t count) const {
   CapabilitySet cap_set;
+  const auto version = spvVersionForTargetEnv(target_env_);
   for (uint32_t i = 0; i < count; ++i) {
-    spv_operand_desc cap_desc = {};
+    spv_operand_desc entry = {};
     if (SPV_SUCCESS == lookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
                                      static_cast<uint32_t>(cap_array[i]),
-                                     &cap_desc)) {
-      // spvOperandTableValueLookup() filters capabilities internally
-      // according to the current target environment by itself. So we
-      // should be safe to add this capability if the lookup succeeds.
-      cap_set.Add(cap_array[i]);
+                                     &entry)) {
+      // This token is visible in this environment if it's in an appropriate
+      // core version, or it is enabled by a capability or an extension.
+      if ((version >= entry->minVersion && version <= entry->lastVersion) ||
+          entry->numExtensions > 0u || entry->numCapabilities > 0u) {
+        cap_set.insert(cap_array[i]);
+      }
     }
   }
   return cap_set;

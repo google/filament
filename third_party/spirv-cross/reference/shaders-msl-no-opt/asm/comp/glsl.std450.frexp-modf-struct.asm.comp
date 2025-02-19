@@ -3,33 +3,33 @@
 
 using namespace metal;
 
-struct _8
+struct _9
 {
     float _m0;
     float _m1;
 };
 
-struct _15
+struct _16
 {
     float _m0;
     int _m1;
 };
 
-struct _3
+struct _4
 {
     float _m0;
     int _m1;
 };
 
-kernel void main0(device _3& _4 [[buffer(0)]])
+kernel void main0(device _4& _6 [[buffer(0)]])
 {
-    _8 _23;
+    _9 _23;
     _23._m0 = modf(20.0, _23._m1);
-    _15 _24;
+    _16 _24;
     _24._m0 = frexp(40.0, _24._m1);
-    _4._m0 = _23._m0;
-    _4._m0 = _23._m1;
-    _4._m0 = _24._m0;
-    _4._m1 = _24._m1;
+    _6._m0 = _23._m0;
+    _6._m0 = _23._m1;
+    _6._m0 = _24._m0;
+    _6._m1 = _24._m1;
 }
 

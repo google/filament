@@ -48,7 +48,6 @@
 #include "source/opt/cfg.h"
 #include "source/opt/mem_pass.h"
 #include "source/opt/types.h"
-#include "source/util/make_unique.h"
 
 // Debug logging (0: Off, 1-N: Verbosity level).  Replace this with the
 // implementation done for

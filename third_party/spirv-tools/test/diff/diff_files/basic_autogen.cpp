@@ -129,7 +129,7 @@ TEST(DiffTest, Basic) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 36
++; Bound: 30
  ; Schema: 0
  OpCapability Shader
 +%27 = OpExtInstImport "GLSL.std.450"
@@ -272,7 +272,7 @@ OpFunctionEnd
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 36
++; Bound: 30
  ; Schema: 0
  OpCapability Shader
 +%27 = OpExtInstImport "GLSL.std.450"
@@ -324,7 +324,7 @@ TEST(DiffTest, BasicDumpIds) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 36
++; Bound: 30
  ; Schema: 0
  OpCapability Shader
 +%27 = OpExtInstImport "GLSL.std.450"
@@ -384,8 +384,8 @@ TEST(DiffTest, BasicDumpIds) {
    6 ->   14 [TypeInt]
   13 ->   19 [TypePointer]
   14 ->   27 [Variable]
-  15 ->   34 [Constant]
-  16 ->   35 [TypeArray]
+  15 ->   28 [Constant]
+  16 ->   29 [TypeArray]
   17 ->   11 [TypeStruct]
   18 ->   12 [TypePointer]
   19 ->   13 [Variable]

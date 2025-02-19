@@ -101,10 +101,7 @@ set_property(TARGET SPIRV-Tools-reduce PROPERTY FOLDER "SPIRV-Tools libraries")
 spvtools_check_symbol_exports(SPIRV-Tools-reduce)
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)
-  install(TARGETS SPIRV-Tools-reduce EXPORT SPIRV-Tools-reduceTargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS SPIRV-Tools-reduce EXPORT SPIRV-Tools-reduceTargets)
   export(EXPORT SPIRV-Tools-reduceTargets FILE SPIRV-Tools-reduceTarget.cmake)
 
   spvtools_config_package_dir(SPIRV-Tools-reduce PACKAGE_DIR)

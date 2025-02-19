@@ -86,6 +86,14 @@ class InstructionFolder {
   // result type is |type_inst|.
   bool IsFoldableType(Instruction* type_inst) const;
 
+  // Returns true if |FoldInstructionToConstant| could fold an instruction whose
+  // result type is |type_inst|.
+  bool IsFoldableScalarType(Instruction* type_inst) const;
+
+  // Returns true if |FoldInstructionToConstant| could fold an instruction whose
+  // result type is |type_inst|.
+  bool IsFoldableVectorType(Instruction* type_inst) const;
+
   // Tries to fold |inst| to a single constant, when the input ids to |inst|
   // have been substituted using |id_map|.  Returns a pointer to the OpConstant*
   // instruction if successful.  If necessary, a new constant instruction is

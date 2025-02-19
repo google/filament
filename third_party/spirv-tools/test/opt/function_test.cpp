@@ -13,8 +13,6 @@
 // limitations under the License.
 
 #include <memory>
-#include <sstream>
-#include <string>
 #include <vector>
 
 #include "function_utils.h"

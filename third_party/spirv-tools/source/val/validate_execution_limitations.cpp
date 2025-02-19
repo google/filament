@@ -13,8 +13,6 @@
 // limitations under the License.
 
 #include "source/val/validate.h"
-
-#include "source/val/function.h"
 #include "source/val/validation_state.h"
 
 namespace spvtools {

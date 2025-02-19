@@ -1,4 +1,4 @@
-RWByteAddressBuffer _3 : register(u0);
+RWByteAddressBuffer _4 : register(u0);
 
 uint spvBitfieldInsert(uint Base, uint Insert, uint Offset, uint Count)
 {
@@ -82,20 +82,20 @@ int4 spvBitfieldSExtract(int4 Base, int Offset, int Count)
 
 void comp_main()
 {
-    int4 _19 = int4(_3.Load4(0));
-    uint4 _20 = _3.Load4(16);
-    _3.Store4(0, uint4(countbits(_19)));
-    _3.Store4(16, uint4(countbits(_19)));
-    _3.Store4(0, uint4(int4(countbits(_20))));
-    _3.Store4(16, countbits(_20));
-    _3.Store4(0, uint4(reversebits(_19)));
-    _3.Store4(16, reversebits(_20));
-    _3.Store4(0, uint4(spvBitfieldSExtract(_19, 1, 11u)));
-    _3.Store4(16, spvBitfieldSExtract(_20, 11u, 1));
-    _3.Store4(0, uint4(spvBitfieldUExtract(_19, 1, 11u)));
-    _3.Store4(16, spvBitfieldUExtract(_20, 11u, 1));
-    _3.Store4(0, uint4(int4(spvBitfieldInsert(_19, _19.wzyx, 1, 11u))));
-    _3.Store4(16, spvBitfieldInsert(_20, _20.wzyx, 11u, 1));
+    int4 _19 = int4(_4.Load4(0));
+    uint4 _20 = _4.Load4(16);
+    _4.Store4(0, uint4(countbits(_19)));
+    _4.Store4(16, uint4(countbits(_19)));
+    _4.Store4(0, uint4(int4(countbits(_20))));
+    _4.Store4(16, countbits(_20));
+    _4.Store4(0, uint4(reversebits(_19)));
+    _4.Store4(16, reversebits(_20));
+    _4.Store4(0, uint4(spvBitfieldSExtract(_19, 1, 11u)));
+    _4.Store4(16, spvBitfieldSExtract(_20, 11u, 1));
+    _4.Store4(0, uint4(spvBitfieldUExtract(_19, 1, 11u)));
+    _4.Store4(16, spvBitfieldUExtract(_20, 11u, 1));
+    _4.Store4(0, uint4(int4(spvBitfieldInsert(_19, _19.wzyx, 1, 11u))));
+    _4.Store4(16, spvBitfieldInsert(_20, _20.wzyx, 11u, 1));
 }
 
 [numthreads(1, 1, 1)]

@@ -41,8 +41,7 @@ TEST_F(NonSemanticRoundTripTest, NonSemanticInsts) {
 %8 = OpExtInstImport "NonSemantic.Testing.AnotherUnknownExtInstSet"
 %9 = OpExtInst %4 %8 613874321 %7 %5 %6
 )";
-  std::string disassembly = EncodeAndDecodeSuccessfully(
-      spirv, SPV_BINARY_TO_TEXT_OPTION_NONE, SPV_ENV_UNIVERSAL_1_0);
+  std::string disassembly = EncodeAndDecodeSuccessfully(spirv);
   EXPECT_THAT(disassembly, Eq(spirv));
 }
 

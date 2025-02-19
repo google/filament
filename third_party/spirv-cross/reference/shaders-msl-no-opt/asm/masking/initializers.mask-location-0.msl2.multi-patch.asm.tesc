@@ -52,7 +52,7 @@ struct _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex
     spvUnsafeArray<float, 1> _RESERVED_IDENTIFIER_FIXUP_gl_CullDistance;
 };
 
-constant spvUnsafeArray<float4, 4> _15 = spvUnsafeArray<float4, 4>({ float4(0.0), float4(0.0), float4(0.0), float4(0.0) });
+constant spvUnsafeArray<float4, 4> _17 = spvUnsafeArray<float4, 4>({ float4(0.0), float4(0.0), float4(0.0), float4(0.0) });
 constant spvUnsafeArray<float, 1> _45 = spvUnsafeArray<float, 1>({ 0.0 });
 constant spvUnsafeArray<float, 1> _46 = spvUnsafeArray<float, 1>({ 0.0 });
 
@@ -71,16 +71,16 @@ struct main0_patchOut
 
 kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
-    spvUnsafeArray<_RESERVED_IDENTIFIER_FIXUP_gl_PerVertex, 4> _29 = spvUnsafeArray<_RESERVED_IDENTIFIER_FIXUP_gl_PerVertex, 4>({ _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) } });
+    spvUnsafeArray<_RESERVED_IDENTIFIER_FIXUP_gl_PerVertex, 4> _32 = spvUnsafeArray<_RESERVED_IDENTIFIER_FIXUP_gl_PerVertex, 4>({ _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, _RESERVED_IDENTIFIER_FIXUP_gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) } });
     
     device main0_out* gl_out = &spvOut[gl_GlobalInvocationID.x - gl_GlobalInvocationID.x % 4];
-    threadgroup float4 spvStoragefoo[8][4];
-    threadgroup float4 (&foo)[4] = spvStoragefoo[(gl_GlobalInvocationID.x / 4) % 8];
-    foo[gl_GlobalInvocationID.x % 4] = _15[gl_GlobalInvocationID.x % 4];
-    gl_out[gl_GlobalInvocationID.x % 4].gl_Position = _29[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_Position;
-    gl_out[gl_GlobalInvocationID.x % 4].gl_PointSize = _29[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_PointSize;
-    gl_out[gl_GlobalInvocationID.x % 4].gl_ClipDistance = _29[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_ClipDistance;
-    gl_out[gl_GlobalInvocationID.x % 4].gl_CullDistance = _29[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_CullDistance;
+    threadgroup spvUnsafeArray<float4, 4> spvStoragefoo[8];
+    threadgroup auto &foo = spvStoragefoo[(gl_GlobalInvocationID.x / 4) % 8];
+    foo[gl_GlobalInvocationID.x % 4] = _17[gl_GlobalInvocationID.x % 4];
+    gl_out[gl_GlobalInvocationID.x % 4].gl_Position = _32[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_Position;
+    gl_out[gl_GlobalInvocationID.x % 4].gl_PointSize = _32[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_PointSize;
+    gl_out[gl_GlobalInvocationID.x % 4].gl_ClipDistance = _32[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_ClipDistance;
+    gl_out[gl_GlobalInvocationID.x % 4].gl_CullDistance = _32[gl_GlobalInvocationID.x % 4]._RESERVED_IDENTIFIER_FIXUP_gl_CullDistance;
     device main0_patchOut& patchOut = spvPatchOut[gl_GlobalInvocationID.x / 4];
     patchOut.foo_patch = float4(0.0);
     uint gl_InvocationID = gl_GlobalInvocationID.x % 4;

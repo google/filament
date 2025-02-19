@@ -4,6 +4,7 @@
 *.o
 *.d
 *.txt
+/build
 /test
 /spirv-cross
 /obj
@@ -19,6 +20,9 @@
 /external
 .vs/
 *.vcxproj.user
+
+# Mac OS X Finder
+.DS_Store
 
 !CMakeLists.txt
 !LICENSES/*.txt

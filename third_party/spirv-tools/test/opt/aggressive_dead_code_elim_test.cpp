@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
 #include "test/opt/pass_utils.h"
@@ -25,6 +26,8 @@ namespace opt {
 namespace {
 
 using AggressiveDCETest = PassTest<::testing::Test>;
+
+using ::testing::HasSubstr;
 
 TEST_F(AggressiveDCETest, EliminateExtendedInst) {
   //  #version 140
@@ -6764,7 +6767,7 @@ TEST_F(AggressiveDCETest, ShaderDebugInfoKeepInFunctionElimStoreVar) {
          %60 = OpExtInst %void %1 DebugTypeVector %59 %uint_4
          %58 = OpExtInst %void %1 DebugTypeMember %10 %60 %55 %uint_12 %uint_5 %uint_0 %uint_128 %uint_3
          %57 = OpExtInst %void %1 DebugTypeComposite %8 %uint_1 %55 %uint_10 %uint_1 %56 %8 %uint_128 %uint_3 %58
-         %63 = OpExtInst %void %1 DebugTypeVector %59 %uint_2 
+         %63 = OpExtInst %void %1 DebugTypeVector %59 %uint_2
          %62 = OpExtInst %void %1 DebugTypeMember %12 %63 %55 %uint_7 %uint_5 %uint_0 %uint_64 %uint_3
          %61 = OpExtInst %void %1 DebugTypeComposite %11 %uint_1 %55 %uint_5 %uint_1 %56 %11 %uint_64 %uint_3 %62
          %64 = OpExtInst %void %1 DebugTypeComposite %13 %uint_0 %55 %uint_0 %uint_0 %56 %14 %51 %uint_3
@@ -7568,7 +7571,7 @@ TEST_F(AggressiveDCETest, PreserveInterface) {
 OpExtension "SPV_KHR_ray_tracing"
 %1 = OpExtInstImport "GLSL.std.450"
 OpMemoryModel Logical GLSL450
-OpEntryPoint RayGenerationNV %2 "main" %3 %4
+OpEntryPoint RayGenerationKHR %2 "main" %3 %4
 OpDecorate %3 Location 0
 OpDecorate %4 DescriptorSet 2
 OpDecorate %4 Binding 0
@@ -7577,8 +7580,8 @@ OpDecorate %4 Binding 0
 %uint = OpTypeInt 32 0
 %uint_0 = OpConstant %uint 0
 %float = OpTypeFloat 32
-%_ptr_CallableDataNV_float = OpTypePointer CallableDataNV %float
-%3 = OpVariable %_ptr_CallableDataNV_float CallableDataNV
+%_ptr_CallableDataKHR_float = OpTypePointer CallableDataKHR %float
+%3 = OpVariable %_ptr_CallableDataKHR_float CallableDataKHR
 %13 = OpTypeAccelerationStructureKHR
 %_ptr_UniformConstant_13 = OpTypePointer UniformConstant %13
 %4 = OpVariable %_ptr_UniformConstant_13 UniformConstant
@@ -7855,6 +7858,443 @@ TEST_F(AggressiveDCETest, RemoveOutputFalse) {
   SetTargetEnv(SPV_ENV_VULKAN_1_3);
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SinglePassRunAndMatch<AggressiveDCEPass>(text, true, false, false);
+}
+
+TEST_F(AggressiveDCETest, RemoveWhenUsingPrintfExtension) {
+  // Remove dead n_out output variable from module
+  const std::string text = R"(
+; CHECK: OpExtInstImport "NonSemantic.DebugPrintf"
+; CHECK-NOT: OpVariable
+               OpCapability Shader
+          %1 = OpExtInstImport "NonSemantic.DebugPrintf"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 8 8 1
+               OpSource HLSL 660
+               OpName %main "main"
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+          %5 = OpTypeFunction %void
+%_ptr_Function_uint = OpTypePointer Function %uint
+       %main = OpFunction %void None %5
+          %7 = OpLabel
+          %8 = OpVariable %_ptr_Function_uint Function
+               OpReturn
+               OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_VULKAN_1_3);
+  SinglePassRunAndMatch<AggressiveDCEPass>(text, true);
+}
+
+TEST_F(AggressiveDCETest, FunctionReturnPointer) {
+  // Run DCE when a function returning a pointer to a reference is present
+
+  const std::string text = R"(
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint Vertex %2 "main" %3 %4
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpSourceExtension "GL_EXT_scalar_block_layout"
+               OpName %4 "color"
+               OpMemberDecorate %5 0 Offset 0
+               OpDecorate %5 Block
+               OpMemberDecorate %7 0 Offset 0
+               OpDecorate %7 Block
+               OpDecorate %8 AliasedPointer
+               OpDecorate %4 Location 0
+          %9 = OpTypeVoid
+         %10 = OpTypeFunction %9
+               OpTypeForwardPointer %11 PhysicalStorageBuffer
+         %12 = OpTypeInt 32 0
+          %5 = OpTypeStruct %12
+         %11 = OpTypePointer PhysicalStorageBuffer %5
+;CHECK:         [[pt:%\w+]] = OpTypePointer PhysicalStorageBuffer {{%\w+}}
+         %13 = OpTypeFunction %11
+;CHECK:  [[pt_fn:%\w+]] = OpTypeFunction [[pt]]
+          %7 = OpTypeStruct %11
+         %14 = OpTypePointer PushConstant %7
+          %3 = OpVariable %14 PushConstant
+         %15 = OpTypeInt 32 1
+         %16 = OpConstant %15 0
+         %17 = OpTypePointer PushConstant %11
+         %18 = OpTypePointer Function %11
+         %19 = OpTypeFloat 32
+         %20 = OpTypeVector %19 4
+         %21 = OpTypePointer Output %20
+          %4 = OpVariable %21 Output
+         %22 = OpConstant %19 1
+         %23 = OpConstant %19 0
+         %24 = OpConstantComposite %20 %22 %23 %22 %22
+          %6 = OpFunction %11 None %13
+;CHECK:   [[fn:%\w+]] = OpFunction [[pt]] None [[pt_fn]]
+         %27 = OpLabel
+         %28 = OpAccessChain %17 %3 %16
+         %29 = OpLoad %11 %28
+               OpReturnValue %29
+               OpFunctionEnd
+          %2 = OpFunction %9 None %10
+         %25 = OpLabel
+          %8 = OpVariable %18 Function
+         %26 = OpFunctionCall %11 %6
+;CHECK:  {{%\w+}} = OpFunctionCall [[pt]] [[fn]]
+               OpStore %8 %26
+               OpStore %4 %24
+               OpReturn
+               OpFunctionEnd
+)";
+
+  // For physical storage buffer support
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<AggressiveDCEPass>(text, true);
+}
+
+TEST_F(AggressiveDCETest, KeepBeginEndInvocationInterlock) {
+  // OpBeginInvocationInterlockEXT and OpEndInvocationInterlockEXT delimit a
+  // critical section. As such, they should be treated as if they have side
+  // effects and should not be removed.
+  const std::string test =
+      R"(OpCapability Shader
+OpCapability FragmentShaderSampleInterlockEXT
+OpExtension "SPV_EXT_fragment_shader_interlock"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %1 "main" %gl_FragCoord
+OpExecutionMode %1 OriginUpperLeft
+OpExecutionMode %1 SampleInterlockOrderedEXT
+OpDecorate %gl_FragCoord BuiltIn FragCoord
+%float = OpTypeFloat 32
+%float_0 = OpConstant %float 0
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%void = OpTypeVoid
+%8 = OpTypeFunction %void
+%bool = OpTypeBool
+%gl_FragCoord = OpVariable %_ptr_Input_v4float Input
+%1 = OpFunction %void None %8
+%10 = OpLabel
+%11 = OpLoad %v4float %gl_FragCoord
+%12 = OpCompositeExtract %float %11 0
+%13 = OpFOrdGreaterThan %bool %12 %float_0
+OpSelectionMerge %14 None
+OpBranchConditional %13 %15 %16
+%15 = OpLabel
+OpBeginInvocationInterlockEXT
+OpBranch %14
+%16 = OpLabel
+OpBeginInvocationInterlockEXT
+OpBranch %14
+%14 = OpLabel
+OpEndInvocationInterlockEXT
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<AggressiveDCEPass>(test, test, true, true);
+}
+
+TEST_F(AggressiveDCETest, StoringAPointer) {
+  // A store that stores a pointer should not be kept live because the value
+  // being stored is eventually loaded from.
+
+  const std::string text = R"(
+               OpCapability CooperativeMatrixKHR
+               OpCapability Shader
+               OpExtension "SPV_KHR_cooperative_matrix"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2
+               OpExecutionMode %1 LocalSize 64 1 1
+               OpSource HLSL 600
+               OpDecorate %2 DescriptorSet 0
+               OpDecorate %2 Binding 0
+               OpDecorate %_runtimearr_int ArrayStride 4
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %_struct_4 Block
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+    %uint_64 = OpConstant %uint 64
+     %uint_3 = OpConstant %uint 3
+    %uint_16 = OpConstant %uint 16
+     %uint_4 = OpConstant %uint 4
+%coop_stride = OpConstant %int 42
+%_runtimearr_int = OpTypeRuntimeArray %int
+  %_struct_4 = OpTypeStruct %_runtimearr_int
+%_ptr_StorageBuffer__struct_4 = OpTypePointer StorageBuffer %_struct_4
+       %void = OpTypeVoid
+         %16 = OpTypeFunction %void
+; CHECK: [[mat:%\w+]] = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_16 %uint_4 %uint_0
+         %17 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_16 %uint_4 %uint_0
+; CHECK: [[struct:%\w+]] = OpTypeStruct [[mat]]
+ %_struct_18 = OpTypeStruct %17
+; CHECK: [[ptr:%\w+]] = OpTypePointer Function [[struct]]
+%_ptr_Function__struct_18 = OpTypePointer Function %_struct_18
+%_ptr_StorageBuffer_int = OpTypePointer StorageBuffer %int
+%_ptr_Function_17 = OpTypePointer Function %17
+%_ptr_Function_int = OpTypePointer Function %int
+%_ptr_Function__ptr_Function_int = OpTypePointer Function %_ptr_Function_int
+          %2 = OpVariable %_ptr_StorageBuffer__struct_4 StorageBuffer
+
+; The stored to the fist two variables should be removed and the variables
+; as well. The only function scope variable should be the cooperative matrix.
+; CHECK: OpFunction
+; CHECK-NOT: OpVariable %_ptr_Function__ptr_Function_int Function
+; CHECK: OpVariable [[ptr]] Function
+; CHECK-NOT: OpVariable
+          %1 = OpFunction %void None %16
+         %24 = OpLabel
+         %25 = OpVariable %_ptr_Function__ptr_Function_int Function
+         %26 = OpVariable %_ptr_Function__ptr_Function_int Function
+         %27 = OpVariable %_ptr_Function__struct_18 Function
+         %28 = OpAccessChain %_ptr_StorageBuffer_int %2 %int_0 %uint_0
+         %29 = OpCooperativeMatrixLoadKHR %17 %28 %int_1 %coop_stride
+         %30 = OpCompositeConstruct %_struct_18 %29
+               OpStore %27 %30
+         %31 = OpAccessChain %_ptr_Function_17 %27 %int_0
+         %32 = OpAccessChain %_ptr_Function_int %27 %int_0 %uint_0
+               OpStore %26 %32
+         %33 = OpLoad %int %32
+         %34 = OpIAdd %int %33 %int_1
+               OpStore %25 %32
+               OpStore %32 %34
+         %35 = OpAccessChain %_ptr_StorageBuffer_int %2 %int_0 %uint_64
+         %36 = OpLoad %17 %31
+               OpCooperativeMatrixStoreKHR %35 %36 %int_0 %coop_stride
+               OpReturn
+               OpFunctionEnd
+)";
+
+  // For physical storage buffer support
+  SetTargetEnv(SPV_ENV_VULKAN_1_2);
+  SinglePassRunAndMatch<AggressiveDCEPass>(text, true);
+}
+
+TEST_F(AggressiveDCETest, FunctionDeclaration) {
+  // Ensure the optimizer can handle traversing over a function declaration
+  // 'myfunc' which has no blocks
+
+  const std::string text = R"(OpCapability Linkage
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %PSMain "main" %entryPointParam_PSMain
+OpExecutionMode %PSMain OriginUpperLeft
+OpSource Slang 1
+OpName %myfunc "myfunc"
+OpName %entryPointParam_PSMain "entryPointParam_PSMain"
+OpName %PSMain "PSMain"
+OpDecorate %myfunc LinkageAttributes "_S6myfuncp0pv4f" Import
+OpDecorate %entryPointParam_PSMain Location 0
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%8 = OpTypeFunction %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%entryPointParam_PSMain = OpVariable %_ptr_Output_v4float Output
+%myfunc = OpFunction %v4float None %8
+OpFunctionEnd
+%PSMain = OpFunction %void None %5
+%10 = OpLabel
+%11 = OpFunctionCall %v4float %myfunc
+OpStore %entryPointParam_PSMain %11
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<AggressiveDCEPass>(text, text, true, true);
+}
+
+TEST_F(AggressiveDCETest, MarkCentroidInterpolantLive) {
+  const std::string spirv =
+      R"(OpCapability InterpolationFunction
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_COLOR %out_var_SV_Target
+OpExecutionMode %main OriginUpperLeft
+OpSource HLSL 680
+OpName %in_var_COLOR "in.var.COLOR"
+OpName %out_var_SV_Target "out.var.SV_Target"
+OpName %main "main"
+OpName %param_var_p1 "param.var.p1"
+OpDecorate %in_var_COLOR Location 0
+OpDecorate %out_var_SV_Target Location 0
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%11 = OpTypeFunction %void
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%in_var_COLOR = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+%main = OpFunction %void None %11
+%13 = OpLabel
+%14 = OpVariable %_ptr_Function_v4float Function
+%param_var_p1 = OpVariable %_ptr_Function_v4float Function
+%15 = OpLoad %v4float %in_var_COLOR
+OpStore %param_var_p1 %15
+%16 = OpExtInst %v4float %1 InterpolateAtCentroid %param_var_p1
+OpStore %14 %16
+%17 = OpLoad %v4float %14
+OpStore %out_var_SV_Target %17
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<AggressiveDCEPass>(spirv, spirv, true, false);
+}
+
+TEST_F(AggressiveDCETest, MarkSampleInterpolantLive) {
+  const std::string spirv =
+      R"(OpCapability InterpolationFunction
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_COLOR %out_var_SV_Target
+OpExecutionMode %main OriginUpperLeft
+OpSource HLSL 680
+OpName %in_var_COLOR "in.var.COLOR"
+OpName %out_var_SV_Target "out.var.SV_Target"
+OpName %main "main"
+OpName %param_var_p1 "param.var.p1"
+OpDecorate %in_var_COLOR Location 0
+OpDecorate %out_var_SV_Target Location 0
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 1
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%12 = OpTypeFunction %void
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%in_var_COLOR = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+%int_123 = OpConstant %int 123
+%main = OpFunction %void None %12
+%15 = OpLabel
+%16 = OpVariable %_ptr_Function_v4float Function
+%param_var_p1 = OpVariable %_ptr_Function_v4float Function
+%17 = OpLoad %v4float %in_var_COLOR
+OpStore %param_var_p1 %17
+%18 = OpExtInst %v4float %1 InterpolateAtSample %param_var_p1 %int_123
+OpStore %16 %18
+%19 = OpLoad %v4float %16
+OpStore %out_var_SV_Target %19
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<AggressiveDCEPass>(spirv, spirv, true, false);
+}
+
+TEST_F(AggressiveDCETest, MarkOffsetInterpolantLive) {
+  const std::string spirv =
+      R"(OpCapability InterpolationFunction
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_COLOR %out_var_SV_Target
+OpExecutionMode %main OriginUpperLeft
+OpSource HLSL 680
+OpName %in_var_COLOR "in.var.COLOR"
+OpName %out_var_SV_Target "out.var.SV_Target"
+OpName %main "main"
+OpName %param_var_p1 "param.var.p1"
+OpDecorate %in_var_COLOR Location 0
+OpDecorate %out_var_SV_Target Location 0
+%float = OpTypeFloat 32
+%int = OpTypeInt 32 1
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%12 = OpTypeFunction %void
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%in_var_COLOR = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_Target = OpVariable %_ptr_Output_v4float Output
+%int_123 = OpConstant %int 123
+%main = OpFunction %void None %12
+%15 = OpLabel
+%16 = OpVariable %_ptr_Function_v4float Function
+%param_var_p1 = OpVariable %_ptr_Function_v4float Function
+%17 = OpLoad %v4float %in_var_COLOR
+OpStore %param_var_p1 %17
+%18 = OpExtInst %v4float %1 InterpolateAtOffset %param_var_p1 %int_123
+OpStore %16 %18
+%19 = OpLoad %v4float %16
+OpStore %out_var_SV_Target %19
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<AggressiveDCEPass>(spirv, spirv, true, false);
+}
+
+TEST_F(AggressiveDCETest, NoEliminateOpSource) {
+  // Should not eliminate OpSource
+
+  const std::string text =
+      R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in_var_COLOR %out_var_SV_TARGET
+OpExecutionMode %main OriginUpperLeft
+%4 = OpString "D:\\directxshadercompiler\\tools\\clang\\test\\CodeGenSPIRV\\spirv.debug.opsource.include.hlsl"
+%5 = OpString "D:\\directxshadercompiler\\tools\\clang\\test\\CodeGenSPIRV/spirv.debug.opsource.include-file.hlsli"
+OpSource HLSL 600 %4 "// RUN: %dxc -T ps_6_0 -E main -Zi %s -spirv | FileCheck %s
+#include \"spirv.debug.opsource.include-file.hlsli\"
+
+struct ColorType
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
+};
+
+float4 main(UBER_TYPE(Color) input) : SV_TARGET
+{
+    return input.color;
+}
+"
+OpSource HLSL 600 %5 "#define UBER_TYPE(x) x ## Type
+"
+OpName %in_var_COLOR "in.var.COLOR"
+OpName %out_var_SV_TARGET "out.var.SV_TARGET"
+OpName %main "main"
+OpDecorate %in_var_COLOR Location 0
+OpDecorate %out_var_SV_TARGET Location 0
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%void = OpTypeVoid
+%11 = OpTypeFunction %void
+%in_var_COLOR = OpVariable %_ptr_Input_v4float Input
+%out_var_SV_TARGET = OpVariable %_ptr_Output_v4float Output
+OpLine %4 22 1
+%main = OpFunction %void None %11
+OpNoLine
+%12 = OpLabel
+OpLine %4 22 1
+%13 = OpLoad %v4float %in_var_COLOR
+OpStore %out_var_SV_TARGET %13
+OpLine %4 25 1
+OpReturn
+OpFunctionEnd
+)";
+
+  auto result = SinglePassRunAndDisassemble<AggressiveDCEPass>(
+      text, /* skip_nop = */ true, /* skip_validation = */ false);
+
+  EXPECT_EQ(Pass::Status::SuccessWithoutChange, std::get<1>(result));
+  const std::string& output = std::get<0>(result);
+  EXPECT_THAT(
+      output,
+      HasSubstr("OpSource HLSL 600 %5 \"#define UBER_TYPE(x) x ## Type"));
 }
 
 }  // namespace

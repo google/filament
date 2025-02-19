@@ -17,7 +17,6 @@
 #include <functional>
 #include <list>
 #include <memory>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -31,7 +30,6 @@
 #include "source/opt/ir_builder.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/loop_descriptor.h"
-
 #include "source/opt/loop_utils.h"
 
 namespace spvtools {

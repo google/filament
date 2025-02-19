@@ -3,42 +3,42 @@
 
 using namespace metal;
 
-struct _17
+struct _19
 {
     float2 _m0;
     float2 _m1;
 };
 
-struct _4
+struct _6
 {
     uint2 _m0[324];
 };
 
-struct _7
+struct _9
 {
     float2 _m0[648];
 };
 
-struct _10
+struct _13
 {
     float2 _m0[648];
 };
 
-kernel void main0(const device _4& _5 [[buffer(0)]], device _7& _8 [[buffer(1)]], device _10& _11 [[buffer(2)]])
+kernel void main0(const device _6& _7 [[buffer(0)]], device _9& _11 [[buffer(1)]], device _13& _14 [[buffer(2)]])
 {
-    for (uint _39 = 0u; _39 < 648u; _39 += 2u)
+    for (uint _46 = 0u; _46 < 648u; _46 += 2u)
     {
-        uint2 _40 = _5._m0[_39 / 2u];
-        float2 _41 = as_type<float2>(_40);
-        float2 _76;
-        float2 _61 = modf(_41, _76);
-        _8._m0[_39] = _76;
-        _8._m0[_39 + 1u] = _61;
-        _17 _64;
-        _64._m0 = modf(_41, _64._m1);
-        _17 _42 = _64;
-        _11._m0[_39] = _42._m1;
-        _11._m0[_39 + 1u] = _42._m0;
+        uint2 _47 = _7._m0[_46 / 2u];
+        float2 _48 = as_type<float2>(_47);
+        float2 _91;
+        float2 _69 = modf(_48, _91);
+        _11._m0[_46] = _91;
+        _11._m0[_46 + 1u] = _69;
+        _19 _74;
+        _74._m0 = modf(_48, _74._m1);
+        _19 _50 = _74;
+        _14._m0[_46] = _50._m1;
+        _14._m0[_46 + 1u] = _50._m0;
     }
 }
 

@@ -4,22 +4,23 @@
 #else
 #error No extension available for 64-bit integers.
 #endif
-#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(buffer_reference, buffer_reference_align = 4) buffer uint0_Pointer
+layout(buffer_reference) buffer uint0_stride_4Pointer;
+layout(std430, buffer_reference, buffer_reference_align = 4) buffer uint0_stride_4Pointer
 {
     uint value[];
 };
 
-layout(push_constant, std430) uniform _6_14
+layout(push_constant, std430) uniform _8_15
 {
     uint64_t _m0;
-} _14;
+} _15;
 
 void main()
 {
-    uint0_Pointer _5 = uint0_Pointer(_14._m0);
-    _5.value[10] = 20u;
+    uint0_stride_4Pointer _7 = uint0_stride_4Pointer(_15._m0);
+    _7.value[10] = 20u;
 }
 

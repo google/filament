@@ -12,56 +12,56 @@ struct _5
     int _m1;
 };
 
-_4 _16;
-int _21;
+_4 _26;
+int _31;
 
 layout(location = 0) flat in int _2;
 layout(location = 0) out int _3;
 
 void main()
 {
-    bool _25 = false;
+    bool _76 = false;
     do
     {
-        _5 _26;
-        _26._m0 = 0;
-        _26._m1 = 10;
-        _4 _35;
-        _35 = _16;
-        int _39;
-        _4 _36;
-        bool _59;
-        int _38 = 0;
+        _5 _33;
+        _33._m0 = 0;
+        _33._m1 = 10;
+        _4 _41;
+        _41 = _26;
+        int _45;
+        _4 _42;
+        bool _79;
+        int _44 = 0;
         for (;;)
         {
-            if (_26._m0 < _26._m1)
+            if (_33._m0 < _33._m1)
             {
-                int _27 = _26._m0;
-                int _28 = _26._m0 + int(1u);
-                _26._m0 = _28;
-                _36 = _4(1u, _27);
+                int _34 = _33._m0;
+                int _35 = _33._m0 + int(1u);
+                _33._m0 = _35;
+                _42 = _4(1u, _34);
             }
             else
             {
-                _4 _48 = _35;
-                _48._m0 = 0u;
-                _36 = _48;
+                _4 _65 = _41;
+                _65._m0 = 0u;
+                _42 = _65;
             }
-            bool _45_ladder_break = false;
-            switch (int(_36._m0))
+            bool _55_ladder_break = false;
+            switch (int(_42._m0))
             {
                 case 0:
                 {
-                    _3 = _38;
-                    _25 = true;
-                    _59 = true;
-                    _45_ladder_break = true;
+                    _3 = _44;
+                    _76 = true;
+                    _79 = true;
+                    _55_ladder_break = true;
                     break;
                 }
                 default:
                 {
-                    _59 = false;
-                    _45_ladder_break = true;
+                    _79 = false;
+                    _55_ladder_break = true;
                     break;
                 }
                 case 1:
@@ -69,16 +69,16 @@ void main()
                     break;
                 }
             }
-            if (_45_ladder_break)
+            if (_55_ladder_break)
             {
                 break;
             }
-            _39 = _38 + _2;
-            _35 = _36;
-            _38 = _39;
+            _45 = _44 + _2;
+            _41 = _42;
+            _44 = _45;
             continue;
         }
-        if (_59)
+        if (_79)
         {
             break;
         }

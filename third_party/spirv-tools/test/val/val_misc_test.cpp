@@ -84,7 +84,28 @@ OpMemoryModel Logical GLSL450
       HasSubstr("Cannot create undefined values with 8- or 16-bit types"));
 }
 
-const std::string ShaderClockSpriv = R"(
+TEST_F(ValidateMisc, SizeOfValid) {
+  const std::string spirv = R"(
+               OpCapability Addresses
+               OpCapability Kernel
+               OpMemoryModel Physical64 OpenCL
+               OpEntryPoint Kernel %f "f"
+       %void = OpTypeVoid
+        %i32 = OpTypeInt 32 0
+        %ptr = OpTypePointer CrossWorkgroup %i32
+       %fnTy = OpTypeFunction %void
+          %f = OpFunction %void None %fnTy
+      %entry = OpLabel
+          %s = OpSizeOf %i32 %ptr
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_1);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_1));
+}
+
+const std::string ShaderClockSpirv = R"(
 OpCapability Shader
 OpCapability Int64
 OpCapability ShaderClockKHR
@@ -103,7 +124,7 @@ OpName %time1 "time1"
 )";
 
 TEST_F(ValidateMisc, ShaderClockInt64) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %uint = OpTypeInt 32 0
 %_ptr_Function_uint = OpTypePointer Function %uint
@@ -123,7 +144,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateMisc, ShaderClockVec2) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %ulong = OpTypeInt 64 0
 %_ptr_Function_ulong = OpTypePointer Function %ulong
@@ -145,7 +166,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateMisc, ShaderClockInvalidScopeValue) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %ulong = OpTypeInt 64 0
 %uint = OpTypeInt 32 0
@@ -166,7 +187,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateMisc, ShaderClockSubgroupScope) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %ulong = OpTypeInt 64 0
 %uint = OpTypeInt 32 0
@@ -186,7 +207,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateMisc, ShaderClockDeviceScope) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %ulong = OpTypeInt 64 0
 %uint = OpTypeInt 32 0
@@ -206,7 +227,7 @@ OpFunctionEnd)";
 }
 
 TEST_F(ValidateMisc, ShaderClockWorkgroupScope) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %ulong = OpTypeInt 64 0
 %uint = OpTypeInt 32 0
@@ -222,13 +243,13 @@ OpReturn
 OpFunctionEnd)";
 
   CompileSuccessfully(spirv);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Scope must be Subgroup or Device"));
 }
 
 TEST_F(ValidateMisc, VulkanShaderClockWorkgroupScope) {
-  const std::string spirv = ShaderClockSpriv + R"(
+  const std::string spirv = ShaderClockSpirv + R"(
 %3 = OpTypeFunction %void
 %ulong = OpTypeInt 64 0
 %uint = OpTypeInt 32 0
@@ -249,6 +270,59 @@ OpFunctionEnd)";
               AnyVUID("VUID-StandaloneSpirv-OpReadClockKHR-04652"));
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Scope must be Subgroup or Device"));
+}
+
+std::string GenKernelClockSpirv(const std::string& scope) {
+  const std::string s = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Int64
+OpCapability ShaderClockKHR
+OpExtension "SPV_KHR_shader_clock"
+OpMemoryModel Physical32 OpenCL
+OpEntryPoint Kernel %main "main"
+OpExecutionMode %main ContractionOff
+OpSource OpenCL_C 200000
+OpName %main "main"
+OpName %time1 "time1"
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%ulong = OpTypeInt 64 0
+%uint = OpTypeInt 32 0
+%_ptr_Function_ulong = OpTypePointer Function %ulong
+%scope = OpConstant %uint )" +
+                        scope + R"(
+%main = OpFunction %void None %3
+%5 = OpLabel
+%time1 = OpVariable %_ptr_Function_ulong Function
+%11 = OpReadClockKHR %ulong %scope
+OpStore %time1 %11
+OpReturn
+OpFunctionEnd
+)";
+  return s;
+}
+
+TEST_F(ValidateMisc, KernelClockScopeDevice) {
+  CompileSuccessfully(GenKernelClockSpirv("1"), SPV_ENV_OPENCL_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+}
+
+TEST_F(ValidateMisc, KernelClockScopeWorkgroup) {
+  CompileSuccessfully(GenKernelClockSpirv("2"), SPV_ENV_OPENCL_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+}
+
+TEST_F(ValidateMisc, KernelClockScopeSubgroup) {
+  CompileSuccessfully(GenKernelClockSpirv("3"), SPV_ENV_OPENCL_1_2);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+}
+
+TEST_F(ValidateMisc, KernelClockScopeInvalid) {
+  CompileSuccessfully(GenKernelClockSpirv("0"), SPV_ENV_OPENCL_1_2);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_OPENCL_1_2));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Scope must be Subgroup, Workgroup, or Device"));
 }
 
 TEST_F(ValidateMisc, UndefVoid) {
@@ -297,6 +371,77 @@ OpEntryPoint Vertex %func "shader"
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Invalid storage class for target environment"));
 }
+
+TEST_F(ValidateMisc, CoopMat2WorkgroupLocalSizeIdPass) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability Int16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionModeId %main LocalSizeId %u32_16 %u32_16 %u32_16
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%use_Acc = OpConstant %u32 2
+%workgroup = OpConstant %u32 2
+
+%f16mat = OpTypeCooperativeMatrixKHR %f16 %workgroup %u32_16 %u32_16 %use_Acc
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateMisc, CoopMat2WorkgroupLocalSizeIdConstantNotDeclaredYetFail) {
+  const std::string body = R"(
+OpCapability Shader
+OpCapability Float16
+OpCapability Int16
+OpCapability CooperativeMatrixKHR
+OpExtension "SPV_KHR_cooperative_matrix"
+OpExtension "SPV_KHR_vulkan_memory_model"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionModeId %main LocalSizeId %u32_16 %u32_8 %u32_16
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bool = OpTypeBool
+%f16 = OpTypeFloat 16
+%u32 = OpTypeInt 32 0
+
+%u32_16 = OpConstant %u32 16
+%use_Acc = OpConstant %u32 2
+%workgroup = OpConstant %u32 2
+
+%f16mat = OpTypeCooperativeMatrixKHR %f16 %workgroup %u32_16 %u32_16 %use_Acc
+%u32_8 = OpConstant %u32 8
+
+%main = OpFunction %void None %func
+%main_entry = OpLabel
+
+OpReturn
+OpFunctionEnd)";
+
+  CompileSuccessfully(body.c_str(), SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpTypeCooperativeMatrixKHR with ScopeWorkgroup used "
+                        "before LocalSizeId constant value"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools
