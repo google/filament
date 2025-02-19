@@ -42,7 +42,6 @@ absl_cc_library(
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
-    absl::config
     absl::core_headers
     absl::random_internal_distribution_caller
     absl::random_internal_fast_uniform_bits
@@ -78,7 +77,6 @@ absl_cc_library(
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
-    absl::config
     absl::fast_type_id
     absl::optional
 )
@@ -94,7 +92,6 @@ absl_cc_library(
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
-    absl::config
     absl::random_mocking_bit_gen
     absl::random_internal_mock_helpers
   TESTONLY
@@ -111,15 +108,17 @@ absl_cc_library(
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
-    absl::config
-    absl::core_headers
-    absl::fast_type_id
     absl::flat_hash_map
     absl::raw_logging_internal
-    absl::random_internal_mock_helpers
+    absl::random_distributions
+    absl::random_internal_distribution_caller
+    absl::random_internal_mock_overload_set
     absl::random_random
+    absl::strings
+    absl::span
     absl::type_traits
     absl::utility
+    absl::variant
     GTest::gmock
     GTest::gtest
   PUBLIC
@@ -136,7 +135,6 @@ absl_cc_test(
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
-    absl::random_distributions
     absl::random_mocking_bit_gen
     absl::random_random
     GTest::gmock
@@ -211,7 +209,6 @@ absl_cc_library(
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
     absl::config
-    absl::raw_logging_internal
 )
 
 absl_cc_library(
@@ -290,8 +287,6 @@ absl_cc_test(
   DEPS
     absl::random_distributions
     absl::random_random
-    absl::type_traits
-    absl::int128
     absl::random_internal_distribution_test_util
     GTest::gmock
     GTest::gtest_main
@@ -551,7 +546,6 @@ absl_cc_library(
     absl::config
     absl::utility
     absl::fast_type_id
-    absl::type_traits
 )
 
 # Internal-only target, do not depend on directly.
@@ -1179,26 +1173,6 @@ absl_cc_library(
 )
 
 # Internal-only target, do not depend on directly.
-absl_cc_library(
-  NAME
-    random_internal_mock_validators
-  HDRS
-    "internal/mock_validators.h"
-  COPTS
-    ${ABSL_DEFAULT_COPTS}
-  LINKOPTS
-    ${ABSL_DEFAULT_LINKOPTS}
-  DEPS
-    absl::random_internal_iostream_state_saver
-    absl::random_internal_uniform_helper
-    absl::config
-    absl::raw_logging_internal
-    absl::strings
-    absl::string_view
-  TESTONLY
-)
-
-# Internal-only target, do not depend on directly.
 absl_cc_test(
   NAME
     random_internal_uniform_helper_test
@@ -1211,7 +1185,6 @@ absl_cc_test(
   DEPS
     absl::random_internal_uniform_helper
     GTest::gtest_main
-    absl::int128
 )
 
 # Internal-only target, do not depend on directly.

@@ -230,8 +230,8 @@ class LogEveryNSecState final {
 
 // Helper routines to abort the application quietly
 
-[[noreturn]] inline void AbortQuietly() { abort(); }
-[[noreturn]] inline void ExitQuietly() { _exit(1); }
+ABSL_ATTRIBUTE_NORETURN inline void AbortQuietly() { abort(); }
+ABSL_ATTRIBUTE_NORETURN inline void ExitQuietly() { _exit(1); }
 }  // namespace log_internal
 ABSL_NAMESPACE_END
 }  // namespace absl

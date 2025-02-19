@@ -291,8 +291,7 @@ inline std::string StrJoin(std::initializer_list<absl::string_view> il,
 template <typename... T>
 std::string StrJoin(const std::tuple<T...>& value,
                     absl::string_view separator) {
-  return strings_internal::JoinTuple(value, separator,
-                                     std::index_sequence_for<T...>{});
+  return strings_internal::JoinAlgorithm(value, separator, AlphaNumFormatter());
 }
 
 ABSL_NAMESPACE_END

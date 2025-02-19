@@ -35,6 +35,9 @@ void EncodeRawVarint(uint64_t value, size_t size, absl::Span<char> *buf) {
   }
   buf->remove_prefix(size);
 }
+constexpr uint64_t MakeTagType(uint64_t tag, WireType type) {
+  return tag << 3 | static_cast<uint64_t>(type);
+}
 }  // namespace
 
 bool EncodeVarint(uint64_t tag, uint64_t value, absl::Span<char> *buf) {
