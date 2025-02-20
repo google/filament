@@ -29,7 +29,7 @@ namespace filament::backend::fvkmemory {
 
 class ResourceManager {
 public:
-    ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck);
+    ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck, bool disablePoolHandleTags);
 
     template<typename D>
     inline Handle<D> allocHandle() noexcept {

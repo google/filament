@@ -202,7 +202,10 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
 VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
         Platform::DriverConfig const& driverConfig) noexcept
     : mPlatform(platform),
-      mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck),
+      mResourceManager(
+              driverConfig.handleArenaSize,
+              driverConfig.disableHandleUseAfterFreeCheck,
+              driverConfig.disableHeapHandleTags),
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),

@@ -128,6 +128,11 @@ public:
         bool disableHandleUseAfterFreeCheck = false;
 
         /**
+         * Disable backend handles tags for heap allocated (fallback) handles
+         */
+        bool disableHeapHandleTags = false;
+
+        /**
          * Force GLES2 context if supported, or pretend the context is ES2. Only meaningful on
          * GLES 3.x backends.
          */

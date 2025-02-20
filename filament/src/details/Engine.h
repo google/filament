@@ -702,6 +702,7 @@ public:
             } opengl;
             bool disable_parallel_shader_compile = false;
             bool disable_handle_use_after_free_check = false;
+            bool disable_heap_handle_tags = true; // FIXME: this should be false
         } backend;
     } features;
 
@@ -712,6 +713,9 @@ public:
             { "backend.disable_handle_use_after_free_check",
               "Disable Handle<> use-after-free checks.",
               &features.backend.disable_handle_use_after_free_check, true },
+            { "backend.disable_heap_handle_tags",
+              "Disable Handle<> tags for heap-allocated handles.",
+              &features.backend.disable_heap_handle_tags, true },
             { "backend.opengl.assert_native_window_is_valid",
               "Asserts that the ANativeWindow is valid when rendering starts.",
               &features.backend.opengl.assert_native_window_is_valid, true },
