@@ -802,7 +802,6 @@ if (FILAMENT_ENABLE_FGVIEWER OR IS_HOST_PLATFORM)
     add_subdirectory(${LIBRARIES}/fgviewer)
 endif()
 
-
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
