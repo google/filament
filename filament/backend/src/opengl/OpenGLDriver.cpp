@@ -277,7 +277,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mShaderCompilerService(*this),
           mHandleAllocator("Handles",
                   driverConfig.handleArenaSize,
-                  driverConfig.disableHandleUseAfterFreeCheck),
+                  driverConfig.disableHandleUseAfterFreeCheck,
+                  driverConfig.disableHeapHandleTags),
           mDriverConfig(driverConfig),
           mCurrentPushConstants(new(std::nothrow) PushConstantBundle{}) {
     // set a reasonable default value for our stream array
