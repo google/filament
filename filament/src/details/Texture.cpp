@@ -164,6 +164,26 @@ Texture* Texture::Builder::build(Engine& engine) {
             (isProtectedTexturesSupported && useProtectedMemory) || !useProtectedMemory)
             << "Texture is PROTECTED but protected textures are not supported";
 
+    const auto validateSamplerType = [&engine = downcast(engine)](SamplerType const sampler) -> bool {
+        switch (sampler) {
+            case SamplerType::SAMPLER_2D:
+            case SamplerType::SAMPLER_CUBEMAP:
+            case SamplerType::SAMPLER_EXTERNAL:
+                return true;
+            case SamplerType::SAMPLER_3D:
+            case SamplerType::SAMPLER_2D_ARRAY:
+                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1);
+            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_2);
+        }
+        return false;
+    };
+
+    // Validate sampler before any further interaction with it.
+    FILAMENT_CHECK_PRECONDITION(validateSamplerType(mImpl->mTarget))
+            << "SamplerType " << uint8_t(mImpl->mTarget) << " not support at feature level "
+            << uint8_t(engine.getActiveFeatureLevel());
+
     // SAMPLER_EXTERNAL implies imported.
     if (mImpl->mTarget == SamplerType::SAMPLER_EXTERNAL) {
         mImpl->mExternal = true;
@@ -215,24 +235,6 @@ Texture* Texture::Builder::build(Engine& engine) {
     #if defined(__EMSCRIPTEN__)
     FILAMENT_CHECK_PRECONDITION(!swizzled) << "WebGL does not support texture swizzling.";
     #endif
-
-    auto validateSamplerType = [&engine = downcast(engine)](SamplerType const sampler) -> bool {
-        switch (sampler) {
-            case SamplerType::SAMPLER_2D:
-            case SamplerType::SAMPLER_CUBEMAP:
-            case SamplerType::SAMPLER_EXTERNAL:
-                return true;
-            case SamplerType::SAMPLER_3D:
-            case SamplerType::SAMPLER_2D_ARRAY:
-                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1);
-            case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-                return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_2);
-        }
-    };
-
-    FILAMENT_CHECK_PRECONDITION(validateSamplerType(mImpl->mTarget))
-            << "SamplerType " << uint8_t(mImpl->mTarget) << " not support at feature level "
-            << uint8_t(engine.getActiveFeatureLevel());
 
     FILAMENT_CHECK_PRECONDITION((swizzled && sampleable) || !swizzled)
             << "Swizzled texture must be SAMPLEABLE";
