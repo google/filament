@@ -71,6 +71,21 @@ inline VkImageViewType getViewType(SamplerType target) {
     }
 }
 
+inline VkPrimitiveTopology getPrimitiveTopology(PrimitiveType pt) noexcept {
+    switch (pt) {
+        case PrimitiveType::POINTS:
+            return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        case PrimitiveType::LINES:
+            return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        case PrimitiveType::LINE_STRIP:
+            return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        case PrimitiveType::TRIANGLES:
+            return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        case PrimitiveType::TRIANGLE_STRIP:
+            return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    }
+}
+
 }// namespace filament::backend::fvkutils
 
 #endif// TNT_FILAMENT_BACKEND_VULKAN_UTILS_CONVERSION_H
