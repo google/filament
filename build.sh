@@ -195,6 +195,7 @@ VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
 VULKAN_ANDROID_GRADLE_OPTION=""
 
 WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=OFF"
+WEBGPU_ANDROID_GRADLE_OPTION=""
 
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
@@ -530,6 +531,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleDebug \
@@ -579,6 +581,7 @@ function build_android {
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
+            ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
             ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleRelease \
@@ -959,6 +962,7 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bx:S:X:" opt; do
             ;;
         W)
             WEBGPU_OPTION="-DFILAMENT_SUPPORTS_WEBGPU=ON"
+            WEBGPU_ANDROID_GRADLE_OPTION="-Pcom.google.android.filament.include-webgpu"
             echo "Enable support for WebGPU(Experimental) in the core Filament library."
             ;;
         s)
