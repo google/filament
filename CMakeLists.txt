@@ -517,6 +517,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_definitions(-DFILAMENT_DRIVER_SUPPORTS_VULKAN)
 endif()
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+    message(AUTHOR_WARNING "WebGPU support is very limited and is only experimental at this stage.")
+    add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
+endif()
+
 # Build with Metal support on non-WebGL Apple platforms.
 if (APPLE AND NOT WEBGL)
     option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
@@ -765,7 +770,6 @@ add_subdirectory(${LIBRARIES}/mathio)
 add_subdirectory(${LIBRARIES}/uberz)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${LIBRARIES}/viewer)
-add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/abseil/tnt)
 add_subdirectory(${EXTERNAL}/basisu/tnt)
@@ -811,6 +815,13 @@ if (FILAMENT_SUPPORTS_VULKAN)
     set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
     add_subdirectory(${EXTERNAL}/spirv-headers)
 endif()
+
+if (FILAMENT_SUPPORTS_WEBGPU)
+    add_subdirectory(${EXTERNAL}/dawn/tnt/)
+endif()
+
+# Add filament after dawn, since filament/backend depends on dawn targets.
+add_subdirectory(${FILAMENT}/filament)
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
