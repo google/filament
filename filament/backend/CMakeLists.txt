@@ -428,6 +428,8 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/backend DESTINATION include)
 # ==================================================================================================
 # Test
 # ==================================================================================================
+if(FILAMENT_TESTS)
+
 option(INSTALL_BACKEND_TEST "Install the backend test library so it can be consumed on iOS" OFF)
 
 if (APPLE OR LINUX)
@@ -557,3 +559,5 @@ target_link_libraries(metal_utils_test PRIVATE
 set_target_properties(metal_utils_test PROPERTIES FOLDER Tests)
 
 endif()
+
+endif(FILAMENT_TESTS)
