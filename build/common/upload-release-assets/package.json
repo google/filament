@@ -10,6 +10,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@actions/glob": "^0.3.0",
-    "@octokit/rest": "^19.0.5"
+    "@octokit/rest": "^21.1.0"
   }
 }
