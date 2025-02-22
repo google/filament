@@ -98,6 +98,15 @@ inline bool getVertexAttrType(cgltf_attribute_type atype, filament::VertexAttrib
     }
 }
 
+inline bool getCustomVertexAttrType(int8_t customIndex, filament::VertexAttribute* attrType) {
+    if (customIndex < 0) {
+        return false;
+    }
+    *attrType = static_cast<filament::VertexAttribute>(
+            customIndex + (uint8_t) filament::VertexAttribute::CUSTOM0);
+    return true;
+}
+
 inline bool getIndexType(cgltf_component_type ctype, filament::IndexBuffer::IndexType* itype) {
     switch (ctype) {
         case cgltf_component_type_r_8u:
