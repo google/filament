@@ -1,7 +1,229 @@
 Revision history for SPIRV-Tools
 
-v2022.5-dev 2022-10-12
-   - Start v2022.5-dev
+v2024.4 2024-12-04
+  - General
+    - Add FPEncoding operand type. (#5726)
+    - Support SPV_KHR_untyped_pointers (#5736)
+    - add support for SPV_INTEL_global_variable_host_access (#5786)
+    - Add support for SPV_KHR_compute_shader_derivative (#5817)
+    - Accept hex representation as binary input (#5870)
+    - Vulkan 1.4 support (#5899)
+  - Optimizer
+    - Add knowledge of cooperative matrices (#5720)
+    - Add struct-packing pass and unit test. (#5778)
+  - Validator
+    - Validate presence of Stride operand to OpCooperativeMatrix{Load,Store}KHR (#5777)
+    - Update sampled image validation (#5789)
+    - Disallow stores according to VUID 06924 (#5368)
+    - Add validation for SPV_NV_tensor_addressing and SPV_NV_cooperative_matrix2 (#5865)
+  - Linker
+    - allow linking functions with different pointer arguments (#5534)
+
+v2024.3 2024-06-20
+  - General
+  - Optimizer
+    - Do not fold mul and adds to generate fmas (#5682)
+    - add OpExtInst forward ref fixup pass (#5708)
+  - Validator
+    - Separate Location check for tess patch (#5654)
+    - Validate MemoryAccessMask of OpCooperativeMatrixStoreKHR (#5668)
+    - OpSampledImage extra validation (#5695)
+    - add support for OpExtInstWithForwardRefs (#5698)A
+  - Disassembler
+    - add decorations to comments (#5675)
+    - Add --nested-indent and --reorder-blocks (#5671)
+
+v2024.2 2024-04-22
+  - General
+    - Add SPIRV_TOOLS_EXPORT to public C++ API (#5591)
+    - Use bazel 7 and bzlmod (#5601)
+  - Optimizer
+    - opt: add GroupNonUniformPartitionedNV capability to trim pass (#5648)
+    - Fix rebuilding types with circular references. (#5637)
+    - Add AliasedPointer decoration (#5635)
+    - add support for vulkan-shader-profiler external passes (#5512)
+  - Validator
+    - A fix to support of SPV_QCOM_image_processing2 (#5646)
+    - spirv-val: Add Vulkan check for Rect Dim in OpTypeImage (#5644)
+    - Validate duplicate decorations and execution modes (#5641)
+    - Validator: Support SPV_NV_raw_access_chains (#5568)
+
+v2024.1 2024-03-06
+  - General
+    - Add tooling support for SPV_KHR_maximal_reconvergence (#5542)
+    - Add support for SPV_KHR_float_controls2 (#5543)
+    - SPV_KHR_quad_control (#5547)
+    - Fold 64-bit int operations (#5561)
+    - update image enum tests to remove Kernel capability (#5562)
+    - Support operand kind for SPV_INTEL_maximum_registers (#5580)
+    - SPV_NV_shader_atomic_fp16_vector (#5581)
+    - Support for SPV_QCOM_image_processing2 (#5582)
+    - Fix access chain struct checks (#5592)
+  - Optimizer
+    - opt: add Int16 and Float16 to capability trim pass (#5519)
+    - Add preserver-interface option to spirv-opt (#5524)
+    - spirv-opt: Fix OpCompositeExtract relaxation with struct operands (#5536)
+    - opt: Add VulkanMemoryModelDeviceScope to trim (#5544)
+    - opt: Add TrimCapabilities pass to spirv-opt tool (#5545)
+    - Add modify-maximal-reconvergence to spirv-opt help (#5546)
+    - opt: add SPV_EXT_mesh_shader to opt allowlist (#5551)
+    - opt: Add OpEntryPoint to DescriptorScalarReplacement pass (#5553)
+    - opt: prevent meld to merge block with MaximalReconvergence (#5557)
+    - [OPT] Use new instruction folder for for all opcodes in spec consti folding (#5569)
+    - [OPT] Identify arrays with unknown length in copy prop arrays (#5570)
+    - [OPT] Add removed unused interface var pass to legalization passes (#5579)
+  - Validator
+    - spirv-val: Re-enable OpControlBarrier VU (#5527)
+    - spirv-val: Add Mesh Primitive Built-In validaiton (#5529)
+    - spirv-val: Validate PhysicalStorageBuffer Stage Interface (#5539)
+    - spirv-val: Multiple interface var with same SC (#5528)
+    - spirv-val: Revert Validate PhysicalStorageBuffer Stage Interface (#5575)
+    - spirv-val: Make Constant evaluation consistent (#5587)
+
+v2023.6 2023-12-18
+  - General
+    - update_build_version.py produce deterministic header. (#5426)
+    - Support missing git in update_build_version.py (#5473)
+  - Optimizer
+    - Add ComputeDerivativeGroup*NV capabilities to trim capabilities pass. (#5430)
+    - Do not crash when tryingto fold unsupported spec constant (#5496)
+    - instrument: Fix handling of gl_InvocationID (#5493)
+    - Fix nullptr argument in MarkInsertChain (#5465)
+    - opt: support 64-bit OpAccessChain index in FixStorageClass (#5446)
+    - opt: add StorageImageReadWithoutFormat to cap trim (#5475)
+    - opt: add PhysicalStorageBufferAddresses to trim (#5476)
+    - Fix array size calculation (#5463
+  - Validator
+    - spirv-val: Loosen restriction on base type of DebugTypePointer and DebugTypeQualifier (#5479)
+    - spirv-val: Add WorkgroupMemoryExplicitLayoutKHR check for Block (#5461)
+
+v2023.5 2023-10-15
+  - General
+    - Support 2 Intel extensions (#5357)
+    - SPV_QCOM_image_processing support (#5223)
+  - Optimizer
+    - opt: fix StorageInputOutput16 trimming. (#5359)
+    - opt: add StoragePushConstant16 to trim pass (#5366)
+    - opt: enable StorageUniform16 (#5371)
+    - opt: add bitmask support for capability trimming (#5372)
+    - opt: Add SwitchDescriptorSetPass (#5375)
+    - opt: add FragmentShader*InterlockEXT to capability trim pass (#5390)
+    - opt: add Int64 capability to trim pass (#5398)
+    - opt: add Float64 capability to trim pass (#5428)
+    - opt: add raytracing/rayquery to trim pass (#5397)
+    - opt: add ImageMSArray capability to trim pass. (#5395)
+    - Add SPV_KHR_physical_storage_buffer to allowlists (#5402)
+    - Add SPV_EXT_fragment_shader_interlock to allow lists (#5393)
+    - Make sure that fragment shader interlock instructions are not removed by DCE (#5400)
+    - instrument: Use Import linkage for instrumentation functions (#5355)
+    - Add a new legalization pass to dedupe invocation interlock instructions (#5409)
+    - instrument: Ensure linking works even of nothing is changed (#5419)
+  - Validator
+    - Move token version/cap/ext checks from parsing to validation (#5370)
+    - val: re-add ImageMSArray validation (#5394)
+  - Linker
+    - linker: Add --use-highest-version option
+
+v2023.4 2023-07-17
+  - General
+    - Set cmake_policy CMP0128 (#5341)
+    - Add python3 requirement for the script (#5326)
+    - Add support for LiteralFloat type (#5323)
+    - SPV_KHR_cooperative_matrix (#5286)
+    - Allow OpTypeBool in UniformConstant (#5237)
+    - Allow physical storage buffer pointer in IO (#5251)
+    - Remove const zero image operands (#5232)
+  - Optimizer
+    - Enable vector constant folding (#4913) (#5272)
+    - Fold negation of integer vectors (#5269)
+    - Add folding rule for OpTranspose (#5241)
+    - Add SPV_NV_bindless_texture to spirv optimizations (#5231)
+    - Fix incorrect half float conversion (#5349)
+    - Add SPV_EXT_shader_atomic_float_add to allow lists (#5348)
+  - Instrument
+    - instrument: Cast gl_VertexIndex and InstanceIndex to uint (#5319)
+    - instrument: Fix buffer address length calculations (#5257)
+    - instrument: Reduce number of inst_bindless_stream_write_6 calls (#5327)
+  - Validator
+    - Validate GroupNonUniform instructions (#5296)
+    - spirv-val: Label SPV_KHR_cooperative_matrix VUID (#5301)
+    - Validate layouts for PhysicalStorageBuffer pointers (#5291)
+    - spirv-val: Remove VUID from 1.3.251 spec (#5244)
+  - Diff
+    - spirv-diff: Update test expectations (#5264)
+    - spirv-diff: Leave undefined ids unpaired. (#5262)
+    - spirv-diff: Properly match SPV_KHR_ray_query types. (#5259)
+    - diff: Don't give up entry point matching too early. (#5224)
+
+v2023.3 2023-05-15
+  - General
+    - Update spirv_headers to include SPV_KHR_ray_tracing_position_fetch (#5205)
+    - spirv-tools: Add support for QNX (#5211)
+    - build: set std=c++17 for BUILD.gn (#5162)
+  - Optimizer
+    - Run ADCE when the printf extension is used. (#5215)
+    - Don't convert struct members to half (#5201)
+    - Apply scalar replacement on vars with Pointer decorations (#5208)
+    - opt: Fix null deref in OpMatrixTimesVector and OpVectorTimesMatrix (#5199)
+    - instrument: Add set and binding to bindless error records (#5204)
+    - instrument: Change descriptor state storage format (#5178)
+    - Fix LICMPass (#5087)
+    - Add Vulkan memory model to allow lists (#5173)
+    - Do not remove control barrier after spv1.3 (#5174)
+  - Validator
+    - spirv-val: Label Interface Location/Component VUIDs (#5221)
+    - Add support for SPV_EXT_shader_tile_image (#5188)
+    - Fix vector OpConstantComposite type validation (#5191)
+    - spirv-val: Label new Vulkan VUID 07951 (#5154)
+  - Fuzz
+    - Do not define GOOGLE_PROTOBUF_INTERNAL_DONATE_STEAL_INLINE if it is already defined. (#5200)
+
+v2023.2 2023-03-10
+  - General
+    - build: move from c++11 to c++17 (#4983)
+    - tools: refactorize tools flags parsing. (#5111)
+    - Add C interface for Optimizer (#5030)
+    - libspirv.cpp: adds c++ api for spvBinaryParse (#5109)
+    - build: change the way we set cxx version for bazel. (#5114)
+  - Optimizer
+    - Fix null pointer in FoldInsertWithConstants. (#5093)
+    - Fix removal of dependent non-semantic instructions (#5122)
+    - Remove duplicate lists of constant and type opcodes (#5106)
+    - opt: fix spirv ABI on Linux again. (#5113)
+  - Validator
+    - Validate decoration of structs with RuntimeArray (#5094)
+    - Validate operand type before operating on it (#5092)
+    - spirv-val: Conditional Branch without an exit is invalid in loop header (#5069)
+    - spirv-val: Initial SPV_EXT_mesh_shader builtins (#5080)
+
+v2023.1 2023-01-17
+  - General
+    - Renamed "master" to "main" (issue#5051)
+    - Validate version 5 of clspv reflection (#5050)
+    - Remove testing support for VS2015 (#5027)
+    - Fix undef behaviour in hex float parsing (#5025)
+    - Require C++11 *or later* (#5020)
+  - Instrument
+    - Instrument: Fix bindless checking for BufferDeviceAddress (#5049)
+  - Optimizer
+    - Optimize allocation of spvtools::opt::Instruction::operands_ (#5024)
+    - spirv-opt: Fix OpCompositeInsert with Null Constant (#5008)
+    - spirv-opt: Handle null CompositeInsert (#4998)
+    - Add option to ADCE to remove output variables from interface. (#4994)
+    - Add support for tesc, tese and geom to EliminateDead*Components (#4990)
+    - Add pass to eliminate dead output components (#4982)
+    - spirv-opt: Add const folding for CompositeInsert (#4943)
+    - Add passes to eliminate dead output stores (#4970)
+    - Prevent eliminating case constructs in block merging (#4976)
+  - Validator
+    - Fix layout validation (#5015)
+    - Fix use of invalid analysis (#5013)
+    - Fix infinite loop in validator (#5006)
+    - Add validation support for SPV_NV_shader_invocation_reorder. (#4979)
+    - Only validate full layout in Vulkan environments (#4972)
+    - spirv-val: Label new Vulkan OpPtrAccessChain VUs (#4975)
+    - spirv-val: Add OpPtrAccessChain Base checks (#4965)
+
 
 v2022.4 2022-10-12
   - General

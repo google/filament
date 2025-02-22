@@ -1,0 +1,21 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 460
+               OpName %main "main"
+               OpName %type_Primitive "type_Primitive"
+               OpName %Primitive "Primitive"
+               OpDecorate %type_Primitive Block
+               OpDecorate %Primitive DescriptorSet 0
+               OpDecorate %Primitive Binding 15
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+%type_Primitive = OpTypeStruct
+%_ptr_Uniform_type_Primitive = OpTypePointer Uniform %type_Primitive
+  %Primitive = OpVariable %_ptr_Uniform_type_Primitive Uniform
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd

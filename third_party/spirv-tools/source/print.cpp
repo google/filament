@@ -14,26 +14,7 @@
 
 #include "source/print.h"
 
-#if defined(SPIRV_ANDROID) || defined(SPIRV_LINUX) || defined(SPIRV_MAC) || \
-    defined(SPIRV_IOS) || defined(SPIRV_TVOS) || defined(SPIRV_FREEBSD) ||  \
-    defined(SPIRV_OPENBSD) || defined(SPIRV_EMSCRIPTEN) ||                  \
-    defined(SPIRV_FUCHSIA) || defined(SPIRV_GNU)
-namespace spvtools {
-
-clr::reset::operator const char*() { return "\x1b[0m"; }
-
-clr::grey::operator const char*() { return "\x1b[1;30m"; }
-
-clr::red::operator const char*() { return "\x1b[31m"; }
-
-clr::green::operator const char*() { return "\x1b[32m"; }
-
-clr::yellow::operator const char*() { return "\x1b[33m"; }
-
-clr::blue::operator const char*() { return "\x1b[34m"; }
-
-}  // namespace spvtools
-#elif defined(SPIRV_WINDOWS)
+#if defined(SPIRV_WINDOWS)
 #include <windows.h>
 
 namespace spvtools {
@@ -111,17 +92,17 @@ clr::blue::operator const char*() {
 #else
 namespace spvtools {
 
-clr::reset::operator const char*() { return ""; }
+clr::reset::operator const char*() { return "\x1b[0m"; }
 
-clr::grey::operator const char*() { return ""; }
+clr::grey::operator const char*() { return "\x1b[1;30m"; }
 
-clr::red::operator const char*() { return ""; }
+clr::red::operator const char*() { return "\x1b[31m"; }
 
-clr::green::operator const char*() { return ""; }
+clr::green::operator const char*() { return "\x1b[32m"; }
 
-clr::yellow::operator const char*() { return ""; }
+clr::yellow::operator const char*() { return "\x1b[33m"; }
 
-clr::blue::operator const char*() { return ""; }
+clr::blue::operator const char*() { return "\x1b[34m"; }
 
 }  // namespace spvtools
 #endif

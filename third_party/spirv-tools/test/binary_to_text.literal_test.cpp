@@ -33,6 +33,7 @@ TEST_P(RoundTripLiteralsTest, Sample) {
   for (bool endian_swap : kSwapEndians) {
     EXPECT_THAT(
         EncodeAndDecodeSuccessfully(GetParam(), SPV_BINARY_TO_TEXT_OPTION_NONE,
+                                    SPV_TEXT_TO_BINARY_OPTION_NONE,
                                     SPV_ENV_UNIVERSAL_1_0, endian_swap),
         Eq(GetParam()));
   }
@@ -68,6 +69,7 @@ TEST_P(RoundTripSpecialCaseLiteralsTest, Sample) {
   for (bool endian_swap : kSwapEndians) {
     EXPECT_THAT(EncodeAndDecodeSuccessfully(std::get<0>(GetParam()),
                                             SPV_BINARY_TO_TEXT_OPTION_NONE,
+                                            SPV_TEXT_TO_BINARY_OPTION_NONE,
                                             SPV_ENV_UNIVERSAL_1_0, endian_swap),
                 Eq(std::get<1>(GetParam())));
   }

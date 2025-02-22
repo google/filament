@@ -188,6 +188,46 @@ TEST(BitUtilsTest, IsBitSetAtPositionAll) {
     EXPECT_TRUE(IsBitAtPositionSet(max_u64, i));
   }
 }
+
+struct ExtendedValueTestCase {
+  uint32_t input;
+  uint32_t bit_width;
+  uint32_t expected_result;
+};
+
+using SignExtendedValueTest = ::testing::TestWithParam<ExtendedValueTestCase>;
+
+TEST_P(SignExtendedValueTest, SignExtendValue) {
+  const auto& tc = GetParam();
+  auto result = SignExtendValue(tc.input, tc.bit_width);
+  EXPECT_EQ(result, tc.expected_result);
+}
+INSTANTIATE_TEST_SUITE_P(
+    SignExtendValue, SignExtendedValueTest,
+    ::testing::Values(ExtendedValueTestCase{1, 1, 0xFFFFFFFF},
+                      ExtendedValueTestCase{1, 2, 0x1},
+                      ExtendedValueTestCase{2, 1, 0x0},
+                      ExtendedValueTestCase{0x8, 4, 0xFFFFFFF8},
+                      ExtendedValueTestCase{0x8765, 16, 0xFFFF8765},
+                      ExtendedValueTestCase{0x7765, 16, 0x7765},
+                      ExtendedValueTestCase{0xDEADBEEF, 32, 0xDEADBEEF}));
+
+using ZeroExtendedValueTest = ::testing::TestWithParam<ExtendedValueTestCase>;
+
+TEST_P(ZeroExtendedValueTest, ZeroExtendValue) {
+  const auto& tc = GetParam();
+  auto result = ZeroExtendValue(tc.input, tc.bit_width);
+  EXPECT_EQ(result, tc.expected_result);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ZeroExtendValue, ZeroExtendedValueTest,
+    ::testing::Values(ExtendedValueTestCase{1, 1, 0x1},
+                      ExtendedValueTestCase{1, 2, 0x1},
+                      ExtendedValueTestCase{2, 1, 0x0},
+                      ExtendedValueTestCase{0x8, 4, 0x8},
+                      ExtendedValueTestCase{0xFF8765, 16, 0x8765},
+                      ExtendedValueTestCase{0xDEADBEEF, 32, 0xDEADBEEF}));
 }  // namespace
 }  // namespace utils
 }  // namespace spvtools

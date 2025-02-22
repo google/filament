@@ -13,8 +13,8 @@ layout(binding = 1, std430) buffer Buf_count
 
 void _main()
 {
-    int _29 = atomicAdd(Buf_count_1._count, 1);
-    Buf_1._data[_29] = vec4(1.0);
+    int _25 = atomicAdd(Buf_count_1._count, 1);
+    Buf_1._data[_25] = vec4(1.0);
 }
 
 void main()

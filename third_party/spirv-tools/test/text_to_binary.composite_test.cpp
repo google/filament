@@ -35,7 +35,8 @@ using CompositeRoundTripTest = RoundTripTest;
 TEST_F(CompositeRoundTripTest, Good) {
   std::string spirv = "%2 = OpCopyLogical %1 %3\n";
   std::string disassembly = EncodeAndDecodeSuccessfully(
-      spirv, SPV_BINARY_TO_TEXT_OPTION_NONE, SPV_ENV_UNIVERSAL_1_4);
+      spirv, SPV_BINARY_TO_TEXT_OPTION_NONE, SPV_TEXT_TO_BINARY_OPTION_NONE,
+      SPV_ENV_UNIVERSAL_1_4);
   EXPECT_THAT(disassembly, Eq(spirv));
 }
 

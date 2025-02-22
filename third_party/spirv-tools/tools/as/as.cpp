@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -19,11 +20,11 @@
 #include "source/spirv_target_env.h"
 #include "spirv-tools/libspirv.h"
 #include "tools/io.h"
+#include "tools/util/flags.h"
 
-void print_usage(char* argv0) {
-  std::string target_env_list = spvTargetEnvList(19, 80);
-  printf(
-      R"(%s - Create a SPIR-V binary module from SPIR-V assembly text
+constexpr auto kDefaultTarget = SPV_ENV_UNIVERSAL_1_6;
+static const std::string kHelpText =
+    R"(%s - Create a SPIR-V binary module from SPIR-V assembly text
 
 Usage: %s [options] [<filename>]
 
@@ -42,94 +43,69 @@ Options:
                   Numeric IDs in the binary will have the same values as in the
                   source. Non-numeric IDs are allocated by filling in the gaps,
                   starting with 1 and going up.
-  --target-env    {%s}
+  --target-env    %s
                   Use specified environment.
-)",
-      argv0, argv0, target_env_list.c_str());
-}
+)";
 
-static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+// clang-format off
+//                flag name=            default_value=   required=
+FLAG_SHORT_bool(  h,                    false,           false);
+FLAG_LONG_bool(   help,                 false,           false);
+FLAG_LONG_bool(   version,              false,           false);
+FLAG_LONG_bool(   preserve_numeric_ids, false,           false);
+FLAG_SHORT_string(o,                    "",              false);
+FLAG_LONG_string( target_env,           "",              false);
+// clang-format on
 
-int main(int argc, char** argv) {
-  const char* inFile = nullptr;
-  const char* outFile = nullptr;
-  uint32_t options = 0;
-  spv_target_env target_env = kDefaultEnvironment;
-  for (int argi = 1; argi < argc; ++argi) {
-    if ('-' == argv[argi][0]) {
-      switch (argv[argi][1]) {
-        case 'h': {
-          print_usage(argv[0]);
-          return 0;
-        }
-        case 'o': {
-          if (!outFile && argi + 1 < argc) {
-            outFile = argv[++argi];
-          } else {
-            print_usage(argv[0]);
-            return 1;
-          }
-        } break;
-        case 0: {
-          // Setting a filename of "-" to indicate stdin.
-          if (!inFile) {
-            inFile = argv[argi];
-          } else {
-            fprintf(stderr, "error: More than one input file specified\n");
-            return 1;
-          }
-        } break;
-        case '-': {
-          // Long options
-          if (0 == strcmp(argv[argi], "--version")) {
-            printf("%s\n", spvSoftwareVersionDetailsString());
-            printf("Target: %s\n",
-                   spvTargetEnvDescription(kDefaultEnvironment));
-            return 0;
-          } else if (0 == strcmp(argv[argi], "--help")) {
-            print_usage(argv[0]);
-            return 0;
-          } else if (0 == strcmp(argv[argi], "--preserve-numeric-ids")) {
-            options |= SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS;
-          } else if (0 == strcmp(argv[argi], "--target-env")) {
-            if (argi + 1 < argc) {
-              const auto env_str = argv[++argi];
-              if (!spvParseTargetEnv(env_str, &target_env)) {
-                fprintf(stderr, "error: Unrecognized target env: %s\n",
-                        env_str);
-                return 1;
-              }
-            } else {
-              fprintf(stderr, "error: Missing argument to --target-env\n");
-              return 1;
-            }
-          } else {
-            fprintf(stderr, "error: Unrecognized option: %s\n\n", argv[argi]);
-            print_usage(argv[0]);
-            return 1;
-          }
-        } break;
-        default:
-          fprintf(stderr, "error: Unrecognized option: %s\n\n", argv[argi]);
-          print_usage(argv[0]);
-          return 1;
-      }
-    } else {
-      if (!inFile) {
-        inFile = argv[argi];
-      } else {
-        fprintf(stderr, "error: More than one input file specified\n");
-        return 1;
-      }
-    }
+int main(int, const char** argv) {
+  if (!flags::Parse(argv)) {
+    return 1;
   }
 
-  if (!outFile) {
+  if (flags::h.value() || flags::help.value()) {
+    const std::string target_env_list = spvTargetEnvList(19, 80);
+    printf(kHelpText.c_str(), argv[0], argv[0], target_env_list.c_str());
+    return 0;
+  }
+
+  if (flags::version.value()) {
+    printf("%s\n", spvSoftwareVersionDetailsString());
+    printf("Target: %s\n", spvTargetEnvDescription(kDefaultTarget));
+    return 0;
+  }
+
+  std::string outFile = flags::o.value();
+  if (outFile.empty()) {
     outFile = "out.spv";
   }
 
+  uint32_t options = 0;
+  if (flags::preserve_numeric_ids.value()) {
+    options |= SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS;
+  }
+
+  if (flags::positional_arguments.size() != 1) {
+    fprintf(stderr, "error: exactly one input file must be specified.\n");
+    return 1;
+  }
+  std::string inFile = flags::positional_arguments[0];
+
   std::vector<char> contents;
-  if (!ReadTextFile<char>(inFile, &contents)) return 1;
+  if (!ReadTextFile(inFile.c_str(), &contents)) return 1;
+
+  // Can only deduce target after the file has been read
+  spv_target_env target_env;
+  if (flags::target_env.value().empty()) {
+    if (!spvReadEnvironmentFromText(contents, &target_env)) {
+      // Revert to default version since deduction failed
+      target_env = kDefaultTarget;
+    }
+  } else if (!spvParseTargetEnv(flags::target_env.value().c_str(),
+                                &target_env)) {
+    fprintf(stderr, "error: Unrecognized target env: %s\n",
+            flags::target_env.value().c_str());
+    return 1;
+  }
 
   spv_binary binary;
   spv_diagnostic diagnostic = nullptr;
@@ -143,7 +119,8 @@ int main(int argc, char** argv) {
     return error;
   }
 
-  if (!WriteFile<uint32_t>(outFile, "wb", binary->code, binary->wordCount)) {
+  if (!WriteFile<uint32_t>(outFile.c_str(), "wb", binary->code,
+                           binary->wordCount)) {
     spvBinaryDestroy(binary);
     return 1;
   }

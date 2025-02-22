@@ -1,4 +1,4 @@
-static float4 _21;
+static float4 _44;
 
 static int counter;
 static float4 FragColor;
@@ -15,23 +15,23 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    float4 _24;
-    _24 = _21;
-    float4 _33;
+    float4 _45;
+    _45 = _44;
+    float4 _46;
     for (;;)
     {
         if (counter == 10)
         {
-            _33 = 10.0f.xxxx;
+            _46 = 10.0f.xxxx;
             break;
         }
         else
         {
-            _33 = 30.0f.xxxx;
+            _46 = 30.0f.xxxx;
             break;
         }
     }
-    FragColor = _33;
+    FragColor = _46;
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

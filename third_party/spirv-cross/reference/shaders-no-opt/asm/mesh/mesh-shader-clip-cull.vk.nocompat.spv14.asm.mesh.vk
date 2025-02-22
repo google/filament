@@ -1,0 +1,35 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(max_vertices = 32, max_primitives = 30, triangles) out;
+
+out gl_MeshPerVertexEXT
+{
+    vec4 gl_Position;
+    float gl_ClipDistance[4];
+} gl_MeshVerticesEXT[];
+
+layout(location = 2) out vec4 B[32];
+
+void main()
+{
+    SetMeshOutputsEXT(32u, 30u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.x = 1.0;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.y = 1.0;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.z = 1.0;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.w = 1.0;
+    float _40 = float(int((gl_LocalInvocationIndex << 1u) + 4294967295u)) * 0.5;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0u] = _40;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[1u] = _40;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[2u] = _40;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[3u] = _40;
+    B[gl_LocalInvocationIndex].x = 2.0;
+    B[gl_LocalInvocationIndex].y = 2.0;
+    B[gl_LocalInvocationIndex].z = 2.0;
+    B[gl_LocalInvocationIndex].w = 2.0;
+    if (gl_LocalInvocationIndex < 30u)
+    {
+        gl_PrimitiveTriangleIndicesEXT[gl_LocalInvocationIndex] = uvec3(gl_LocalInvocationIndex, gl_LocalInvocationIndex + 1u, gl_LocalInvocationIndex + 2u);
+    }
+}
+

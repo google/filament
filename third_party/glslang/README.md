@@ -1,19 +1,16 @@
-# News
-
-1. [As discussed in #3107](https://github.com/KhronosGroup/glslang/issues/3107), the default branch of this repository is now 'main'. This change should be transparent to repository users, since github rewrites many references to the old 'master' branch to 'main'. However, if you have a checked-out local clone, you may wish to take the following steps as recommended by github:
-
-```sh
-git branch -m master main
-git fetch origin
-git branch -u origin/main main
-git remote set-head origin -a
-```
-
-2. C++17 (all platforms) and Visual Studio 2019 (Windows) are now required. This change was driven by the external dependency on SPIRV-Tools.
-
 ![Continuous Integration](https://github.com/KhronosGroup/glslang/actions/workflows/continuous_integration.yml/badge.svg)
 ![Continuous Deployment](https://github.com/KhronosGroup/glslang/actions/workflows/continuous_deployment.yml/badge.svg)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/KhronosGroup/glslang/badge)](https://securityscorecards.dev/viewer/?uri=github.com/KhronosGroup/glslang)
+
+# News
+
+1. Building glslang as a DLL or shared library is now possible and supported.
+
+2. The `GenericCodeGen`, `MachineIndependent`, `OSDependent`, and `SPIRV` libraries have been integrated into the main `glslang` library. The old separate libraries have replaced with empty stubs for a temporary compatibility period, and they will be removed entirely in the future.
+
+3. A new CMake `ENABLE_SPIRV` option has been added to control whether glslang is built with SPIR-V support. Its default value is `ON`.
+
+4. `OGLCompiler` and `HLSL` stub libraries have been fully removed from the build.
 
 # Glslang Components and Status
 
@@ -122,47 +119,29 @@ git clone https://github.com/KhronosGroup/glslang.git
 #### 2) Check-Out External Projects
 
 ```bash
-cd <the directory glslang was cloned to, "External" will be a subdirectory>
-git clone https://github.com/google/googletest.git External/googletest
-```
-
-TEMPORARY NOTICE: additionally perform the following to avoid a current
-breakage in googletest:
-
-```bash
-cd External/googletest
-git checkout 0c400f67fcf305869c5fb113dd296eca266c9725
-cd ../..
-```
-
-If you wish to assure that SPIR-V generated from HLSL is legal for Vulkan,
-wish to invoke -Os to reduce SPIR-V size from HLSL or GLSL, or wish to run the
-integrated test suite, install spirv-tools with this:
-
-```bash
 ./update_glslang_sources.py
 ```
 
 #### 3) Configure
 
-Assume the source directory is `$SOURCE_DIR` and the build directory is
-`$BUILD_DIR`. First ensure the build directory exists, then navigate to it:
+Assume the source directory is `$SOURCE_DIR` and the build directory is `$BUILD_DIR`.
+CMake will create the `$BUILD_DIR` for the user if it doesn't exist.
 
+First change your working directory:
 ```bash
-mkdir -p $BUILD_DIR
-cd $BUILD_DIR
+cd $SOURCE_DIR
 ```
 
 For building on Linux:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(pwd)/install" $SOURCE_DIR
+cmake -B $BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
 # "Release" (for CMAKE_BUILD_TYPE) could also be "Debug" or "RelWithDebInfo"
 ```
 
 For building on Android:
 ```bash
-cmake $SOURCE_DIR -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -DANDROID_ABI=arm64-v8a -DCMAKE_BUILD_TYPE=Release -DANDROID_STL=c++_static -DANDROID_PLATFORM=android-24 -DCMAKE_SYSTEM_NAME=Android -DANDROID_TOOLCHAIN=clang -DANDROID_ARM_MODE=arm -DCMAKE_MAKE_PROGRAM=$ANDROID_NDK_HOME/prebuilt/linux-x86_64/bin/make -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake
+cmake -B $BUILD_DIR -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -DANDROID_ABI=arm64-v8a -DCMAKE_BUILD_TYPE=Release -DANDROID_STL=c++_static -DANDROID_PLATFORM=android-24 -DCMAKE_SYSTEM_NAME=Android -DANDROID_TOOLCHAIN=clang -DANDROID_ARM_MODE=arm -DCMAKE_MAKE_PROGRAM=$ANDROID_NDK_HOME/prebuilt/linux-x86_64/bin/make -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake
 # If on Windows will be -DCMAKE_MAKE_PROGRAM=%ANDROID_NDK_HOME%\prebuilt\windows-x86_64\bin\make.exe
 # -G is needed for building on Windows
 # -DANDROID_ABI can also be armeabi-v7a for 32 bit
@@ -171,11 +150,9 @@ cmake $SOURCE_DIR -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -D
 For building on Windows:
 
 ```bash
-cmake $SOURCE_DIR -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
+cmake -B $BUILD_DIR -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
 # The CMAKE_INSTALL_PREFIX part is for testing (explained later).
 ```
-
-The CMake GUI also works for Windows (version 3.4.1 tested).
 
 Also, consider using `git config --global core.fileMode false` (or with `--local`) on Windows
 to prevent the addition of execution permission on files.
@@ -251,17 +228,21 @@ Use the steps in [Build Steps](#build-steps), with the following notes/exception
   Bash-like environments:
   + [Instructions located here](https://emscripten.org/docs/getting_started/downloads.html#sdk-download-and-install)
 * Wrap cmake call: `emcmake cmake`
-* Set `-DBUILD_TESTING=OFF -DENABLE_OPT=OFF`.
+* Set `-DENABLE_OPT=OFF`.
 * Set `-DENABLE_HLSL=OFF` if HLSL is not needed.
 * For a standalone JS/WASM library, turn on `-DENABLE_GLSLANG_JS=ON`.
 * To get a fully minimized build, make sure to use `brotli` to compress the .js
   and .wasm files
+* Note that by default, Emscripten allocates a very small stack size, which may
+  cause stack overflows when compiling large shaders. Use the
+  [STACK_SIZE](https://emscripten.org/docs/tools_reference/settings_reference.html?highlight=environment#stack-size)
+  compiler setting to increase the stack size.
 
 Example:
 
 ```sh
 emcmake cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_GLSLANG_JS=ON \
-    -DENABLE_HLSL=OFF -DBUILD_TESTING=OFF -DENABLE_OPT=OFF ..
+    -DENABLE_HLSL=OFF -DENABLE_OPT=OFF ..
 ```
 
 ## Building glslang - Using vcpkg
@@ -282,6 +263,9 @@ Right now, there are two test harnesses existing in glslang: one is [Google
 Test](gtests/), one is the [`runtests` script](Test/runtests). The former
 runs unit tests and single-shader single-threaded integration tests, while
 the latter runs multiple-shader linking tests and multi-threaded tests.
+
+Tests may erroneously fail or pass if using `ALLOW_EXTERNAL_SPIRV_TOOLS` with
+any commit other than the one specified in `known_good.json`.
 
 ### Running tests
 

@@ -224,7 +224,7 @@ kernel void main0(device SSBO& _19 [[buffer(0)]])
     _19.res = acosh(((device float*)&_19.f32)[0u]);
     _19.res = atanh(((device float*)&_19.f32)[0u]);
     _19.res = precise::atan2(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
-    _19.res = pow(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.res = powr(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
     _19.res = exp(((device float*)&_19.f32)[0u]);
     _19.res = log(((device float*)&_19.f32)[0u]);
     _19.res = exp2(((device float*)&_19.f32)[0u]);

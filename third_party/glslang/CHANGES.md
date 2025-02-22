@@ -3,6 +3,148 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 15.1.0 2024-12-13
+* Add Vulkan 1.4 target and client
+* Improve conversion of uniform block to push constant
+* Improve cross stage error reporting by reporting proper stager rather than "unkwown stage"
+* Add warning if forward declaration uses layout qualifiers
+* Implement GLSL_NV_cooperative_matrix2
+* Emit OpModfStruct instead of depracated OpModf
+* Add link-time cross stage optimization
+* Add column to DebugLexicalBlock
+* Propagate errors from symbol table initialization
+* Fix nonsemantic debuginfo line attribution for cooperative matrix
+
+## 15.0.0 2024-09-23
+### Breaking changes
+* Explicitly export all symbols that are part of the public API and hide other symbols by default
+
+### Other changes
+* Allow building glslang without the SPIR-V backend using the new ENABLE_SPIRV build option
+* Add setResourceSetBinding method to the API
+* Add interface to get the GLSL IO mapper and resolver
+* Allow compute derivative modes when the workgroup dimensions are spec constants
+* Improve debug location of branch/return instructions
+* Silence preprocessor '#' error reporting in inactive #if/#ifdef/#elif/#else blocks
+* Apply GLSL memory decorations to top-level OpVariable
+* Move definition of GLSLANG_EXPORT to visibility.h
+* Merge ancillary libraries into main glslang library and stub originals
+* Add public setSourceFile and addSourceText methods to TShader class
+* Add type checks for hitObjectNV
+* Add optimizerAllowExpandedIDBound to SpvOptions
+* Add SpvTools.h back to public headers 
+* Add cross-stage check for missing outputs
+* Fix HLSL offsets for non-buffers
+* Add types and functions for IO mapping to API
+* Add function to set preprocessed code to API
+* Add set/get version functions to API
+* Expose setGlobalUniform functions to API
+* Don't emit debug instructions before an OpPhi
+* Add command-line and API option to enable reporting column location for compiler errors
+* Improve location aliasing checks
+* Support constant expression calculated by matrixCompMult
+* Fix crash caused by atomicCounter() use without arguments
+* Fix multi-line function call line numbers
+* Add line info to OpDebugDeclare for function parameters
+* Fix HLSL OpDebugFunction file name
+* Fix duplicate decorations
+* Enable compilation of glslang without thread support for WASI
+
+## 14.3.0 2024-06-25
+* Generate vector constructions more efficiently when sizes match
+* Skip identity conversions for 8-bit and 16-bit types
+* Add cmake aliases for public libraries
+* Support ARM extended matrix layout
+* Emit debug info for buffer references
+* Add support for OpExtInstWithForwardRefsKHR
+* Generate SPV_EXT_replicated_compisites when requested by pragma
+* Reuse loads generated for repeated function arguments
+* Fix gl_HitT alias of gl_RayTmax
+* Fix some cases where invalid SPIR-V was being generated when using separate samplers
+* Add back layoutLocation to public API
+
+## 14.2.0 2024-05-02
+* Improve checking for location aliasing errors
+* Fix undefined behavior in parser
+* Add bounds check to gl_SampleMask
+* Fix alignment and padding of matrices consuming one vector
+* Remove duplicate SPIR-V decorations
+* Check for exponent overflow in float parser
+* Fix bug in relaxed verification rules
+* Fix disassembly of debugBreak
+* Fix bug when importing SPIR-V extended intruction set
+* Fix issues with the interaction of cooperative_matrix and spirv_intrinsics
+* Support SPV_QCOM_image_processing2
+* Support files with UTF8BOM character
+
+## 14.1.0 2024-03-08
+* Add a new --abosute-path command-line option to output absolute paths in error messages
+* Support GL_EXT_control_flow_attributes2
+* Support GL_ARB_shading_language_include
+* Fix HLSL built-in passthrough via inout
+* Enable -Wimplicit-fallthrough and fix warnings
+* Fix -Wmissing_field_initializer warnings
+* Document supported dependencies in known_good.json
+* Clear spirv vector before use
+* Emit debug info for accelerationStructure and rayQuery variables
+* Support NV_shader_atomic_fp16_vector
+* Support GL_EXT_expect_assume_support
+* Allow external control of whether glslang will be tested or installed
+* Improve debug source and line info
+* Support GL_KHR_shader_subgroup_rotate
+* Add SPIRV-Tools-opt dependency if ENABLE_OPT
+* Support EXT_shader_quad_control
+* Add OpAssumeTrueKHR and OpExpectKHR
+* Support GL_EXT_maximal_reconvergence
+* Remove generation of deprecated Target.cmake files
+* Fix array size of gl_SampleMask and gl_SampleMaskIn
+* Support GL_ARB_texture_multisample_extension
+* Emit DebugTypePointer when non-semantic debug info is enabled
+
+## 14.0.0 2023-12-21
+
+### Breaking changes
+* The legacy libraries named HLSL and OGLCompiler have been removed. To avoid future disruptions, please use cmake's find_package mechanism rather than hardcoding library dependencies.
+* Only the headers that are part of glslang's public interface are included in the install target.
+* Remove OVERRIDE_MSVCCRT cmake option.
+
+### Other changes
+* Fix spv_options initialization
+* Fix line number for OpDebugFunction and OpDebugScope for function
+* Fix SPV_KHR_cooperative_matrix enumerants
+* Fix nullptr crash
+* Fix GL_ARB_shader_storage_buffer_object version
+* Fix interpolant ES error
+* Generate DebugValue for constant arguments
+* Overflow/underflow out-of-range floats to infinity/0.0 respectively
+* Support SV_ViewID keywords for HLSL
+* Implement relaxed rule for opaque struct members
+* Add BUILD_WERROR cmake option
+* Add GLSLANG_TESTS cmake option
+* Always generate OpDebugBasicType for bool type
+* Fix GLSL parsing of '#' when not preceded by space or tab
+* Fix GL_ARB_bindless_texture availability
+* Support GL_EXT_draw_instanced extension
+* Support GL_EXT_texture_array extension
+* Fix conversion of 64-bit unsigned integer constants to bool
+* Output 8-bit and 16-bit capabilities when appropriate for OpSpecConstant
+
+## 13.1.1 2023-10-16
+* Initialize compile_only field in C interface
+
+## 13.1.0 2023-10-13
+* Support GL_EXT_texture_shadow_lod
+* Support GL_NV_displacement_micromap
+* Fix ByteAddressBuffer when used a function parameter
+* Add more verbose messages if SPIRV-Tools is not found
+* Fix names for explicitly sized types when emitting nonsemantic debug info
+* Emit error for r-value arguments in atomic memory operations
+* Add --no-link option
+* Beautify preprocessor output format
+* Fix race condition in glslangValidator
+* Only set LocalSizeId mode when necessary
+* Don't emit invalid debug info for buffer references
+
 ## 13.0.0 2023-08-23
 
 ### Breaking changes

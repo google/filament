@@ -17,7 +17,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <memory>
 #include <new>

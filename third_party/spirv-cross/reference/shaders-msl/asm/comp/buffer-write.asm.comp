@@ -17,8 +17,8 @@ struct cb
     float value;
 };
 
-kernel void main0(constant cb& _6 [[buffer(0)]], texture2d<float, access::write> _buffer [[texture(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+kernel void main0(constant cb& _8 [[buffer(0)]], texture2d<float, access::write> _buffer [[texture(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
 {
-    _buffer.write(float4(_6.value), spvTexelBufferCoord(((32u * gl_WorkGroupID.x) + gl_LocalInvocationIndex)));
+    _buffer.write(float4(_8.value), spvTexelBufferCoord(((32u * gl_WorkGroupID.x) + gl_LocalInvocationIndex)));
 }
 

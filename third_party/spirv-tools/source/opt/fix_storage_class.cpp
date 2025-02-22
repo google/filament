@@ -1,4 +1,6 @@
 // Copyright (c) 2019 Google LLC
+// Modifications Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
+// reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -99,6 +101,7 @@ bool FixStorageClass::PropagateStorageClass(Instruction* inst,
     case spv::Op::OpCopyMemorySized:
     case spv::Op::OpVariable:
     case spv::Op::OpBitcast:
+    case spv::Op::OpAllocateNodePayloadsAMDX:
       // Nothing to change for these opcode.  The result type is the same
       // regardless of the storage class of the operand.
       return false;
@@ -141,22 +144,26 @@ bool FixStorageClass::IsPointerResultType(Instruction* inst) {
   if (inst->type_id() == 0) {
     return false;
   }
-  const analysis::Type* ret_type =
-      context()->get_type_mgr()->GetType(inst->type_id());
-  return ret_type->AsPointer() != nullptr;
+
+  Instruction* type_def = get_def_use_mgr()->GetDef(inst->type_id());
+  return type_def->opcode() == spv::Op::OpTypePointer;
 }
 
 bool FixStorageClass::IsPointerToStorageClass(Instruction* inst,
                                               spv::StorageClass storage_class) {
-  analysis::TypeManager* type_mgr = context()->get_type_mgr();
-  analysis::Type* pType = type_mgr->GetType(inst->type_id());
-  const analysis::Pointer* result_type = pType->AsPointer();
-
-  if (result_type == nullptr) {
+  if (inst->type_id() == 0) {
     return false;
   }
 
-  return (result_type->storage_class() == storage_class);
+  Instruction* type_def = get_def_use_mgr()->GetDef(inst->type_id());
+  if (type_def->opcode() != spv::Op::OpTypePointer) {
+    return false;
+  }
+
+  const uint32_t kPointerTypeStorageClassIndex = 0;
+  spv::StorageClass pointer_storage_class = static_cast<spv::StorageClass>(
+      type_def->GetSingleWordInOperand(kPointerTypeStorageClassIndex));
+  return pointer_storage_class == storage_class;
 }
 
 bool FixStorageClass::ChangeResultType(Instruction* inst,
@@ -233,6 +240,9 @@ bool FixStorageClass::PropagateType(Instruction* inst, uint32_t type_id,
         }
 
         uint32_t copy_id = GenerateCopy(obj_inst, pointee_type_id, inst);
+        if (copy_id == 0) {
+          return false;
+        }
         inst->SetInOperand(1, {copy_id});
         context()->UpdateDefUse(inst);
       }
@@ -301,24 +311,34 @@ uint32_t FixStorageClass::WalkAccessChainType(Instruction* inst, uint32_t id) {
       break;
   }
 
-  Instruction* orig_type_inst = get_def_use_mgr()->GetDef(id);
-  assert(orig_type_inst->opcode() == spv::Op::OpTypePointer);
-  id = orig_type_inst->GetSingleWordInOperand(1);
+  Instruction* id_type_inst = get_def_use_mgr()->GetDef(id);
+  assert(id_type_inst->opcode() == spv::Op::OpTypePointer);
+  id = id_type_inst->GetSingleWordInOperand(1);
+  spv::StorageClass input_storage_class =
+      static_cast<spv::StorageClass>(id_type_inst->GetSingleWordInOperand(0));
 
   for (uint32_t i = start_idx; i < inst->NumInOperands(); ++i) {
     Instruction* type_inst = get_def_use_mgr()->GetDef(id);
     switch (type_inst->opcode()) {
       case spv::Op::OpTypeArray:
       case spv::Op::OpTypeRuntimeArray:
+      case spv::Op::OpTypeNodePayloadArrayAMDX:
       case spv::Op::OpTypeMatrix:
       case spv::Op::OpTypeVector:
+      case spv::Op::OpTypeCooperativeMatrixKHR:
         id = type_inst->GetSingleWordInOperand(0);
         break;
       case spv::Op::OpTypeStruct: {
         const analysis::Constant* index_const =
             context()->get_constant_mgr()->FindDeclaredConstant(
                 inst->GetSingleWordInOperand(i));
-        uint32_t index = index_const->GetU32();
+        // It is highly unlikely that any type would have more fields than could
+        // be indexed by a 32-bit integer, and GetSingleWordInOperand only takes
+        // a 32-bit value, so we would not be able to handle it anyway. But the
+        // specification does allow any scalar integer type, treated as signed,
+        // so we simply downcast the index to 32-bits.
+        uint32_t index =
+            static_cast<uint32_t>(index_const->GetSignExtendedValue());
         id = type_inst->GetSingleWordInOperand(index);
         break;
       }
@@ -329,9 +349,19 @@ uint32_t FixStorageClass::WalkAccessChainType(Instruction* inst, uint32_t id) {
            "Tried to extract from an object where it cannot be done.");
   }
 
-  return context()->get_type_mgr()->FindPointerToType(
-      id, static_cast<spv::StorageClass>(
-              orig_type_inst->GetSingleWordInOperand(0)));
+  Instruction* orig_type_inst = get_def_use_mgr()->GetDef(inst->type_id());
+  spv::StorageClass orig_storage_class =
+      static_cast<spv::StorageClass>(orig_type_inst->GetSingleWordInOperand(0));
+  assert(orig_type_inst->opcode() == spv::Op::OpTypePointer);
+  if (orig_type_inst->GetSingleWordInOperand(1) == id &&
+      input_storage_class == orig_storage_class) {
+    // The existing type is correct. Avoid the search for the type. Note that if
+    // there is a duplicate type, the search below could return a different type
+    // forcing more changes to the code than necessary.
+    return inst->type_id();
+  }
+
+  return context()->get_type_mgr()->FindPointerToType(id, input_storage_class);
 }
 
 // namespace opt

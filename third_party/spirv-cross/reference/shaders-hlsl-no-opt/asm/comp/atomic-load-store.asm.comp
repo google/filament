@@ -1,14 +1,14 @@
 static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
 
-RWByteAddressBuffer _5 : register(u0);
+RWByteAddressBuffer _7 : register(u0);
 
 void comp_main()
 {
-    uint _20;
-    _5.InterlockedAdd(4, 0, _20);
-    uint c = _20;
+    uint _16;
+    _7.InterlockedAdd(4, 0, _16);
+    uint c = _16;
     uint _23;
-    _5.InterlockedExchange(0, c, _23);
+    _7.InterlockedExchange(0, c, _23);
 }
 
 [numthreads(1, 1, 1)]

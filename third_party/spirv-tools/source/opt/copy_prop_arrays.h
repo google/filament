@@ -101,7 +101,8 @@ class CopyPropagateArrays : public MemPass {
     bool IsMember() const { return !access_chain_.empty(); }
 
     // Returns the number of members in the object represented by |this|.  If
-    // |this| does not represent a composite type, the return value will be 0.
+    // |this| does not represent a composite type or the number of components is
+    // not known at compile time, the return value will be 0.
     uint32_t GetNumberOfMembers();
 
     // Returns the owning variable that the memory object is contained in.
@@ -207,7 +208,7 @@ class CopyPropagateArrays : public MemPass {
 
   // Returns the memory object that at some point was equivalent to the result
   // of |insert_inst|.  If a memory object cannot be identified, the return
-  // value is |nullptr\.  The opcode of |insert_inst| must be
+  // value is |nullptr|.  The opcode of |insert_inst| must be
   // |OpCompositeInsert|.  This function looks for a series of
   // |OpCompositeInsert| instructions that insert the elements one at a time in
   // order from beginning to end.
@@ -220,6 +221,10 @@ class CopyPropagateArrays : public MemPass {
 
   // Return true if |type_id| is a pointer type whose pointee type is an array.
   bool IsPointerToArrayType(uint32_t type_id);
+
+  // Return true if |inst| is one of the InterpolateAt* GLSL.std.450 extended
+  // instructions.
+  bool IsInterpolationInstruction(Instruction* inst);
 
   // Returns true if there are not stores using |ptr_inst| or something derived
   // from it.
@@ -253,6 +258,14 @@ class CopyPropagateArrays : public MemPass {
   // same way the indexes are used in an |OpCompositeExtract| instruction.
   uint32_t GetMemberTypeId(uint32_t id,
                            const std::vector<uint32_t>& access_chain) const;
+
+  // If the result of inst is stored to a variable, add that variable to the
+  // worklist.
+  void AddUsesToWorklist(Instruction* inst);
+
+  // OpVariable worklist. An instruction is added to this list if we would like
+  // to run copy propagation on it.
+  std::queue<Instruction*> worklist_;
 };
 
 }  // namespace opt

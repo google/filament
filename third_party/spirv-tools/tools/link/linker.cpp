@@ -14,6 +14,7 @@
 
 #include "spirv-tools/linker.hpp"
 
+#include <cassert>
 #include <cstring>
 #include <iostream>
 #include <vector>
@@ -22,10 +23,11 @@
 #include "source/table.h"
 #include "spirv-tools/libspirv.hpp"
 #include "tools/io.h"
+#include "tools/util/flags.h"
 
 namespace {
 
-const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
+constexpr auto kDefaultEnvironment = "spv1.6";
 
 void print_usage(const char* program) {
   std::string target_env_list = spvTargetEnvList(16, 80);
@@ -46,6 +48,10 @@ Options (in lexicographical order):
   --allow-partial-linkage
                Allow partial linkage by accepting imported symbols to be
                unresolved.
+  --allow-pointer-mismatch
+               Allow pointer function parameters to mismatch the target link
+               target. This is useful to workaround lost correct parameter type
+               information due to LLVM's opaque pointers.
   --create-library
                Link the binaries into a library, keeping all exported symbols.
   -h, --help
@@ -57,6 +63,13 @@ Options (in lexicographical order):
                NOTE: The SPIR-V version used by the linked binary module
                depends only on the version of the inputs, and is not affected
                by this option.
+  --use-highest-version
+               Upgrade the output SPIR-V version to the highest of the input
+               files, instead of requiring all of them to have the same
+               version.
+               NOTE: If one of the older input files uses an instruction that
+               is deprecated in the highest SPIR-V version, the output will
+               be invalid.
   --verify-ids
                Verify that IDs in the resulting modules are truly unique.
   --version
@@ -67,64 +80,61 @@ Options (in lexicographical order):
 
 }  // namespace
 
-int main(int argc, char** argv) {
-  std::vector<const char*> inFiles;
-  const char* outFile = nullptr;
-  spv_target_env target_env = kDefaultEnvironment;
-  spvtools::LinkerOptions options;
+// clang-format off
+FLAG_SHORT_bool(  h,                      /* default_value= */ false,               /* required= */ false);
+FLAG_LONG_bool(   help,                   /* default_value= */ false,               /* required= */ false);
+FLAG_LONG_bool(   version,                /* default_value= */ false,               /* required= */ false);
+FLAG_LONG_bool(   verify_ids,             /* default_value= */ false,               /* required= */ false);
+FLAG_LONG_bool(   create_library,         /* default_value= */ false,               /* required= */ false);
+FLAG_LONG_bool(   allow_partial_linkage,  /* default_value= */ false,               /* required= */ false);
+FLAG_LONG_bool(   allow_pointer_mismatch, /* default_value= */ false,               /* required= */ false);
+FLAG_SHORT_string(o,                      /* default_value= */ "",                  /* required= */ false);
+FLAG_LONG_string( target_env,             /* default_value= */ kDefaultEnvironment, /* required= */ false);
+FLAG_LONG_bool(   use_highest_version,    /* default_value= */ false,               /* required= */ false);
+// clang-format on
 
-  for (int argi = 1; argi < argc; ++argi) {
-    const char* cur_arg = argv[argi];
-    if ('-' == cur_arg[0]) {
-      if (0 == strcmp(cur_arg, "-o")) {
-        if (argi + 1 < argc) {
-          if (!outFile) {
-            outFile = argv[++argi];
-          } else {
-            fprintf(stderr, "error: More than one output file specified\n");
-            return 1;
-          }
-        } else {
-          fprintf(stderr, "error: Missing argument to %s\n", cur_arg);
-          return 1;
-        }
-      } else if (0 == strcmp(cur_arg, "--allow-partial-linkage")) {
-        options.SetAllowPartialLinkage(true);
-      } else if (0 == strcmp(cur_arg, "--create-library")) {
-        options.SetCreateLibrary(true);
-      } else if (0 == strcmp(cur_arg, "--help") || 0 == strcmp(cur_arg, "-h")) {
-        print_usage(argv[0]);
-        return 0;
-      } else if (0 == strcmp(cur_arg, "--target-env")) {
-        if (argi + 1 < argc) {
-          const auto env_str = argv[++argi];
-          if (!spvParseTargetEnv(env_str, &target_env)) {
-            fprintf(stderr, "error: Unrecognized target env: %s\n", env_str);
-            return 1;
-          }
-        } else {
-          fprintf(stderr, "error: Missing argument to --target-env\n");
-          return 1;
-        }
-      } else if (0 == strcmp(cur_arg, "--verify-ids")) {
-        options.SetVerifyIds(true);
-      } else if (0 == strcmp(cur_arg, "--version")) {
-        printf("%s\n", spvSoftwareVersionDetailsString());
-        printf("Target: %s\n", spvTargetEnvDescription(target_env));
-        return 0;
-      } else {
-        fprintf(stderr, "error: Unrecognized option: %s\n\n", argv[argi]);
-        print_usage(argv[0]);
-        return 1;
-      }
-    } else {
-      inFiles.push_back(cur_arg);
+int main(int, const char* argv[]) {
+  if (!flags::Parse(argv)) {
+    return 1;
+  }
+
+  if (flags::h.value() || flags::help.value()) {
+    print_usage(argv[0]);
+    return 0;
+  }
+
+  if (flags::version.value()) {
+    spv_target_env target_env;
+    bool success = spvParseTargetEnv(kDefaultEnvironment, &target_env);
+    assert(success && "Default environment should always parse.");
+    if (!success) {
+      fprintf(stderr,
+              "error: invalid default target environment. Please report this "
+              "issue.");
+      return 1;
     }
+    printf("%s\n", spvSoftwareVersionDetailsString());
+    printf("Target: %s\n", spvTargetEnvDescription(target_env));
+    return 0;
   }
 
-  if (!outFile) {
-    outFile = "out.spv";
+  spv_target_env target_env;
+  if (!spvParseTargetEnv(flags::target_env.value().c_str(), &target_env)) {
+    fprintf(stderr, "error: Unrecognized target env: %s\n",
+            flags::target_env.value().c_str());
+    return 1;
   }
+
+  const std::string outFile =
+      flags::o.value().empty() ? "out.spv" : flags::o.value();
+  const std::vector<std::string>& inFiles = flags::positional_arguments;
+
+  spvtools::LinkerOptions options;
+  options.SetAllowPartialLinkage(flags::allow_partial_linkage.value());
+  options.SetAllowPtrTypeMismatch(flags::allow_pointer_mismatch.value());
+  options.SetCreateLibrary(flags::create_library.value());
+  options.SetVerifyIds(flags::verify_ids.value());
+  options.SetUseHighestVersion(flags::use_highest_version.value());
 
   if (inFiles.empty()) {
     fprintf(stderr, "error: No input file specified\n");
@@ -133,7 +143,7 @@ int main(int argc, char** argv) {
 
   std::vector<std::vector<uint32_t>> contents(inFiles.size());
   for (size_t i = 0u; i < inFiles.size(); ++i) {
-    if (!ReadBinaryFile<uint32_t>(inFiles[i], &contents[i])) return 1;
+    if (!ReadBinaryFile(inFiles[i].c_str(), &contents[i])) return 1;
   }
 
   const spvtools::MessageConsumer consumer = [](spv_message_level_t level,
@@ -165,7 +175,7 @@ int main(int argc, char** argv) {
   spv_result_t status = Link(context, contents, &linkingResult, options);
   if (status != SPV_SUCCESS && status != SPV_WARNING) return 1;
 
-  if (!WriteFile<uint32_t>(outFile, "wb", linkingResult.data(),
+  if (!WriteFile<uint32_t>(outFile.c_str(), "wb", linkingResult.data(),
                            linkingResult.size()))
     return 1;
 

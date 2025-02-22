@@ -15,11 +15,9 @@
 
 #include "source/opt/eliminate_dead_io_components_pass.h"
 
-#include <set>
 #include <vector>
 
 #include "source/opt/instruction.h"
-#include "source/opt/ir_builder.h"
 #include "source/opt/ir_context.h"
 #include "source/util/bit_vector.h"
 

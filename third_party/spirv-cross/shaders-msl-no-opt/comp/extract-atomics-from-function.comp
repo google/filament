@@ -1,0 +1,69 @@
+#version 460
+
+#extension GL_KHR_memory_scope_semantics : enable
+
+layout(local_size_x = 64) in;
+
+shared uint var;
+
+void testAdd()
+{
+  atomicAdd(var, 1);
+}
+
+void testMin()
+{
+  atomicMin(var, 2);
+}
+
+void testMax()
+{
+  atomicMax(var, 3);
+}
+
+void testAnd()
+{
+  atomicAnd(var, 4);
+}
+
+void testOr()
+{
+  atomicOr(var, 5);
+}
+
+void testXor()
+{
+  atomicXor(var, 6);
+}
+
+void testExchange()
+{
+  atomicExchange(var, 7);
+}
+
+void testCompSwap()
+{
+  atomicCompSwap(var, 8, 9);
+}
+
+void testStore()
+{
+  atomicStore(var, 10u, gl_ScopeDevice, gl_StorageSemanticsShared, gl_SemanticsRelaxed);
+}
+
+void foo()
+{
+  testAdd();
+  testMin();
+  testMax();
+  testOr();
+  testXor();
+  testExchange();
+  testCompSwap();
+  testStore();
+}
+
+void main()
+{
+  foo();
+}

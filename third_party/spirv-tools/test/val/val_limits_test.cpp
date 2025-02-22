@@ -16,7 +16,6 @@
 
 #include <sstream>
 #include <string>
-#include <utility>
 
 #include "gmock/gmock.h"
 #include "test/unit_spirv.h"

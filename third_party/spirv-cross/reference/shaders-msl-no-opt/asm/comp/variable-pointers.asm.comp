@@ -1,9 +1,48 @@
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
 
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
 
 struct foo
 {
@@ -35,34 +74,34 @@ device int* select_buffer_null(device foo& buf, constant bar& cb)
 }
 
 static inline __attribute__((always_inline))
-threadgroup int* select_tgsm(constant bar& cb, threadgroup int (&tgsm)[128])
+threadgroup int* select_tgsm(constant bar& cb, threadgroup spvUnsafeArray<int, 128>& tgsm)
 {
     return (cb.d != 0) ? &tgsm[0u] : nullptr;
 }
 
 kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]], device baz& buf2 [[buffer(2)]])
 {
-    threadgroup int tgsm[128];
+    threadgroup spvUnsafeArray<int, 128> tgsm;
     device int* sbuf = select_buffer(buf, buf2, cb);
     device int* sbuf2 = select_buffer_null(buf, cb);
     threadgroup int* stgsm = select_tgsm(cb, tgsm);
     threadgroup int* cur = stgsm;
-    device int* _73;
-    _73 = &buf.a[0u];
-    threadgroup int* _76;
-    int _77;
+    device int* _78;
+    _78 = &buf.a[0u];
+    threadgroup int* _81;
+    int _82;
     for (;;)
     {
-        _76 = cur;
-        _77 = *_73;
-        if (_77 != 0)
+        _81 = cur;
+        _82 = *_78;
+        if (_82 != 0)
         {
-            int _81 = *_76;
-            int _82 = _77 + _81;
-            *_73 = _82;
-            *_76 = _82;
-            cur = &_76[1u];
-            _73 = &_73[1u];
+            int _86 = *_81;
+            int _87 = _82 + _86;
+            *_78 = _87;
+            *_81 = _87;
+            cur = &_81[1u];
+            _78 = &_78[1u];
             continue;
         }
         else

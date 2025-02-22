@@ -12,78 +12,78 @@
 
 layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = SPIRV_CROSS_CONSTANT_ID_1, local_size_z = SPIRV_CROSS_CONSTANT_ID_2) in;
 
-layout(binding = 0, std430) buffer _4_6
+layout(binding = 0, std430) buffer _3_15
 {
     float _m0[];
-} _6;
+} _15;
 
-layout(binding = 1, std430) buffer _4_7
+layout(binding = 1, std430) buffer _3_16
 {
     float _m0[];
-} _7;
+} _16;
 
-uvec3 _28 = gl_WorkGroupSize;
+uvec3 _14 = gl_WorkGroupSize;
 
 void main()
 {
-    float _44_copy;
-    float _46;
-    uint _47;
-    float _63;
-    uint _65;
-    float _36 = _6._m0[0u];
-    uint _39 = 0u;
-    float _44;
+    float _38_copy;
+    float _39;
+    uint _40;
+    float _70;
+    uint _71;
+    float _32 = _15._m0[0u];
+    uint _33 = 0u;
+    float _38;
     for (;;)
     {
-        _44 = _36;
-        _46 = _6._m0[35u];
-        _47 = 0u;
+        _38 = _32;
+        _39 = _15._m0[35u];
+        _40 = 0u;
         for (;;)
         {
-            uint _48 = _47 + 1u;
-            float _45 = _6._m0[_48];
-            _6._m0[_47] = ((_46 + _44) + _45) / 3.0;
-            if (!(_47 < 34u))
+            uint _44 = _40 + 1u;
+            float _46 = _15._m0[_44];
+            _15._m0[_40] = ((_39 + _38) + _46) / 3.0;
+            if (!(_40 < 34u))
             {
                 break;
             }
             else
             {
-                _44_copy = _44;
-                _44 = _45;
-                _46 = _44_copy;
-                _47 = _48;
+                _38_copy = _38;
+                _38 = _46;
+                _39 = _38_copy;
+                _40 = _44;
             }
         }
-        _6._m0[35u] = (_36 + (_44 + _6._m0[35u])) / 3.0;
-        if (!(_39 < 5u))
+        _15._m0[35u] = (_32 + (_38 + _15._m0[35u])) / 3.0;
+        if (!(_33 < 5u))
         {
-            _63 = _6._m0[0u];
-            _65 = 1u;
+            _70 = _15._m0[0u];
+            _71 = 1u;
             break;
         }
         else
         {
-            _36 = _6._m0[0u];
-            _39++;
+            _32 = _15._m0[0u];
+            _33++;
             continue;
         }
     }
-    float _64;
+    float _75;
     for (;;)
     {
-        _64 = (_63 < _6._m0[_65]) ? _6._m0[_65] : _63;
-        if (!(_65 < 35u))
+        _75 = (_70 < _15._m0[_71]) ? _15._m0[_71] : _70;
+        if (!(_71 < 35u))
         {
             break;
         }
         else
         {
-            _63 = _64;
-            _65++;
+            _70 = _75;
+            _71++;
         }
     }
-    _7._m0[gl_GlobalInvocationID.x] = _64;
+    _16._m0[gl_GlobalInvocationID.x] = _75;
 }
 

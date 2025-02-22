@@ -1,0 +1,60 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+			   OpCapability VariablePointers
+			   OpExtension "SPV_KHR_variable_pointers"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_LocalInvocationIndex %gl_GlobalInvocationID
+               OpExecutionMode %main LocalSize 64 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %test "test"
+               OpName %gl_LocalInvocationIndex "gl_LocalInvocationIndex"
+               OpName %gl_GlobalInvocationID "gl_GlobalInvocationID"
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+	  %bool = OpTypeBool
+	  %true = OpConstantTrue %bool
+      %v2float = OpTypeVector %float 2
+       %uint = OpTypeInt 32 0
+    %uint_64 = OpConstant %uint 64
+%_arr_v2float_uint_64 = OpTypeArray %v2float %uint_64
+%_ptr_Workgroup__arr_v2float_uint_64 = OpTypePointer Workgroup %_arr_v2float_uint_64
+       %test = OpVariable %_ptr_Workgroup__arr_v2float_uint_64 Workgroup
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%_ptr_Workgroup_float = OpTypePointer Workgroup %float
+%_ptr_Workgroup_v2float = OpTypePointer Workgroup %v2float
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_64 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %14 = OpLoad %uint %gl_LocalInvocationIndex
+         %19 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %20 = OpLoad %uint %19
+         %21 = OpConvertUToF %float %20
+		 %22 = OpCompositeConstruct %v2float %21 %21
+
+		   %a = OpAccessChain %_ptr_Workgroup_v2float %test %uint_1
+		   %b = OpAccessChain %_ptr_Workgroup_v2float %test %uint_2
+		   %c = OpSelect %_ptr_Workgroup_v2float %true %a %b
+
+		   %d = OpAccessChain %_ptr_Workgroup_float %c %uint_1
+		   OpStore %d %21
+
+               OpReturn
+               OpFunctionEnd

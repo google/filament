@@ -10,11 +10,11 @@ struct SSBOScalar
     float4 c[16];
 };
 
-kernel void main0(device SSBOScalar& _4 [[buffer(0)]])
+kernel void main0(device SSBOScalar& _6 [[buffer(0)]])
 {
-    float2 _27 = _4.b[10].xy;
-    float _29 = _4.c[10].x;
-    (device float2&)_4.b[10] = float2(10.0, 11.0);
-    (device float2&)_4.a[10] = _27 * _29;
+    float2 _22 = _6.b[10].xy;
+    float _26 = _6.c[10].x;
+    (device float2&)_6.b[10] = float2(10.0, 11.0);
+    (device float2&)_6.a[10] = _22 * _26;
 }
 

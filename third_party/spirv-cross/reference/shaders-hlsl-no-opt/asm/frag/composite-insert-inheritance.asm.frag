@@ -1,6 +1,6 @@
-static float4 _32;
+static float4 _33;
 
-static const float4 _34[2] = { 0.0f.xxxx, 0.0f.xxxx };
+static const float4 _35[2] = { 0.0f.xxxx, 0.0f.xxxx };
 
 static float4 vInput;
 static float4 FragColor;
@@ -24,12 +24,12 @@ void frag_main()
     _38.z = 3.0f;
     _38.w = 4.0f;
     FragColor = _38;
-    float4 _6 = _37;
-    _6.x = 1.0f;
-    _6.y = 2.0f;
-    _6.z = 3.0f;
-    _6.w = 4.0f;
-    FragColor = _6;
+    float4 _8 = _37;
+    _8.x = 1.0f;
+    _8.y = 2.0f;
+    _8.z = 3.0f;
+    _8.w = 4.0f;
+    FragColor = _8;
     float4 _42 = _37;
     _42.x = 1.0f;
     _42.y = 2.0f;
@@ -55,7 +55,7 @@ void frag_main()
     float4 _53 = 0.0f.xxxx;
     _53.x = 1.0f;
     FragColor = _53;
-    float4 _54[2] = _34;
+    float4 _54[2] = _35;
     _54[1].z = 1.0f;
     _54[0].w = 2.0f;
     FragColor = _54[0];

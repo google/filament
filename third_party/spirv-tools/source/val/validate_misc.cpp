@@ -50,10 +50,22 @@ spv_result_t ValidateShaderClock(ValidationState_t& _,
   bool is_int32 = false, is_const_int32 = false;
   uint32_t value = 0;
   std::tie(is_int32, is_const_int32, value) = _.EvalInt32IfConst(scope);
-  if (is_const_int32 && spv::Scope(value) != spv::Scope::Subgroup &&
-      spv::Scope(value) != spv::Scope::Device) {
-    return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << _.VkErrorID(4652) << "Scope must be Subgroup or Device";
+  if (is_const_int32) {
+    spv::Scope scope_val{value};
+    if (spvIsVulkanEnv(_.context()->target_env)) {
+      if (scope_val != spv::Scope::Subgroup &&
+          scope_val != spv::Scope::Device) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << _.VkErrorID(4652) << "Scope must be Subgroup or Device";
+      }
+    } else if (spvIsOpenCLEnv(_.context()->target_env)) {
+      if (scope_val != spv::Scope::Workgroup &&
+          scope_val != spv::Scope::Subgroup &&
+          scope_val != spv::Scope::Device) {
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "Scope must be Subgroup, Workgroup, or Device";
+      }
+    }
   }
 
   // Result Type must be a 64 - bit unsigned integer type or

@@ -12,10 +12,10 @@ layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_10, local_size_y = 20, local_size_
 layout(binding = 0, std430) buffer SSBO
 {
     float a;
-} _4;
+} _6;
 
 void main()
 {
-    _4.a += 1.0;
+    _6.a += 1.0;
 }
 

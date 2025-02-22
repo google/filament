@@ -123,21 +123,29 @@ uint32_t LivenessManager::GetLocSize(const analysis::Type* type) const {
   return 1;
 }
 
-const analysis::Type* LivenessManager::GetComponentType(
-    uint32_t index, const analysis::Type* agg_type) const {
-  auto arr_type = agg_type->AsArray();
-  if (arr_type) return arr_type->element_type();
-  auto struct_type = agg_type->AsStruct();
-  if (struct_type) return struct_type->element_types()[index];
-  auto mat_type = agg_type->AsMatrix();
-  if (mat_type) return mat_type->element_type();
-  auto vec_type = agg_type->AsVector();
-  assert(vec_type && "unexpected non-aggregate type");
-  return vec_type->element_type();
+uint32_t LivenessManager::GetComponentType(uint32_t index,
+                                           uint32_t agg_type_id) const {
+  analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
+  Instruction* agg_type_inst = def_use_mgr->GetDef(agg_type_id);
+
+  const uint32_t kArrayElementInIdx = 0;
+  switch (agg_type_inst->opcode()) {
+    case spv::Op::OpTypeArray:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector:
+      return agg_type_inst->GetSingleWordInOperand(kArrayElementInIdx);
+    case spv::Op::OpTypeStruct:
+      return agg_type_inst->GetSingleWordInOperand(index);
+    default:
+      assert(false && "unexpected aggregate type");
+      return 0;
+  }
 }
 
 uint32_t LivenessManager::GetLocOffset(uint32_t index,
-                                       const analysis::Type* agg_type) const {
+                                       uint32_t agg_type_id) const {
+  analysis::TypeManager* type_mgr = context()->get_type_mgr();
+  const analysis::Type* agg_type = type_mgr->GetType(agg_type_id);
   auto arr_type = agg_type->AsArray();
   if (arr_type) return index * GetLocSize(arr_type->element_type());
   auto struct_type = agg_type->AsStruct();
@@ -161,12 +169,11 @@ uint32_t LivenessManager::GetLocOffset(uint32_t index,
   return 0;
 }
 
-void LivenessManager::AnalyzeAccessChainLoc(const Instruction* ac,
-                                            const analysis::Type** curr_type,
-                                            uint32_t* offset, bool* no_loc,
-                                            bool is_patch, bool input) {
+uint32_t LivenessManager::AnalyzeAccessChainLoc(const Instruction* ac,
+                                                uint32_t curr_type_id,
+                                                uint32_t* offset, bool* no_loc,
+                                                bool is_patch, bool input) {
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
-  analysis::TypeManager* type_mgr = context()->get_type_mgr();
   analysis::DecorationManager* deco_mgr = context()->get_decoration_mgr();
   // For tesc, tese and geom input variables, and tesc output variables,
   // first array index does not contribute to offset.
@@ -178,15 +185,18 @@ void LivenessManager::AnalyzeAccessChainLoc(const Instruction* ac,
       (!input && stage == spv::ExecutionModel::TessellationControl))
     skip_first_index = !is_patch;
   uint32_t ocnt = 0;
-  ac->WhileEachInOperand([this, &ocnt, def_use_mgr, type_mgr, deco_mgr,
-                          curr_type, offset, no_loc,
+  ac->WhileEachInOperand([this, &ocnt, def_use_mgr, deco_mgr, &curr_type_id,
+                          offset, no_loc,
                           skip_first_index](const uint32_t* opnd) {
     if (ocnt >= 1) {
       // Skip first index's contribution to offset if indicated
+      Instruction* curr_type_inst = def_use_mgr->GetDef(curr_type_id);
       if (ocnt == 1 && skip_first_index) {
-        auto arr_type = (*curr_type)->AsArray();
-        assert(arr_type && "unexpected wrapper type");
-        *curr_type = arr_type->element_type();
+        assert(curr_type_inst->opcode() == spv::Op::OpTypeArray &&
+               "unexpected wrapper type");
+        const uint32_t kArrayElementTypeInIdx = 0;
+        curr_type_id =
+            curr_type_inst->GetSingleWordInOperand(kArrayElementTypeInIdx);
         ocnt++;
         return true;
       }
@@ -196,12 +206,10 @@ void LivenessManager::AnalyzeAccessChainLoc(const Instruction* ac,
       // If current type is struct, look for location decoration on member and
       // reset offset if found.
       auto index = idx_inst->GetSingleWordInOperand(0);
-      auto str_type = (*curr_type)->AsStruct();
-      if (str_type) {
+      if (curr_type_inst->opcode() == spv::Op::OpTypeStruct) {
         uint32_t loc = 0;
-        auto str_type_id = type_mgr->GetId(str_type);
         bool no_mem_loc = deco_mgr->WhileEachDecoration(
-            str_type_id, uint32_t(spv::Decoration::Location),
+            curr_type_id, uint32_t(spv::Decoration::Location),
             [&loc, index, no_loc](const Instruction& deco) {
               assert(deco.opcode() == spv::Op::OpMemberDecorate &&
                      "unexpected decoration");
@@ -216,19 +224,20 @@ void LivenessManager::AnalyzeAccessChainLoc(const Instruction* ac,
             });
         if (!no_mem_loc) {
           *offset = loc;
-          *curr_type = GetComponentType(index, *curr_type);
+          curr_type_id = curr_type_inst->GetSingleWordInOperand(index);
           ocnt++;
           return true;
         }
       }
 
       // Update offset and current type based on constant index.
-      *offset += GetLocOffset(index, *curr_type);
-      *curr_type = GetComponentType(index, *curr_type);
+      *offset += GetLocOffset(index, curr_type_id);
+      curr_type_id = GetComponentType(index, curr_type_id);
     }
     ocnt++;
     return true;
   });
+  return curr_type_id;
 }
 
 void LivenessManager::MarkRefLive(const Instruction* ref, Instruction* var) {
@@ -268,8 +277,15 @@ void LivenessManager::MarkRefLive(const Instruction* ref, Instruction* var) {
   // through constant indices and mark those locs live. Assert if no location
   // found.
   uint32_t offset = loc;
-  auto curr_type = var_type;
-  AnalyzeAccessChainLoc(ref, &curr_type, &offset, &no_loc, is_patch);
+  Instruction* ptr_type_inst =
+      context()->get_def_use_mgr()->GetDef(var->type_id());
+  assert(ptr_type && "unexpected var type");
+  const uint32_t kPointerTypePointeeIdx = 1;
+  uint32_t var_type_id =
+      ptr_type_inst->GetSingleWordInOperand(kPointerTypePointeeIdx);
+  uint32_t curr_type_id =
+      AnalyzeAccessChainLoc(ref, var_type_id, &offset, &no_loc, is_patch);
+  auto curr_type = type_mgr->GetType(curr_type_id);
   assert(!no_loc && "missing input variable location");
   MarkLocsLive(offset, GetLocSize(curr_type));
 }
@@ -277,15 +293,18 @@ void LivenessManager::MarkRefLive(const Instruction* ref, Instruction* var) {
 void LivenessManager::ComputeLiveness() {
   InitializeAnalysis();
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
-  analysis::TypeManager* type_mgr = context()->get_type_mgr();
   // Process all input variables
   for (auto& var : context()->types_values()) {
     if (var.opcode() != spv::Op::OpVariable) {
       continue;
     }
-    analysis::Type* var_type = type_mgr->GetType(var.type_id());
-    analysis::Pointer* ptr_type = var_type->AsPointer();
-    if (ptr_type->storage_class() != spv::StorageClass::Input) {
+    Instruction* var_type_inst = def_use_mgr->GetDef(var.type_id());
+    assert(var_type_inst->opcode() == spv::Op::OpTypePointer &&
+           "Expected a pointer type");
+    const uint32_t kPointerTypeStorageClassInIdx = 0;
+    spv::StorageClass sc = static_cast<spv::StorageClass>(
+        var_type_inst->GetSingleWordInOperand(kPointerTypeStorageClassInIdx));
+    if (sc != spv::StorageClass::Input) {
       continue;
     }
     // If var is builtin, mark live if analyzed and continue to next variable
@@ -295,21 +314,22 @@ void LivenessManager::ComputeLiveness() {
     // continue to next variable. Input interface blocks will only appear
     // in tesc, tese and geom shaders. Will need to strip off one level of
     // arrayness to get to block type.
-    auto pte_type = ptr_type->pointee_type();
-    auto arr_type = pte_type->AsArray();
-    if (arr_type) {
-      auto elt_type = arr_type->element_type();
-      auto str_type = elt_type->AsStruct();
-      if (str_type) {
-        auto str_type_id = type_mgr->GetId(str_type);
-        if (AnalyzeBuiltIn(str_type_id)) continue;
+    const uint32_t kPointerTypePointeeTypeInIdx = 1;
+    uint32_t pte_type_id =
+        var_type_inst->GetSingleWordInOperand(kPointerTypePointeeTypeInIdx);
+    Instruction* pte_type_inst = def_use_mgr->GetDef(pte_type_id);
+    if (pte_type_inst->opcode() == spv::Op::OpTypeArray) {
+      uint32_t array_elt_type_id = pte_type_inst->GetSingleWordInOperand(0);
+      Instruction* arr_elt_type = def_use_mgr->GetDef(array_elt_type_id);
+      if (arr_elt_type->opcode() == spv::Op::OpTypeStruct) {
+        if (AnalyzeBuiltIn(array_elt_type_id)) continue;
       }
     }
     // Mark all used locations of var live
     def_use_mgr->ForEachUser(var_id, [this, &var](Instruction* user) {
       auto op = user->opcode();
       if (op == spv::Op::OpEntryPoint || op == spv::Op::OpName ||
-          op == spv::Op::OpDecorate) {
+          op == spv::Op::OpDecorate || user->IsNonSemanticInstruction()) {
         return;
       }
       MarkRefLive(user, &var);

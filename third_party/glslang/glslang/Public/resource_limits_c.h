@@ -30,25 +30,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _STAND_ALONE_RESOURCE_LIMITS_C_INCLUDED_
 
 #include "../Include/glslang_c_interface.h"
+#include "../Include/visibility.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // Returns a struct that can be use to create custom resource values.
-glslang_resource_t* glslang_resource(void);
+GLSLANG_EXPORT glslang_resource_t* glslang_resource(void);
 
 // These are the default resources for TBuiltInResources, used for both
 //  - parsing this string for the case where the user didn't supply one,
 //  - dumping out a template for user construction of a config file.
-const glslang_resource_t* glslang_default_resource(void);
+GLSLANG_EXPORT const glslang_resource_t* glslang_default_resource(void);
 
 // Returns the DefaultTBuiltInResource as a human-readable string.
 // NOTE: User is responsible for freeing this string.
-const char* glslang_default_resource_string();
+GLSLANG_EXPORT const char* glslang_default_resource_string();
 
 // Decodes the resource limits from |config| to |resources|.
-void glslang_decode_resource_limits(glslang_resource_t* resources, char* config);
+GLSLANG_EXPORT void glslang_decode_resource_limits(glslang_resource_t* resources, char* config);
 
 #ifdef __cplusplus
 }

@@ -110,13 +110,6 @@ using namespace glslang;
 
 %{
 
-/* windows only pragma */
-#ifdef _MSC_VER
-    #pragma warning(disable : 4065)
-    #pragma warning(disable : 4127)
-    #pragma warning(disable : 4244)
-#endif
-
 #define parseContext (*pParseContext)
 #define yyerror(context, msg) context->parserError(msg)
 
@@ -185,7 +178,9 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> RAYQUERYEXT
 %token <lex> FCOOPMATNV ICOOPMATNV UCOOPMATNV
 %token <lex> COOPMAT
+%token <lex> COOPVECNV
 %token <lex> HITOBJECTNV HITOBJECTATTRNV
+%token <lex> TENSORLAYOUTNV TENSORVIEWNV
 
 // combined image/sampler
 %token <lex> SAMPLERCUBEARRAY SAMPLERCUBEARRAYSHADOW
@@ -282,11 +277,11 @@ extern int yylex(YYSTYPE*, TParseContext&);
 
 %token <lex> DOUBLECONSTANT INT16CONSTANT UINT16CONSTANT FLOAT16CONSTANT INT32CONSTANT UINT32CONSTANT
 %token <lex> INT64CONSTANT UINT64CONSTANT
-%token <lex> SUBROUTINE DEMOTE
+%token <lex> SUBROUTINE DEMOTE FUNCTION
 %token <lex> PAYLOADNV PAYLOADINNV HITATTRNV CALLDATANV CALLDATAINNV 
 %token <lex> PAYLOADEXT PAYLOADINEXT HITATTREXT CALLDATAEXT CALLDATAINEXT
 %token <lex> PATCH SAMPLE NONUNIFORM
-%token <lex> COHERENT VOLATILE RESTRICT READONLY WRITEONLY DEVICECOHERENT QUEUEFAMILYCOHERENT WORKGROUPCOHERENT
+%token <lex> COHERENT VOLATILE RESTRICT READONLY WRITEONLY NONTEMPORAL DEVICECOHERENT QUEUEFAMILYCOHERENT WORKGROUPCOHERENT
 %token <lex> SUBGROUPCOHERENT NONPRIVATE SHADERCALLCOHERENT
 %token <lex> NOPERSPECTIVE EXPLICITINTERPAMD PERVERTEXEXT PERVERTEXNV PERPRIMITIVENV PERVIEWNV PERTASKNV PERPRIMITIVEEXT TASKPAYLOADWORKGROUPEXT
 %token <lex> PRECISE
@@ -492,18 +487,44 @@ function_call_header_no_parameters
 
 function_call_header_with_parameters
     : function_call_header assignment_expression {
-        TParameter param = { 0, new TType };
-        param.type->shallowCopy($2->getType());
-        $1.function->addParameter(param);
-        $$.function = $1.function;
-        $$.intermNode = $2;
+        if (parseContext.spvVersion.vulkan > 0
+            && parseContext.spvVersion.vulkanRelaxed
+            && $2->getType().containsOpaque())
+        {
+            $$.intermNode = parseContext.vkRelaxedRemapFunctionArgument($$.loc, $1.function, $2);
+            $$.function = $1.function;
+        }
+        else
+        {
+            TParameter param = { 0, new TType, {} };
+            param.type->shallowCopy($2->getType());
+
+            $1.function->addParameter(param);
+            $$.function = $1.function;
+            $$.intermNode = $2;
+        }
     }
     | function_call_header_with_parameters COMMA assignment_expression {
-        TParameter param = { 0, new TType };
-        param.type->shallowCopy($3->getType());
-        $1.function->addParameter(param);
-        $$.function = $1.function;
-        $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, $3, $2.loc);
+        if (parseContext.spvVersion.vulkan > 0
+            && parseContext.spvVersion.vulkanRelaxed
+            && $3->getType().containsOpaque())
+        {
+            TIntermNode* remappedNode = parseContext.vkRelaxedRemapFunctionArgument($2.loc, $1.function, $3);
+            if (remappedNode == $3)
+                $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, $3, $2.loc);
+            else
+                $$.intermNode = parseContext.intermediate.mergeAggregate($1.intermNode, remappedNode, $2.loc);
+            $$.function = $1.function;
+        }
+        else
+        {
+            TParameter param = { 0, new TType, {} };
+            param.type->shallowCopy($3->getType());
+
+            $1.function->addParameter(param);
+            $$.function = $1.function;
+            $$.intermNode = parseContext.intermediate.growAggregate($1.intermNode, $3, $2.loc);
+        }
     }
     ;
 
@@ -948,18 +969,24 @@ function_prototype
         $$.function = $1;
         if (parseContext.compileOnly) $$.function->setExport();
         $$.loc = $2.loc;
+        const char * extensions[2] = { E_GL_EXT_subgroup_uniform_control_flow, E_GL_EXT_maximal_reconvergence };
+        parseContext.requireExtensions($2.loc, 2, extensions, "attribute");
         parseContext.handleFunctionAttributes($2.loc, *$3);
     }
     | attribute function_declarator RIGHT_PAREN {
         $$.function = $2;
         if (parseContext.compileOnly) $$.function->setExport();
         $$.loc = $3.loc;
+        const char * extensions[2] = { E_GL_EXT_subgroup_uniform_control_flow, E_GL_EXT_maximal_reconvergence };
+        parseContext.requireExtensions($3.loc, 2, extensions, "attribute");
         parseContext.handleFunctionAttributes($3.loc, *$1);
     }
     | attribute function_declarator RIGHT_PAREN attribute {
         $$.function = $2;
         if (parseContext.compileOnly) $$.function->setExport();
         $$.loc = $3.loc;
+        const char * extensions[2] = { E_GL_EXT_subgroup_uniform_control_flow, E_GL_EXT_maximal_reconvergence };
+        parseContext.requireExtensions($3.loc, 2, extensions, "attribute");
         parseContext.handleFunctionAttributes($3.loc, *$1);
         parseContext.handleFunctionAttributes($3.loc, *$4);
     }
@@ -980,7 +1007,12 @@ function_header_with_parameters
         // Add the parameter
         $$ = $1;
         if ($2.param.type->getBasicType() != EbtVoid)
-            $1->addParameter($2.param);
+        {
+            if (!(parseContext.spvVersion.vulkan > 0 && parseContext.spvVersion.vulkanRelaxed))
+                $1->addParameter($2.param);
+            else
+                parseContext.vkRelaxedRemapFunctionParameter($1, $2.param);
+        }
         else
             delete $2.param.type;
     }
@@ -998,7 +1030,10 @@ function_header_with_parameters
         } else {
             // Add the parameter
             $$ = $1;
-            $1->addParameter($3.param);
+            if (!(parseContext.spvVersion.vulkan > 0 && parseContext.spvVersion.vulkanRelaxed))
+                $1->addParameter($3.param);
+            else
+                parseContext.vkRelaxedRemapFunctionParameter($1, $3.param);
         }
     }
     ;
@@ -1038,7 +1073,7 @@ parameter_declarator
         }
         parseContext.reservedErrorCheck($2.loc, *$2.string);
 
-        TParameter param = {$2.string, new TType($1)};
+        TParameter param = {$2.string, new TType($1), {}};
         $$.loc = $2.loc;
         $$.param = param;
     }
@@ -1056,7 +1091,7 @@ parameter_declarator
         parseContext.arraySizeRequiredCheck($3.loc, *$3.arraySizes);
         parseContext.reservedErrorCheck($2.loc, *$2.string);
 
-        TParameter param = { $2.string, type };
+        TParameter param = { $2.string, type, {} };
 
         $$.loc = $2.loc;
         $$.param = param;
@@ -1071,7 +1106,7 @@ parameter_declaration
         $$ = $2;
         if ($1.qualifier.precision != EpqNone)
             $$.param.type->getQualifier().precision = $1.qualifier.precision;
-        parseContext.precisionQualifierCheck($$.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMat());
+        parseContext.precisionQualifierCheck($$.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMatOrVec());
 
         parseContext.checkNoShaderLayouts($1.loc, $1.shaderQualifiers);
         parseContext.parameterTypeCheck($2.loc, $1.qualifier.storage, *$$.param.type);
@@ -1083,7 +1118,7 @@ parameter_declaration
 
         parseContext.parameterTypeCheck($1.loc, EvqIn, *$1.param.type);
         parseContext.paramCheckFixStorage($1.loc, EvqTemporary, *$$.param.type);
-        parseContext.precisionQualifierCheck($$.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMat());
+        parseContext.precisionQualifierCheck($$.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMatOrVec());
     }
     //
     // Without name
@@ -1092,7 +1127,7 @@ parameter_declaration
         $$ = $2;
         if ($1.qualifier.precision != EpqNone)
             $$.param.type->getQualifier().precision = $1.qualifier.precision;
-        parseContext.precisionQualifierCheck($1.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMat());
+        parseContext.precisionQualifierCheck($1.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMatOrVec());
 
         parseContext.checkNoShaderLayouts($1.loc, $1.shaderQualifiers);
         parseContext.parameterTypeCheck($2.loc, $1.qualifier.storage, *$$.param.type);
@@ -1103,13 +1138,13 @@ parameter_declaration
 
         parseContext.parameterTypeCheck($1.loc, EvqIn, *$1.param.type);
         parseContext.paramCheckFixStorage($1.loc, EvqTemporary, *$$.param.type);
-        parseContext.precisionQualifierCheck($$.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMat());
+        parseContext.precisionQualifierCheck($$.loc, $$.param.type->getBasicType(), $$.param.type->getQualifier(), $$.param.type->isCoopMatOrVec());
     }
     ;
 
 parameter_type_specifier
     : type_specifier {
-        TParameter param = { 0, new TType($1) };
+        TParameter param = { 0, new TType($1), {} };
         $$.param = param;
         if ($1.arraySizes)
             parseContext.arraySizeRequiredCheck($1.loc, *$1.arraySizes);
@@ -1178,7 +1213,7 @@ fully_specified_type
             parseContext.profileRequires($1.loc, ENoProfile, 120, E_GL_3DL_array_objects, "arrayed type");
             parseContext.profileRequires($1.loc, EEsProfile, 300, 0, "arrayed type");
         }
-        parseContext.precisionQualifierCheck($$.loc, $$.basicType, $$.qualifier, $$.isCoopmat());
+        parseContext.precisionQualifierCheck($$.loc, $$.basicType, $$.qualifier, $$.isCoopmatOrvec());
     }
     | type_qualifier type_specifier  {
         parseContext.globalQualifierFixCheck($1.loc, $1.qualifier, false, &$2);
@@ -1195,7 +1230,7 @@ fully_specified_type
         parseContext.checkNoShaderLayouts($2.loc, $1.shaderQualifiers);
         $2.shaderQualifiers.merge($1.shaderQualifiers);
         parseContext.mergeQualifiers($2.loc, $2.qualifier, $1.qualifier, true);
-        parseContext.precisionQualifierCheck($2.loc, $2.basicType, $2.qualifier, $2.isCoopmat());
+        parseContext.precisionQualifierCheck($2.loc, $2.basicType, $2.qualifier, $2.isCoopmatOrvec());
 
         $$ = $2;
 
@@ -1623,6 +1658,10 @@ storage_qualifier
         $$.init($1.loc);
         $$.qualifier.writeonly = true;
     }
+    | NONTEMPORAL {
+        $$.init($1.loc);
+        $$.qualifier.nontemporal  = true;
+    }
     | SUBROUTINE {
         parseContext.spvRemoved($1.loc, "subroutine");
         parseContext.globalCheck($1.loc, "subroutine");
@@ -1667,7 +1706,7 @@ type_specifier
         $$ = $1;
         $$.qualifier.precision = parseContext.getDefaultPrecision($$);
         $$.typeParameters = $2;
-        parseContext.coopMatTypeParametersCheck($1.loc, $$);
+        parseContext.typeParametersCheck($1.loc, $$);
 
     }
     | type_specifier_nonarray type_parameter_specifier_opt array_specifier {
@@ -1676,7 +1715,7 @@ type_specifier
         $$.qualifier.precision = parseContext.getDefaultPrecision($$);
         $$.typeParameters = $2;
         $$.arraySizes = $3.arraySizes;
-        parseContext.coopMatTypeParametersCheck($1.loc, $$);
+        parseContext.typeParametersCheck($1.loc, $$);
     }
     ;
 
@@ -1726,6 +1765,7 @@ type_parameter_specifier_list
     : type_specifier {
         $$ = new TTypeParameters;
         $$->arraySizes = new TArraySizes;
+        $$->spirvType = $1.spirvType;
         $$->basicType = $1.basicType;
     }
     | unary_expression {
@@ -3501,6 +3541,26 @@ type_specifier_nonarray
         $$.coopmatNV = false;
         $$.coopmatKHR = true;
     }
+    | TENSORLAYOUTNV {
+        parseContext.tensorLayoutViewCheck($1.loc, "tensorLayoutNV", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtTensorLayoutNV;
+    }
+    | TENSORVIEWNV {
+        parseContext.tensorLayoutViewCheck($1.loc, "tensorViewNV", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtTensorViewNV;
+    }
+    | FUNCTION {
+        $$.init($1.loc);
+        $$.basicType = EbtFunction;
+    }
+    | COOPVECNV {
+        parseContext.coopvecCheck($1.loc, "coopvecNV", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtCoopvecNV;
+        $$.coopvecNV = true;
+    }
     | spirv_type_specifier {
         parseContext.requireExtensions($1.loc, 1, &E_GL_EXT_spirv_intrinsics, "SPIR-V type specifier");
         $$ = $1;
@@ -3549,11 +3609,17 @@ precision_qualifier
 
 struct_specifier
     : STRUCT IDENTIFIER LEFT_BRACE { parseContext.nestedStructCheck($1.loc); } struct_declaration_list RIGHT_BRACE {
+
         TType* structure = new TType($5, *$2.string);
         parseContext.structArrayCheck($2.loc, *structure);
+
         TVariable* userTypeDef = new TVariable($2.string, *structure, true);
         if (! parseContext.symbolTable.insert(*userTypeDef))
             parseContext.error($2.loc, "redefinition", $2.string->c_str(), "struct");
+        else if (parseContext.spvVersion.vulkanRelaxed
+                 && structure->containsOpaque())
+            parseContext.relaxedSymbols.push_back(structure->getTypeName());
+
         $$.init($1.loc);
         $$.basicType = EbtStruct;
         $$.userDef = structure;
@@ -3596,7 +3662,7 @@ struct_declaration
         $$ = $2;
 
         parseContext.voidErrorCheck($1.loc, (*$2)[0].type->getFieldName(), $1.basicType);
-        parseContext.precisionQualifierCheck($1.loc, $1.basicType, $1.qualifier, $1.isCoopmat());
+        parseContext.precisionQualifierCheck($1.loc, $1.basicType, $1.qualifier, $1.isCoopmatOrvec());
 
         for (unsigned int i = 0; i < $$->size(); ++i) {
             TType type($1);
@@ -3620,7 +3686,7 @@ struct_declaration
         parseContext.memberQualifierCheck($1);
         parseContext.voidErrorCheck($2.loc, (*$3)[0].type->getFieldName(), $2.basicType);
         parseContext.mergeQualifiers($2.loc, $2.qualifier, $1.qualifier, true);
-        parseContext.precisionQualifierCheck($2.loc, $2.basicType, $2.qualifier, $2.isCoopmat());
+        parseContext.precisionQualifierCheck($2.loc, $2.basicType, $2.qualifier, $2.isCoopmatOrvec());
 
         for (unsigned int i = 0; i < $$->size(); ++i) {
             TType type($2);
@@ -3733,8 +3799,10 @@ compound_statement
         --parseContext.statementNestingLevel;
     }
       RIGHT_BRACE {
-        if ($3 && $3->getAsAggregate())
+        if ($3 && $3->getAsAggregate()) {
             $3->getAsAggregate()->setOperator(parseContext.intermediate.getDebugInfo() ? EOpScope : EOpSequence);
+            $3->getAsAggregate()->setEndLoc($5.loc);
+        }
         $$ = $3;
     }
     ;
@@ -3770,8 +3838,10 @@ compound_statement_no_new_scope
         $$ = 0;
     }
     | LEFT_BRACE statement_list RIGHT_BRACE {
-        if ($2 && $2->getAsAggregate())
+        if ($2 && $2->getAsAggregate()) {
             $2->getAsAggregate()->setOperator(EOpSequence);
+            $2->getAsAggregate()->setEndLoc($3.loc);
+        }
         $$ = $2;
     }
     ;
@@ -3914,7 +3984,8 @@ iteration_statement
         $$ = $1;
     }
     | attribute iteration_statement_nonattributed {
-        parseContext.requireExtensions($2->getLoc(), 1, &E_GL_EXT_control_flow_attributes, "attribute");
+        const char * extensions[2] = { E_GL_EXT_control_flow_attributes, E_GL_EXT_control_flow_attributes2 };
+        parseContext.requireExtensions($2->getLoc(), 2, extensions, "attribute");
         parseContext.handleLoopAttributes(*$1, $2);
         $$ = $2;
     }

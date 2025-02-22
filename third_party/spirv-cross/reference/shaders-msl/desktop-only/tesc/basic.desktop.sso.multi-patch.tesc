@@ -17,8 +17,8 @@ struct main0_patchOut
 
 struct main0_in
 {
-    uint3 m_78;
-    ushort2 m_82;
+    uint3 m_79;
+    ushort2 m_84;
     float4 gl_Position;
 };
 

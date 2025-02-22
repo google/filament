@@ -18,7 +18,6 @@
 #include "source/opt/ir_context.h"
 
 #include "spirv-tools/libspirv.hpp"
-#include "tools/io.h"
 #include "tools/util/cli_consumer.h"
 
 #include "gtest/gtest.h"

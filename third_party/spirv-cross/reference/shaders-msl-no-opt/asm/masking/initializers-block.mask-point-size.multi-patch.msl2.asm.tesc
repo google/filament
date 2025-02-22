@@ -80,17 +80,17 @@ struct main0_patchOut
 
 kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], device main0_out* spvOut [[buffer(28)]], constant uint* spvIndirectParams [[buffer(29)]], device main0_patchOut* spvPatchOut [[buffer(27)]], device MTLQuadTessellationFactorsHalf* spvTessLevel [[buffer(26)]])
 {
-    spvUnsafeArray<C, 4> _18 = spvUnsafeArray<C, 4>({ C{ float4(0.0) }, C{ float4(0.0) }, C{ float4(0.0) }, C{ float4(0.0) } });
-    spvUnsafeArray<gl_PerVertex, 4> _33 = spvUnsafeArray<gl_PerVertex, 4>({ gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) } });
+    spvUnsafeArray<C, 4> _21 = spvUnsafeArray<C, 4>({ C{ float4(0.0) }, C{ float4(0.0) }, C{ float4(0.0) }, C{ float4(0.0) } });
+    spvUnsafeArray<gl_PerVertex, 4> _39 = spvUnsafeArray<gl_PerVertex, 4>({ gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) }, gl_PerVertex{ float4(0.0), 0.0, spvUnsafeArray<float, 1>({ 0.0 }), spvUnsafeArray<float, 1>({ 0.0 }) } });
     
     device main0_out* gl_out = &spvOut[gl_GlobalInvocationID.x - gl_GlobalInvocationID.x % 4];
-    gl_out[gl_GlobalInvocationID.x % 4].c_v = _18[gl_GlobalInvocationID.x % 4].v;
-    gl_out[gl_GlobalInvocationID.x % 4].gl_Position = _33[gl_GlobalInvocationID.x % 4].gl_Position;
-    gl_out[gl_GlobalInvocationID.x % 4].gl_ClipDistance = _33[gl_GlobalInvocationID.x % 4].gl_ClipDistance;
-    gl_out[gl_GlobalInvocationID.x % 4].gl_CullDistance = _33[gl_GlobalInvocationID.x % 4].gl_CullDistance;
-    threadgroup gl_PerVertex spvStoragegl_out_masked[8][4];
-    threadgroup gl_PerVertex (&gl_out_masked)[4] = spvStoragegl_out_masked[(gl_GlobalInvocationID.x / 4) % 8];
-    gl_out_masked[gl_GlobalInvocationID.x % 4] = _33[gl_GlobalInvocationID.x % 4];
+    gl_out[gl_GlobalInvocationID.x % 4].c_v = _21[gl_GlobalInvocationID.x % 4].v;
+    gl_out[gl_GlobalInvocationID.x % 4].gl_Position = _39[gl_GlobalInvocationID.x % 4].gl_Position;
+    gl_out[gl_GlobalInvocationID.x % 4].gl_ClipDistance = _39[gl_GlobalInvocationID.x % 4].gl_ClipDistance;
+    gl_out[gl_GlobalInvocationID.x % 4].gl_CullDistance = _39[gl_GlobalInvocationID.x % 4].gl_CullDistance;
+    threadgroup spvUnsafeArray<gl_PerVertex, 4> spvStoragegl_out_masked[8];
+    threadgroup auto &gl_out_masked = spvStoragegl_out_masked[(gl_GlobalInvocationID.x / 4) % 8];
+    gl_out_masked[gl_GlobalInvocationID.x % 4] = _39[gl_GlobalInvocationID.x % 4];
     device main0_patchOut& patchOut = spvPatchOut[gl_GlobalInvocationID.x / 4];
     patchOut.p_v = float4(0.0);
     uint gl_InvocationID = gl_GlobalInvocationID.x % 4;

@@ -63,13 +63,13 @@ struct anon_e
 
 cbuffer UBO : register(b0)
 {
-    anon_c _16_c : packoffset(c0);
-    anon_d _16_d : packoffset(c1);
+    anon_c _18_c : packoffset(c0);
+    anon_d _18_d : packoffset(c1);
 };
 
-RWByteAddressBuffer _19 : register(u1);
+RWByteAddressBuffer _21 : register(u1);
 
-static VertexData _3;
+static VertexData _4;
 
 struct SPIRV_Cross_Input
 {
@@ -83,7 +83,7 @@ void frag_main()
 
 void main(SPIRV_Cross_Input stage_input)
 {
-    _3._a = stage_input.VertexData__a;
-    _3.b = stage_input.VertexData_b;
+    _4._a = stage_input.VertexData__a;
+    _4.b = stage_input.VertexData_b;
     frag_main();
 }

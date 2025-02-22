@@ -21,6 +21,8 @@ class RemoveUnusedInterfaceVariablesContext {
   RemoveUnusedInterfaceVariablesPass& parent_;
   Instruction& entry_;
   std::unordered_set<uint32_t> used_variables_;
+  std::vector<uint32_t> operands_to_add_;
+
   IRContext::ProcessFunction pfn_ =
       std::bind(&RemoveUnusedInterfaceVariablesContext::processFunction, this,
                 std::placeholders::_1);
@@ -38,8 +40,10 @@ class RemoveUnusedInterfaceVariablesContext {
               (parent_.get_module()->version() >=
                    SPV_SPIRV_VERSION_WORD(1, 4) ||
                storage_class == spv::StorageClass::Input ||
-               storage_class == spv::StorageClass::Output))
+               storage_class == spv::StorageClass::Output)) {
             used_variables_.insert(*id);
+            operands_to_add_.push_back(*id);
+          }
         });
     return false;
   }
@@ -71,7 +75,7 @@ class RemoveUnusedInterfaceVariablesContext {
   void Modify() {
     for (int i = entry_.NumInOperands() - 1; i >= 3; --i)
       entry_.RemoveInOperand(i);
-    for (auto id : used_variables_) {
+    for (auto id : operands_to_add_) {
       entry_.AddOperand(Operand(SPV_OPERAND_TYPE_ID, {id}));
     }
   }

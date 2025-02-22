@@ -60,6 +60,9 @@ void TType::buildMangledName(TString& mangledName) const
     else if (isVector())
         mangledName += 'v';
 
+    if (isCoopVecNV())
+        mangledName += "coopvec";
+
     switch (basicType) {
     case EbtFloat:              mangledName += 'f';      break;
     case EbtInt:                mangledName += 'i';      break;
@@ -78,6 +81,8 @@ void TType::buildMangledName(TString& mangledName) const
     case EbtRayQuery:           mangledName += "rq";     break;
     case EbtSpirvType:          mangledName += "spv-t";  break;
     case EbtHitObjectNV:        mangledName += "ho";     break;
+    case EbtTensorLayoutNV:     mangledName += "tl";     break;
+    case EbtTensorViewNV:       mangledName += "tv";     break;
     case EbtSampler:
         switch (sampler.type) {
         case EbtFloat16: mangledName += "f16"; break;
@@ -149,6 +154,7 @@ void TType::buildMangledName(TString& mangledName) const
             mangledName += '-';
             (*structure)[i].type->buildMangledName(mangledName);
         }
+        break;
     default:
         break;
     }
@@ -160,6 +166,23 @@ void TType::buildMangledName(TString& mangledName) const
         mangledName += static_cast<char>('0' + getMatrixRows());
     }
 
+    if (typeParameters) {
+        const int maxSize = 11;
+        char buf[maxSize];
+        for (int i = 0; i < typeParameters->arraySizes->getNumDims(); ++i) {
+            if (typeParameters->arraySizes->getDimNode(i)) {
+                if (typeParameters->arraySizes->getDimNode(i)->getAsSymbolNode())
+                    snprintf(buf, maxSize, "s%lld", typeParameters->arraySizes->getDimNode(i)->getAsSymbolNode()->getId());
+                else
+                    snprintf(buf, maxSize, "s%p", typeParameters->arraySizes->getDimNode(i));
+            } else
+                snprintf(buf, maxSize, "%d", typeParameters->arraySizes->getDimSize(i));
+            mangledName += '<';
+            mangledName += buf;
+            mangledName += '>';
+        }
+    }
+
     if (arraySizes) {
         const int maxSize = 11;
         char buf[maxSize];
@@ -168,7 +191,7 @@ void TType::buildMangledName(TString& mangledName) const
                 if (arraySizes->getDimNode(i)->getAsSymbolNode())
                     snprintf(buf, maxSize, "s%lld", arraySizes->getDimNode(i)->getAsSymbolNode()->getId());
                 else
-                    snprintf(buf, maxSize, "s%p", arraySizes->getDimNode(i));
+                    snprintf(buf, maxSize, "s%p", (void*)(arraySizes->getDimNode(i)));
             } else
                 snprintf(buf, maxSize, "%d", arraySizes->getDimSize(i));
             mangledName += '[';
@@ -343,6 +366,7 @@ void TSymbolTableLevel::readOnly()
 TSymbol::TSymbol(const TSymbol& copyOf)
 {
     name = NewPoolTString(copyOf.name->c_str());
+    mangledName = NewPoolTString(copyOf.mangledName->c_str());
     uniqueId = copyOf.uniqueId;
     writable = true;
 }

@@ -20,7 +20,7 @@ vec4 _main()
 
 void main()
 {
-    vec4 _45 = _main();
-    _entryPointOutput = _45;
+    vec4 _62 = _main();
+    _entryPointOutput = _62;
 }
 

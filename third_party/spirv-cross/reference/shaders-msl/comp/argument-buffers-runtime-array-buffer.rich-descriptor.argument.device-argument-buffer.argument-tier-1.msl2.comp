@@ -1,0 +1,115 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+struct spvDescriptor
+{
+    T value;
+};
+
+template<typename T>
+struct spvBufferDescriptor
+{
+    T value;
+    int length;
+    const device T& operator -> () const device
+    {
+        return value;
+    }
+    const device T& operator * () const device
+    {
+        return value;
+    }
+};
+
+template<typename T>
+struct spvDescriptorArray
+{
+    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(ptr)
+    {
+    }
+    const device T& operator [] (size_t i) const
+    {
+        return ptr[i].value;
+    }
+    const device spvDescriptor<T>* ptr;
+};
+
+template<typename T>
+struct spvDescriptorArray<device T*>
+{
+    spvDescriptorArray(const device spvBufferDescriptor<device T*>* ptr) : ptr(ptr)
+    {
+    }
+    const device T* operator [] (size_t i) const
+    {
+        return ptr[i].value;
+    }
+    const int length(int i) const
+    {
+        return ptr[i].length;
+    }
+    const device spvBufferDescriptor<device T*>* ptr;
+};
+
+struct SSBO
+{
+    float4 v[1];
+};
+
+struct UBO
+{
+    float4 v[1024];
+};
+
+struct UBOs
+{
+    float4 v;
+};
+
+struct SSBOIn
+{
+    float4 v[1024];
+};
+
+struct SSBOIns
+{
+    float4 v;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+struct spvDescriptorSetBuffer0
+{
+    device SSBO* o [[id(0)]];
+    constant UBO* v [[id(1)]];
+    spvDescriptor<constant UBOs *> vs [[id(2)]][1] /* unsized array hack */;
+};
+
+struct spvDescriptorSetBuffer1
+{
+    device SSBOIn* w [[id(0)]];
+    spvBufferDescriptor<device SSBOIns *> ws [[id(1)]][1] /* unsized array hack */;
+};
+
+static inline __attribute__((always_inline))
+void in_func(device SSBO& o, thread uint3& gl_GlobalInvocationID, constant UBO& v, thread uint3& gl_WorkGroupID, const spvDescriptorArray<constant UBOs*> vs, device SSBOIn& w, const spvDescriptorArray<device SSBOIns*> ws)
+{
+    o.v[gl_GlobalInvocationID.x] = v.v[gl_WorkGroupID.x];
+    o.v[gl_GlobalInvocationID.x] = vs[gl_WorkGroupID.x]->v;
+    o.v[gl_GlobalInvocationID.x] = w.v[gl_WorkGroupID.x];
+    o.v[gl_GlobalInvocationID.x] = ws[gl_WorkGroupID.x]->v;
+}
+
+kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], const device spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    spvDescriptorArray<constant UBOs*> vs {spvDescriptorSet0.vs};
+    spvDescriptorArray<device SSBOIns*> ws {spvDescriptorSet1.ws};
+
+    in_func((*spvDescriptorSet0.o), gl_GlobalInvocationID, (*spvDescriptorSet0.v), gl_WorkGroupID, vs, (*spvDescriptorSet1.w), ws);
+}
+

@@ -122,7 +122,6 @@ endif()
 # requires us to explicitly list the dependencies below, as CMake doesn't have a way to recursively
 # query dependencies.
 set(FILAMAT_DEPS
-        OGLCompiler
         OSDependent
         SPIRV
         SPIRV-Tools
@@ -144,19 +143,17 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-project(test_filamat)
-set(TARGET test_filamat)
-set(SRCS
-        tests/test_filamat.cpp
-        tests/test_argBufferFixup.cpp
-        tests/test_clipDistanceFixup.cpp
-        tests/test_includes.cpp)
+if (IS_HOST_PLATFORM)
+    project(test_filamat)
+    set(TARGET test_filamat)
+    set(SRCS
+            tests/test_filamat.cpp
+            tests/test_argBufferFixup.cpp
+            tests/test_clipDistanceFixup.cpp
+            tests/test_includes.cpp)
 
-add_executable(${TARGET} ${SRCS})
-
-target_include_directories(${TARGET} PRIVATE src)
-
-target_link_libraries(${TARGET} filamat gtest)
-
-set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
-
+    add_executable(${TARGET} ${SRCS})
+    target_include_directories(${TARGET} PRIVATE src)
+    target_link_libraries(${TARGET} filamat gtest)
+    set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
+endif()

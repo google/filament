@@ -12,14 +12,14 @@ constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(16u, 16u, 1u);
 
 kernel void main0(constant cb1_struct& cb0_1 [[buffer(0)]], texture2d<float, access::write> u0 [[texture(0)]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
 {
-    int2 _46 = int2(u0.get_width(), u0.get_height()) >> int2(uint2(4u));
+    int2 _37 = int2(u0.get_width(), u0.get_height()) >> int2(uint2(4u));
     int _98;
     _98 = 0;
-    for (; _98 < _46.y; _98++)
+    for (; _98 < _37.y; _98++)
     {
-        for (int _99 = 0; _99 < _46.x; )
+        for (int _99 = 0; _99 < _37.x; )
         {
-            u0.write(cb0_1._RESERVED_IDENTIFIER_FIXUP_m0[0].xxxx, uint2(((_46 * int3(gl_LocalInvocationID).xy) + int2(_98, _99))));
+            u0.write(cb0_1._RESERVED_IDENTIFIER_FIXUP_m0[0].xxxx, uint2(((_37 * int3(gl_LocalInvocationID).xy) + int2(_98, _99))));
             _99++;
             continue;
         }
