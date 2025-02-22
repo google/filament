@@ -74,7 +74,7 @@ TEST(TransformationAddTypeFloatTest, IsApplicable) {
 
   // By default, SPIR-V does not support 64-bit float types.
   // Below we add such capability, so the test should now pass.
-  context.get()->get_feature_mgr()->AddCapability(spv::Capability::Float64);
+  context.get()->AddCapability(spv::Capability::Float64);
   ASSERT_TRUE(TransformationAddTypeFloat(7, 64).IsApplicable(
       context.get(), transformation_context));
 

@@ -23,7 +23,6 @@
 
 #include "source/cfa.h"
 #include "source/opt/ir_context.h"
-#include "source/opt/iterator.h"
 #include "source/opt/struct_cfg_analysis.h"
 #include "source/util/make_unique.h"
 

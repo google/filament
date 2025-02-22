@@ -751,7 +751,7 @@ bool Instruction::IsOpaqueType() const {
 }
 
 bool Instruction::IsFoldable() const {
-  return IsFoldableByFoldScalar() ||
+  return IsFoldableByFoldScalar() || IsFoldableByFoldVector() ||
          context()->get_instruction_folder().HasConstFoldingRule(this);
 }
 
@@ -762,7 +762,7 @@ bool Instruction::IsFoldableByFoldScalar() const {
   }
 
   Instruction* type = context()->get_def_use_mgr()->GetDef(type_id());
-  if (!folder.IsFoldableType(type)) {
+  if (!folder.IsFoldableScalarType(type)) {
     return false;
   }
 
@@ -773,7 +773,29 @@ bool Instruction::IsFoldableByFoldScalar() const {
     Instruction* def_inst = context()->get_def_use_mgr()->GetDef(*op_id);
     Instruction* def_inst_type =
         context()->get_def_use_mgr()->GetDef(def_inst->type_id());
-    return folder.IsFoldableType(def_inst_type);
+    return folder.IsFoldableScalarType(def_inst_type);
+  });
+}
+
+bool Instruction::IsFoldableByFoldVector() const {
+  const InstructionFolder& folder = context()->get_instruction_folder();
+  if (!folder.IsFoldableOpcode(opcode())) {
+    return false;
+  }
+
+  Instruction* type = context()->get_def_use_mgr()->GetDef(type_id());
+  if (!folder.IsFoldableVectorType(type)) {
+    return false;
+  }
+
+  // Even if the type of the instruction is foldable, its operands may not be
+  // foldable (e.g., comparisons of 64bit types).  Check that all operand types
+  // are foldable before accepting the instruction.
+  return WhileEachInOperand([&folder, this](const uint32_t* op_id) {
+    Instruction* def_inst = context()->get_def_use_mgr()->GetDef(*op_id);
+    Instruction* def_inst_type =
+        context()->get_def_use_mgr()->GetDef(def_inst->type_id());
+    return folder.IsFoldableVectorType(def_inst_type);
   });
 }
 

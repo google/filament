@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/opt/module.h"
+
 #include <memory>
-#include <sstream>
-#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "source/opt/build_module.h"
-#include "source/opt/module.h"
-#include "source/opt/pass.h"
 #include "spirv-tools/libspirv.hpp"
 #include "test/opt/module_utils.h"
 

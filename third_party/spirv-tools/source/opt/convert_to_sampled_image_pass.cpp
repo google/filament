@@ -16,7 +16,6 @@
 
 #include <cctype>
 #include <cstring>
-#include <tuple>
 
 #include "source/opt/ir_builder.h"
 #include "source/util/make_unique.h"

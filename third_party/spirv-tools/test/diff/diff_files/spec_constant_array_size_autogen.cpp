@@ -125,7 +125,7 @@ TEST(DiffTest, SpecConstantArraySize) {
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 36
++; Bound: 29
  ; Schema: 0
  OpCapability Shader
  OpMemoryModel Logical GLSL450
@@ -140,7 +140,7 @@ TEST(DiffTest, SpecConstantArraySize) {
  OpName %19 ""
  OpName %22 "main"
  OpDecorate %4 Location 0
-+OpDecorate %34 SpecId 4
++OpDecorate %27 SpecId 4
  OpMemberDecorate %17 1 RelaxedPrecision
  OpMemberDecorate %17 0 BuiltIn Position
  OpMemberDecorate %17 1 BuiltIn PointSize
@@ -153,10 +153,10 @@ TEST(DiffTest, SpecConstantArraySize) {
  %8 = OpTypeVector %5 4
 -%15 = OpConstant %5 8
 -%16 = OpTypeArray %1 %15
-+%34 = OpSpecConstant %5 8
-+%35 = OpTypeArray %1 %34
++%27 = OpSpecConstant %5 8
++%28 = OpTypeArray %1 %27
 -%17 = OpTypeStruct %2 %1 %16 %16
-+%17 = OpTypeStruct %2 %1 %35 %35
++%17 = OpTypeStruct %2 %1 %28 %28
  %20 = OpTypeVoid
  %25 = OpConstant %5 0
  %3 = OpTypePointer Input %2
@@ -261,14 +261,14 @@ OpFunctionEnd
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 27
-+; Bound: 36
++; Bound: 29
  ; Schema: 0
  OpCapability Shader
  OpMemoryModel Logical GLSL450
  OpEntryPoint Vertex %22 "main" %4 %19
  OpSource GLSL 450
  OpDecorate %4 Location 0
-+OpDecorate %34 SpecId 4
++OpDecorate %27 SpecId 4
  OpMemberDecorate %17 1 RelaxedPrecision
  OpMemberDecorate %17 0 BuiltIn Position
  OpMemberDecorate %17 1 BuiltIn PointSize
@@ -281,10 +281,10 @@ OpFunctionEnd
  %8 = OpTypeVector %5 4
 -%15 = OpConstant %5 8
 -%16 = OpTypeArray %1 %15
-+%34 = OpSpecConstant %5 8
-+%35 = OpTypeArray %1 %34
++%27 = OpSpecConstant %5 8
++%28 = OpTypeArray %1 %27
 -%17 = OpTypeStruct %2 %1 %16 %16
-+%17 = OpTypeStruct %2 %1 %35 %35
++%17 = OpTypeStruct %2 %1 %28 %28
  %20 = OpTypeVoid
  %25 = OpConstant %5 0
  %3 = OpTypePointer Input %2

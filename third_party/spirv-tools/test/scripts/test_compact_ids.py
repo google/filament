@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2017 Google Inc.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ def print_usage():
   template= \
 """{script} tests correctness of opt pass tools/opt --compact-ids
 
-USAGE: python {script} [<spirv_files>]
+USAGE: python3 {script} [<spirv_files>]
 
 Requires tools/spirv-dis, tools/spirv-as and tools/spirv-opt to be in path
 (call the script from the SPIRV-Tools build output directory).

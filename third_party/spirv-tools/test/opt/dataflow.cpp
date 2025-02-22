@@ -17,7 +17,6 @@
 #include <map>
 #include <set>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "opt/function_utils.h"
 #include "source/opt/build_module.h"

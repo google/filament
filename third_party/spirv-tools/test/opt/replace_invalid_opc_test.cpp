@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdarg>
 #include <string>
 #include <vector>
 
-#include "gmock/gmock.h"
 #include "pass_utils.h"
 #include "test/opt/assembly_builder.h"
 #include "test/opt/pass_fixture.h"
@@ -404,6 +402,7 @@ TEST_F(ReplaceInvalidOpcodeTest, BarrierDontReplace) {
             OpReturn
             OpFunctionEnd)";
 
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_2);
   auto result = SinglePassRunAndDisassemble<ReplaceInvalidOpcodePass>(
       text, /* skip_nop = */ true, /* do_validation = */ false);
   EXPECT_EQ(Pass::Status::SuccessWithoutChange, std::get<1>(result));
@@ -432,7 +431,38 @@ TEST_F(ReplaceInvalidOpcodeTest, BarrierReplace) {
             OpReturn
             OpFunctionEnd)";
 
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_2);
   SinglePassRunAndMatch<ReplaceInvalidOpcodePass>(text, false);
+}
+
+// Since version 1.3 OpControlBarriers are allowed is more shaders.
+// https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpControlBarrier
+TEST_F(ReplaceInvalidOpcodeTest, BarrierDontReplaceV13) {
+  const std::string text = R"(
+            OpCapability Shader
+       %1 = OpExtInstImport "GLSL.std.450"
+            OpMemoryModel Logical GLSL450
+            OpEntryPoint Vertex %main "main"
+            OpExecutionMode %main LocalSize 1 1 1
+            OpSource GLSL 450
+            OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+            OpSourceExtension "GL_GOOGLE_include_directive"
+            OpName %main "main"
+    %void = OpTypeVoid
+       %3 = OpTypeFunction %void
+    %uint = OpTypeInt 32 0
+  %uint_2 = OpConstant %uint 2
+%uint_264 = OpConstant %uint 264
+    %main = OpFunction %void None %3
+       %5 = OpLabel
+            OpControlBarrier %uint_2 %uint_2 %uint_264
+            OpReturn
+            OpFunctionEnd)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_3);
+  auto result = SinglePassRunAndDisassemble<ReplaceInvalidOpcodePass>(
+      text, /* skip_nop = */ true, /* do_validation = */ false);
+  EXPECT_EQ(Pass::Status::SuccessWithoutChange, std::get<1>(result));
 }
 
 TEST_F(ReplaceInvalidOpcodeTest, MessageTest) {

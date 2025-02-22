@@ -90,10 +90,6 @@ class InterfaceVariableScalarReplacement : public Pass {
   // |component|. Returns true whether the component exists or not.
   bool GetVariableComponent(Instruction* var, uint32_t* component);
 
-  // Returns the interface variable instruction whose result id is
-  // |interface_var_id|.
-  Instruction* GetInterfaceVariable(uint32_t interface_var_id);
-
   // Returns the type of |var| as an instruction.
   Instruction* GetTypeOfVariable(Instruction* var);
 

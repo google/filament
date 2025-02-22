@@ -977,7 +977,7 @@ OpFunctionEnd
  ; Version: 1.6
  ; Generator: Khronos SPIR-V Tools Assembler; 0
 -; Bound: 82
-+; Bound: 92
++; Bound: 89
  ; Schema: 0
  OpCapability Shader
  OpMemoryModel Logical GLSL450
@@ -1030,8 +1030,7 @@ OpFunctionEnd
 +OpDecorate %83 DescriptorSet 0
 +OpDecorate %83 Binding 0
  OpDecorate %32 RelaxedPrecision
--OpDecorate %33 RelaxedPrecision
-+OpDecorate %84 RelaxedPrecision
+ OpDecorate %33 RelaxedPrecision
  OpDecorate %36 RelaxedPrecision
  OpDecorate %37 RelaxedPrecision
  OpDecorate %38 RelaxedPrecision
@@ -1040,10 +1039,8 @@ OpFunctionEnd
  OpDecorate %42 RelaxedPrecision
  OpDecorate %43 RelaxedPrecision
  OpDecorate %48 RelaxedPrecision
--OpDecorate %49 RelaxedPrecision
--OpDecorate %50 RelaxedPrecision
-+OpDecorate %85 RelaxedPrecision
-+OpDecorate %86 RelaxedPrecision
+ OpDecorate %49 RelaxedPrecision
+ OpDecorate %50 RelaxedPrecision
  OpDecorate %52 RelaxedPrecision
  OpDecorate %53 RelaxedPrecision
  OpDecorate %54 RelaxedPrecision
@@ -1082,13 +1079,13 @@ OpFunctionEnd
  %61 = OpTypeVoid
  %69 = OpConstant %16 0
  %78 = OpConstant %16 1
-+%88 = OpTypePointer Private %2
++%85 = OpTypePointer Private %2
  %3 = OpTypePointer Input %2
  %7 = OpTypePointer UniformConstant %6
  %10 = OpTypePointer UniformConstant %9
  %13 = OpTypePointer Uniform %12
  %19 = OpTypePointer Uniform %18
-+%89 = OpTypePointer Private %2
++%86 = OpTypePointer Private %2
  %21 = OpTypePointer Output %2
  %28 = OpTypePointer Uniform %27
  %30 = OpTypePointer Function %2
@@ -1106,19 +1103,16 @@ OpFunctionEnd
  %22 = OpVariable %21 Output
 -%29 = OpVariable %28 Uniform
 +%83 = OpVariable %28 Uniform
-+%90 = OpConstant %23 0
-+%91 = OpConstant %1 0.5
++%87 = OpConstant %23 0
++%88 = OpConstant %1 0.5
  %32 = OpFunction %2 None %31
--%33 = OpFunctionParameter %30
-+%84 = OpFunctionParameter %30
+ %33 = OpFunctionParameter %30
  %34 = OpLabel
  %36 = OpLoad %6 %8
--%37 = OpLoad %2 %33
-+%37 = OpLoad %2 %84
+ %37 = OpLoad %2 %33
  %38 = OpVectorShuffle %35 %37 %37 0 1
  %39 = OpImageSampleImplicitLod %2 %36 %38
--%41 = OpLoad %2 %33
-+%41 = OpLoad %2 %84
+ %41 = OpLoad %2 %33
  %42 = OpVectorShuffle %35 %41 %41 2 3
  %43 = OpConvertFToS %40 %42
  %44 = OpLoad %9 %11
@@ -1127,16 +1121,12 @@ OpFunctionEnd
  OpReturnValue %46
  OpFunctionEnd
  %48 = OpFunction %2 None %47
--%49 = OpFunctionParameter %30
--%50 = OpFunctionParameter %30
-+%85 = OpFunctionParameter %30
-+%86 = OpFunctionParameter %30
+ %49 = OpFunctionParameter %30
+ %50 = OpFunctionParameter %30
  %51 = OpLabel
--%52 = OpLoad %2 %49
-+%52 = OpLoad %2 %85
+ %52 = OpLoad %2 %49
  %53 = OpVectorShuffle %35 %52 %52 0 1
--%54 = OpLoad %2 %50
-+%54 = OpLoad %2 %86
+ %54 = OpLoad %2 %50
  %55 = OpVectorShuffle %35 %54 %54 2 3
  %56 = OpCompositeExtract %1 %53 0
  %57 = OpCompositeExtract %1 %53 1
@@ -1154,9 +1144,9 @@ OpFunctionEnd
  OpStore %65 %66
  %67 = OpFunctionCall %2 %32 %65
 -%71 = OpAccessChain %70 %14 %69
-+%87 = OpAccessChain %70 %82 %69
++%84 = OpAccessChain %70 %82 %69
 -%72 = OpLoad %2 %71
-+%72 = OpLoad %2 %87
++%72 = OpLoad %2 %84
  OpStore %68 %72
 -%74 = OpAccessChain %70 %20 %69 %69
 +%74 = OpAccessChain %70 %14 %69 %69

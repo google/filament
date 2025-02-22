@@ -15,11 +15,11 @@
     "bundle": "rollup -c"
   },
   "devDependencies": {
-    "chai": "^4.2.0",
-    "eslint": "^6.3.0",
+    "chai": "^4.3.7",
+    "eslint": "^8.41.0",
     "esm": "^3.2.25",
-    "mocha": "^6.2.0",
-    "rollup": "^1.21.4",
-    "serve": "^11.1.0"
+    "mocha": "^10.2.0",
+    "rollup": "^3.23.0",
+    "serve": "^14.2.0"
   }
 }

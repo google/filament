@@ -21,8 +21,6 @@
 #include <vector>
 
 #include "source/opt/def_use_manager.h"
-#include "source/opt/ir_context.h"
-#include "source/opt/type_manager.h"
 #include "source/opt/types.h"
 #include "source/util/make_unique.h"
 #include "source/util/parse_number.h"

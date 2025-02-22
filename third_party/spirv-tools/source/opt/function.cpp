@@ -15,9 +15,7 @@
 #include "source/opt/function.h"
 
 #include <ostream>
-#include <sstream>
 
-#include "function.h"
 #include "ir_context.h"
 #include "source/util/bit_vector.h"
 

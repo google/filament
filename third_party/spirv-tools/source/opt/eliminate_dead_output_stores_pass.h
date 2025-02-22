@@ -51,13 +51,7 @@ class EliminateDeadOutputStoresPass : public Pass {
   void InitializeElimination();
 
   // Do dead output store analysis
-  Status DoDeadOutputStoreAnalysis();
-
-  // Do dead output store analysis
   Status DoDeadOutputStoreElimination();
-
-  // Mark all locations live
-  void MarkAllLocsLive();
 
   // Kill all stores resulting from |ref|.
   void KillAllStoresOfRef(Instruction* ref);
