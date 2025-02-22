@@ -150,6 +150,19 @@ class FrameGraphSidePanel extends LitElement {
                 font-weight: bolder;
                 color: ${FOREGROUND_COLOR};
             }
+            .resource-title {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 5px;
+                font-size: ${REGULAR_FONT_SIZE}px;
+                color: ${UNSELECTED_COLOR};
+            }
+            .resource-content {
+                display: flex;
+                flex-direction: column;
+                font-size: ${REGULAR_FONT_SIZE}px;
+                color: ${UNSELECTED_COLOR};
+            }
         `;
     }
 
@@ -157,6 +170,7 @@ class FrameGraphSidePanel extends LitElement {
         return {
             connected: {type: Boolean, attribute: 'connected'},
             currentFrameGraph: {type: String, attribute: 'current-framegraph'},
+            currentResourceId: {type: String, attribute: 'current-resource'},
 
             database: {type: Object, state: true},
             framegraphs: {type: Array, state: true},
@@ -212,14 +226,21 @@ class FrameGraphSidePanel extends LitElement {
         }));
     }
 
+    _findCurrentResource() {
+        if (!this.currentFrameGraph || !this.currentResourceId)
+            return null;
+        const frameGraph = this.database[this.currentFrameGraph];
+        return Object.values(frameGraph?.resources)
+            .find(resource => resource.id == this.currentResourceId) || null;
+    }
+
     render() {
         const sections = (title) => {
             const fgs = this.framegraphs
                     .map((fg) => {
-                        const framegraph = this.database[fg.fgid];
                         const onClick = this._handleFrameGraphClick.bind(this, fg.fgid);
                         const isFrameGraphSelected = fg.fgid === this.currentFrameGraph;
-                        const fgName = (isFrameGraphSelected ? '● ' : '') + framegraph.viewName;
+                        const fgName = (isFrameGraphSelected ? '● ' : '') + fg.name;
                         return html`
                             <div class="framegraph" @click="${onClick}" data-id="${fg.fgid}">
                                 ${fgName}
@@ -232,12 +253,36 @@ class FrameGraphSidePanel extends LitElement {
             }
             return null;
         };
+        const resourceDetails = (title) => {
+            const currentResource = this._findCurrentResource();
+            if (!currentResource)
+                return nothing;
+            const details = currentResource.properties
+                .map((prop) => {
+                    return html`
+                        <div class="resource-content">
+                            ${prop.key}: ${prop.value}
+                        </div>
+                    `;
+                });
+            if (details.length > 0) {
+                return html`
+                    <menu-section title="${title}">
+                        <div class="resource-title">
+                            ${currentResource.id}: ${currentResource.name}
+                        </div>
+                        ${details}
+                    </menu-section>`;
+            }
+            return null;
+        };
 
         return html`
             <style>${this.dynamicStyle()}</style>
             <div class="container">
                 <div class="title">fgviewer</div>
                 ${sections("Views", "views") ?? nothing}
+                ${resourceDetails("Resource Details") ?? nothing}
             </div>
         `;
     }
@@ -290,6 +335,10 @@ class FrameGraphTable extends LitElement {
                 border: 1px solid #ddd;
             }
 
+            .selected {
+                text-decoration: underline;
+            }
+
             .scrollable-table tr {
                 position: sticky;
                 padding: 12px;
@@ -305,6 +354,12 @@ class FrameGraphTable extends LitElement {
                 z-index: 1;
             }
 
+            .resource:hover {
+                text-decoration: underline;
+            }
+            .resource {
+                cursor: pointer;
+            }
             th {
                 min-width: 100px;
                 background-color: #f2f2f2;
@@ -318,12 +373,14 @@ class FrameGraphTable extends LitElement {
     static get properties() {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
+            currentResourceId: {type: String, attribute: 'current-resource'},
         };
     }
 
     constructor() {
         super();
         this.frameGraphData = null;
+        this.currentResourceId = null;
     }
 
     updated(props) {
@@ -353,6 +410,14 @@ class FrameGraphTable extends LitElement {
         const isHidden = subresourceRows[0]?.classList.contains('hidden');
         subresourceRows.forEach(row => row.classList.toggle('hidden'));
         icon.textContent = isHidden ? '▼' : '▶';
+    }
+
+    _handleResourceClick(ev) {
+        this.dispatchEvent(new CustomEvent('select-resource', {
+            detail: ev,
+            bubbles: true,
+            composed: true
+        }));
     }
 
     _getRowHtml(allPasses, resourceId, defaultColor) {
@@ -403,9 +468,13 @@ class FrameGraphTable extends LitElement {
                         if (isSubresource) return nothing;
 
                         const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
+                        const onClickResource = this._handleResourceClick.bind(this, resource.id);
+                        // TODO: fix type comparison
+                        const selectedStyle = resource.id == this.currentResourceId
+                            ? "selected": "";
                         return html`
                             <tr id="resource-${resourceIndex}">
-                                <th class="sticky-col">
+                                <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
                                     ${hasSubresources ? html`
                                         <span
                                             class="toggle-icon"
@@ -416,16 +485,21 @@ class FrameGraphTable extends LitElement {
                                 ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
                             </tr>
                             ${resources.filter(subresource => this._isSubresourceOfParent(subresource, resource)
-                            ).map((subresource, subIndex) => html`
+                            ).map((subresource, subIndex) => {
+                                const selectedStyle = subresource.id == this.currentResourceId
+                                        ? "selected": "";
+                                return html`
                                 <tr id="subresource-${resourceIndex}-${subIndex}"
                                     class="collapsible hidden">
-                                    <td class="sticky-col"
+                                    <td class="sticky-col resource ${selectedStyle}"
+                                        @click="${() => this._handleResourceClick(subresource.id)}"
                                         style="background-color: ${SUBRESOURCE_COLOR}">
                                         ${subresource.name}
                                     </td>
                                     ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
                                 </tr>
-                            `)}
+                            `;
+                            })}
                         `;
                     })}
                     </tbody>
@@ -486,12 +560,19 @@ class FrameGraphViewer extends LitElement {
         this.connected = false;
         this.database = {};
         this.currentFrameGraph = null;
+        this.currentResourceId = null;
         this.init();
 
         this.addEventListener('select-framegraph',
                 (ev) => {
                     this.currentFrameGraph = ev.detail;
                 }
+        );
+
+        this.addEventListener('select-resource',
+            (ev) => {
+                this.currentResourceId = ev.detail;
+            }
         );
     }
 
@@ -500,6 +581,7 @@ class FrameGraphViewer extends LitElement {
             connected: {type: Boolean, state: true},
             database: {type: Object, state: true},
             currentFrameGraph: {type: String, state: true},
+            currentResourceId: {type: String, state: true},
         }
     }
 
@@ -516,11 +598,13 @@ class FrameGraphViewer extends LitElement {
         return html`
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}" >
+                current-framegraph="${this.currentFrameGraph}" 
+                current-resource="${this.currentResourceId}">
             </framegraph-sidepanel>
             <framegraph-table id="table" 
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}"
+                current-framegraph="${this.currentFrameGraph}" 
+                current-resource="${this.currentResourceId}">
             </framegraph-table>
         `;
     }

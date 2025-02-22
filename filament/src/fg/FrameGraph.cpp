@@ -539,6 +539,25 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
                     resourceNode->getParentHandle().index).data())
             });
         }
+        auto descriptor = static_cast<Resource<FrameGraphTexture> const*>(
+            getResource(resourceHandle))->descriptor;
+        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+            .name = "width",
+            .value = utils::CString(std::to_string(descriptor.width).data())
+        });
+        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+            .name = "height",
+            .value = utils::CString(std::to_string(descriptor.height).data())
+        });
+        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+            .name = "depth",
+            .value = utils::CString(std::to_string(descriptor.depth).data())
+        });
+        // TODO: Add a function to convert format to readable string
+        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+            .name = "format",
+            .value = utils::CString(std::to_string((uint16_t)descriptor.format).data())
+        });
         resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
                               resourceHandle.index,
                               utils::CString(resourceNode->getName()),
