@@ -60,12 +60,13 @@ set_target_properties(fgviewer_resources PROPERTIES FOLDER Libs)
 # Include and target definitions
 # ==================================================================================================
 
-include_directories(${PUBLIC_HDR_DIR})
+include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_link_libraries(${TARGET} PUBLIC
         civetweb
+        fgviewer_resources
         utils
 )
 
@@ -87,11 +88,12 @@ endif()
 # Installation
 # ==================================================================================================
 
-# matdbg has dependencies on non-installed libraries. Here we bundle them all together into a single
+# fgviewer has dependencies on non-installed libraries. Here we bundle them all together into a single
 # library that gets copied into the installation folder so users are only required to link against
-# matdbg.
+# fgviewer.
 set(FGVIEWER_DEPS
     fgviewer
+    fgviewer_resources
     civetweb
     )
 
