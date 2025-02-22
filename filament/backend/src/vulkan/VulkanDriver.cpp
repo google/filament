@@ -217,6 +217,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mBlitter(mPlatform->getPhysicalDevice(), &mCommands),
       mReadPixels(mPlatform->getDevice()),
       mDescriptorSetManager(mPlatform->getDevice(), &mResourceManager),
+      mQueryManager(mPlatform->getDevice()),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
 
@@ -241,8 +242,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
                 << " error=" << static_cast<int32_t>(result);
     }
 #endif
-
-    mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -313,7 +312,7 @@ void VulkanDriver::terminate() {
     mDefaultRenderTarget = {};
     mBoundPipeline = {};
 
-    mTimestamps.reset();
+    mQueryManager.terminate();
 
     mBlitter.terminate();
     mReadPixels.terminate();
@@ -851,8 +850,7 @@ Handle<HwSwapChain> VulkanDriver::createSwapChainHeadlessS() noexcept {
 Handle<HwTimerQuery> VulkanDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
-    auto query = resource_ptr<VulkanTimerQuery>::construct(&mResourceManager,
-            mTimestamps->getNextQuery());
+    auto query = mQueryManager.getNextQuery(&mResourceManager);
     query.inc();
     return Handle<VulkanTimerQuery>(query.id());
 }
@@ -884,6 +882,7 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         return;
     }
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
+    mQueryManager.clearQuery(vtq);
     vtq.dec();
 }
 
@@ -1196,26 +1195,25 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
         return TimerQueryResult::NOT_READY;
     }
 
-    auto results = mTimestamps->getResult(vtq);
-    uint64_t timestamp0 = results[0];
-    uint64_t available0 = results[1];
-    uint64_t timestamp1 = results[2];
-    uint64_t available1 = results[3];
-
-    if (available0 == 0 || available1 == 0) {
+    auto results = mQueryManager.getResult(vtq);
+    if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NOT_READY;
     }
 
-    FILAMENT_CHECK_POSTCONDITION(timestamp1 >= timestamp0)
-            << "Timestamps are not monotonically increasing.";
+    uint64_t const begin = results.beginTime;
+    uint64_t const end = results.endTime;
+    if (begin >= end) {
+        // TODO: queries might have ran on different command buffers.
+        FVK_LOGW << "Timestamps are not monotonically increasing. " << utils::io::endl;
+        *elapsedTime = 0;
+        return TimerQueryResult::ERROR;
+    }
 
     // NOTE: MoltenVK currently writes system time so the following delta will always be zero.
     // However there are plans for implementing this properly. See the following GitHub ticket.
     // https://github.com/KhronosGroup/MoltenVK/issues/773
-
     float const period = mContext.getPhysicalDeviceLimits().timestampPeriod;
-    uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
-    *elapsedTime = delta;
+    *elapsedTime = uint64_t(float(end - begin) * period);
     return TimerQueryResult::AVAILABLE;
 }
 
@@ -1856,12 +1854,12 @@ void VulkanDriver::scissor(Viewport scissorBox) {
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-    mTimestamps->beginQuery(&(mCommands.get()), vtq);
+    mQueryManager.beginQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     auto vtq = resource_ptr<VulkanTimerQuery>::cast(&mResourceManager, tqh);
-     mTimestamps->endQuery(&(mCommands.get()), vtq);
+    mQueryManager.endQuery(&(mCommands.get()), vtq);
 }
 
 void VulkanDriver::debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
