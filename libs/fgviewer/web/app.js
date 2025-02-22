@@ -16,7 +16,7 @@
 
 import {LitElement, html, css, unsafeCSS, nothing} from "https://unpkg.com/lit@2.8.0?module";
 
-const kUntitledPlaceholder = "untitled";
+const kUntitledPlaceholder = "Untitled View";
 
 // CSS constants
 const FOREGROUND_COLOR = '#fafafa';
@@ -219,7 +219,7 @@ class FrameGraphSidePanel extends LitElement {
                         const framegraph = this.database[fg.fgid];
                         const onClick = this._handleFrameGraphClick.bind(this, fg.fgid);
                         const isFrameGraphSelected = fg.fgid === this.currentFrameGraph;
-                        const fgName = (isFrameGraphSelected ? '● ' : '') + framegraph.viewName;
+                        const fgName = (isFrameGraphSelected ? '● ' : '') + (framegraph.viewName || kUntitledPlaceholder);
                         return html`
                             <div class="framegraph" @click="${onClick}" data-id="${fg.fgid}">
                                 ${fgName}
