@@ -359,19 +359,13 @@ class FrameGraphTable extends LitElement {
         }
     }
 
-    _getCellColor(type, defaultColor) {
-        switch (type) {
-            case RESOURCE_USAGE_TYPE_READ:
-                return READ_COLOR;
-            case RESOURCE_USAGE_TYPE_WRITE:
-                return WRITE_COLOR;
-            case RESOURCE_USAGE_TYPE_NO_ACCESS:
-                return NO_ACCESS_COLOR;
-            case RESOURCE_USAGE_TYPE_READ_WRITE:
-                return READ_WRITE_COLOR;
-            default:
-                return defaultColor;
-        }
+    _getCellColor(type) {
+        return {
+            [RESOURCE_USAGE_TYPE_READ]: READ_COLOR,
+            [RESOURCE_USAGE_TYPE_WRITE]: WRITE_COLOR,
+            [RESOURCE_USAGE_TYPE_NO_ACCESS]: NO_ACCESS_COLOR,
+            [RESOURCE_USAGE_TYPE_READ_WRITE]: READ_WRITE_COLOR
+        }[type] || DEFAULT_COLOR;
     }
 
     _toggleCollapse(resourceIndex) {
@@ -418,60 +412,74 @@ class FrameGraphTable extends LitElement {
                 Number(prop.value) === parentResource.id)
     }
 
+    _isSubresource(resource) {
+        return resource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY);
+    }
+
+    _renderResourceRows(resources, allPasses) {
+        return resources
+            .filter(resource => !this._isSubresource(resource))
+            .map((resource, resourceIndex) => this._renderResourceRow(resource, resourceIndex, resources, allPasses));
+    }
+
+    _renderResourceRow(resource, resourceIndex, resources, allPasses) {
+        const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
+        const onClickResource = () => this._handleResourceClick(resource.id);
+        const selectedStyle = resource.id === this.currentResourceId ? "selected" : "";
+
+        return html`
+        <tr id="resource-${resourceIndex}">
+            <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
+                ${hasSubresources ? html`
+                    <span class="toggle-icon"
+                        @click="${() => this._toggleCollapse(resourceIndex)}">▶</span>` : nothing}
+                ${resource.name}
+            </th>
+            ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
+        </tr>
+        ${this._renderSubresourceRows(resources, resource, resourceIndex, allPasses)}
+    `;
+    }
+
+    _renderSubresourceRows(resources, parentResource, resourceIndex, allPasses) {
+        return resources
+            .filter(subresource => this._isSubresourceOfParent(subresource, parentResource))
+            .map((subresource, subIndex) => this._renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses));
+    }
+
+    _renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses) {
+        const onClickResource = () => this._handleResourceClick(subresource.id);
+        const selectedStyle = subresource.id === this.currentResourceId ? "selected" : "";
+
+        return html`
+        <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
+            <td class="sticky-col resource ${selectedStyle}"
+                @click="${onClickResource}"
+                style="background-color: ${SUBRESOURCE_COLOR}">
+                ${subresource.name}
+            </td>
+            ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
+        </tr>
+    `;
+    }
+
     render() {
-        if (!this.frameGraphData || !this.frameGraphData.passes || !this.frameGraphData.resources) return nothing;
+        if (!this.frameGraphData?.passes || !this.frameGraphData?.resources) return nothing;
+
         const allPasses = this.frameGraphData.passes;
         const resources = Object.values(this.frameGraphData.resources);
+
         return html`
             <div class="table-container">
                 <table class="scrollable-table">
                     <thead>
                     <tr>
                         <th class="sticky-col">Resources/Passes</th>
-                        ${allPasses.map(pass => html`
-                            <th>${pass.name}</th>`)}
+                        ${allPasses.map(pass => html`<th>${pass.name}</th>`)}
                     </tr>
                     </thead>
                     <tbody>
-                    ${resources.map((resource, resourceIndex) => {
-                        const isSubresource = resource.properties?.some(prop => prop.key === IS_SUBRESOURCE_KEY);
-                        if (isSubresource) return nothing;
-
-                        const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
-                        const onClickResource = this._handleResourceClick.bind(this, resource.id);
-                        const selectedStyle = resource.id === this.currentResourceId
-                            ? "selected": "";
-                        return html`
-                            <tr id="resource-${resourceIndex}">
-                                <th class="sticky-col resource ${selectedStyle}" @click="${onClickResource}">
-                                    ${hasSubresources ? html`
-                                        <span
-                                            class="toggle-icon"
-                                            @click="${() => this._toggleCollapse(resourceIndex)}"
-                                        >▶</span>` : nothing}
-                                    ${resource.name}
-                                </th>
-                                ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
-                            </tr>
-                            ${resources.filter(subresource => this._isSubresourceOfParent(subresource, resource)
-                            ).map((subresource, subIndex) => {
-                                const selectedStyle = subresource.id === this.currentResourceId
-                                        ? "selected": "";
-                                const onClickResource = this._handleResourceClick.bind(this, subresource.id);
-                                return html`
-                                <tr id="subresource-${resourceIndex}-${subIndex}"
-                                    class="collapsible hidden">
-                                    <td class="sticky-col resource ${selectedStyle}"
-                                        @click="${onClickResource}"
-                                        style="background-color: ${SUBRESOURCE_COLOR}">
-                                        ${subresource.name}
-                                    </td>
-                                    ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
-                                </tr>
-                            `;
-                            })}
-                        `;
-                    })}
+                    ${this._renderResourceRows(resources, allPasses)}
                     </tbody>
                 </table>
             </div>
