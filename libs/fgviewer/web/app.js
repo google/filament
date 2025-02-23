@@ -170,7 +170,7 @@ class FrameGraphSidePanel extends LitElement {
         return {
             connected: {type: Boolean, attribute: 'connected'},
             currentFrameGraph: {type: String, attribute: 'current-framegraph'},
-            currentResourceId: {type: String, attribute: 'current-resource'},
+            currentResourceId: {type: Number, attribute: 'current-resource'},
 
             database: {type: Object, state: true},
             framegraphs: {type: Array, state: true},
@@ -231,7 +231,7 @@ class FrameGraphSidePanel extends LitElement {
             return null;
         const frameGraph = this.database[this.currentFrameGraph];
         return Object.values(frameGraph?.resources)
-            .find(resource => resource.id == this.currentResourceId) || null;
+            .find(resource => resource.id === this.currentResourceId) || null;
     }
 
     render() {
@@ -373,7 +373,7 @@ class FrameGraphTable extends LitElement {
     static get properties() {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
-            currentResourceId: {type: String, attribute: 'current-resource'},
+            currentResourceId: {type: Number, attribute: 'current-resource'},
         };
     }
 
@@ -469,8 +469,7 @@ class FrameGraphTable extends LitElement {
 
                         const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
                         const onClickResource = this._handleResourceClick.bind(this, resource.id);
-                        // TODO: fix type comparison
-                        const selectedStyle = resource.id == this.currentResourceId
+                        const selectedStyle = resource.id === this.currentResourceId
                             ? "selected": "";
                         return html`
                             <tr id="resource-${resourceIndex}">
@@ -486,7 +485,7 @@ class FrameGraphTable extends LitElement {
                             </tr>
                             ${resources.filter(subresource => this._isSubresourceOfParent(subresource, resource)
                             ).map((subresource, subIndex) => {
-                                const selectedStyle = subresource.id == this.currentResourceId
+                                const selectedStyle = subresource.id === this.currentResourceId
                                         ? "selected": "";
                                 return html`
                                 <tr id="subresource-${resourceIndex}-${subIndex}"
@@ -560,7 +559,7 @@ class FrameGraphViewer extends LitElement {
         this.connected = false;
         this.database = {};
         this.currentFrameGraph = null;
-        this.currentResourceId = null;
+        this.currentResourceId = -1;
         this.init();
 
         this.addEventListener('select-framegraph',
@@ -581,7 +580,7 @@ class FrameGraphViewer extends LitElement {
             connected: {type: Boolean, state: true},
             database: {type: Object, state: true},
             currentFrameGraph: {type: String, state: true},
-            currentResourceId: {type: String, state: true},
+            currentResourceId: {type: Number, state: true},
         }
     }
 
