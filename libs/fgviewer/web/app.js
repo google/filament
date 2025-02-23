@@ -38,7 +38,7 @@ const RESOURCE_USAGE_TYPE_WRITE = 'write';
 const RESOURCE_USAGE_TYPE_NO_ACCESS = 'no-access';
 const RESOURCE_USAGE_TYPE_READ_WRITE = 'read-write';
 
-const IS_SUBRESOURCE_KEY = 'is_subresource'
+const IS_SUBRESOURCE_KEY = 'is_subresource_of'
 
 class MenuSection extends LitElement {
     static get properties() {

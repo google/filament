@@ -529,35 +529,33 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
         if (resources.find(resourceHandle.index) != resources.end())
             continue;
 
-        std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
         if (resourceNode->getRefCount() == 0)
             continue;
+
+        std::vector<fgviewer::FrameGraphInfo::Resource::Property> resourceProps;
+        auto emplace_resource_property =
+            [&resourceProps](utils::CString key, utils::CString value) {
+                resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
+                    .name = std::move(key),
+                    .value = std::move(value)
+                });
+            };
+
         if (resourceNode->getParentNode() != nullptr) {
-            resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property {
-                .name = "is_subresource",
-                .value = utils::CString(std::to_string(
-                    resourceNode->getParentHandle().index).data())
-            });
+            emplace_resource_property("is_subresource_of",
+                utils::CString(std::to_string(
+                        resourceNode->getParentHandle().index).data()));
         }
         auto descriptor = static_cast<Resource<FrameGraphTexture> const*>(
             getResource(resourceHandle))->descriptor;
-        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
-            .name = "width",
-            .value = utils::CString(std::to_string(descriptor.width).data())
-        });
-        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
-            .name = "height",
-            .value = utils::CString(std::to_string(descriptor.height).data())
-        });
-        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
-            .name = "depth",
-            .value = utils::CString(std::to_string(descriptor.depth).data())
-        });
-        // TODO: Add a function to convert format to readable string
-        resourceProps.emplace_back(fgviewer::FrameGraphInfo::Resource::Property{
-            .name = "format",
-            .value = utils::CString(std::to_string((uint16_t)descriptor.format).data())
-        });
+        emplace_resource_property("width",
+            utils::CString(std::to_string(descriptor.width).data()));
+        emplace_resource_property("height",
+            utils::CString(std::to_string(descriptor.height).data()));
+        emplace_resource_property("depth",
+            utils::CString(std::to_string(descriptor.depth).data()));
+        emplace_resource_property("format",
+            utils::to_string(descriptor.format));
         resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(
                               resourceHandle.index,
                               utils::CString(resourceNode->getName()),
