@@ -227,7 +227,7 @@ class FrameGraphSidePanel extends LitElement {
     }
 
     _findCurrentResource() {
-        if (!this.currentFrameGraph || !this.currentResourceId)
+        if (!this.currentFrameGraph)
             return null;
         const frameGraph = this.database[this.currentFrameGraph];
         return Object.values(frameGraph?.resources)
@@ -380,7 +380,7 @@ class FrameGraphTable extends LitElement {
     constructor() {
         super();
         this.frameGraphData = null;
-        this.currentResourceId = null;
+        this.currentResourceId = -1;
     }
 
     updated(props) {
@@ -487,11 +487,12 @@ class FrameGraphTable extends LitElement {
                             ).map((subresource, subIndex) => {
                                 const selectedStyle = subresource.id === this.currentResourceId
                                         ? "selected": "";
+                                const onClickResource = this._handleResourceClick.bind(this, subresource.id);
                                 return html`
                                 <tr id="subresource-${resourceIndex}-${subIndex}"
                                     class="collapsible hidden">
                                     <td class="sticky-col resource ${selectedStyle}"
-                                        @click="${() => this._handleResourceClick(subresource.id)}"
+                                        @click="${onClickResource}"
                                         style="background-color: ${SUBRESOURCE_COLOR}">
                                         ${subresource.name}
                                     </td>
