@@ -186,37 +186,19 @@ class FrameGraphSidePanel extends LitElement {
 
     updated(props) {
         if (props.has('database')) {
-            const items = [];
-            // Names need not be unique, so we display a numeric suffix for non-unique names.
-            // To achieve stable ordering of anonymous framegraphs, we first sort by fgid.
-            const labels = new Set();
             const fgids = Object.keys(this.database).sort();
-            const duplicatedLabels = {};
-            for (const fgid of fgids) {
-                const name = this.database[fgid].viewName || kUntitledPlaceholder;
-                if (labels.has(name)) {
-                    duplicatedLabels[name] = 0;
-                } else {
-                    labels.add(name);
-                }
-            }
+            const labelCount = {};
 
-            this.framegraphs = fgids.map((fgid) => {
-                const framegraph = this.database[fgid];
-                let name = framegraph.viewName || kUntitledPlaceholder;
-                if (name in duplicatedLabels) {
-                    const index = duplicatedLabels[name];
-                    duplicatedLabels[name] = index + 1;
-                    name = `${name} (${index})`;
-                }
-                return {
-                    fgid: fgid,
-                    name: name,
-                    domain: "views"
-                };
+            this.framegraphs = fgids.map(fgid => {
+                const name = this.database[fgid].viewName || kUntitledPlaceholder;
+                const uniqueName = labelCount[name] !== undefined
+                    ? `${name} (${labelCount[name]++})`
+                    : (labelCount[name] = 0, name);
+                return { fgid, name: uniqueName };
             });
         }
     }
+
 
     _handleFrameGraphClick(ev) {
         this.dispatchEvent(new CustomEvent('select-framegraph', {
@@ -235,54 +217,42 @@ class FrameGraphSidePanel extends LitElement {
     }
 
     render() {
-        const sections = (title) => {
-            const fgs = this.framegraphs
-                    .map((fg) => {
-                        const onClick = this._handleFrameGraphClick.bind(this, fg.fgid);
-                        const isFrameGraphSelected = fg.fgid === this.currentFrameGraph;
-                        const fgName = (isFrameGraphSelected ? '● ' : '') + fg.name;
-                        return html`
-                            <div class="framegraph" @click="${onClick}" data-id="${fg.fgid}">
-                                ${fgName}
-                            </div>
-                        `;
-                    });
-            if (fgs.length > 0) {
-                return html`
-                    <menu-section title="${title}">${fgs}</menu-section>`;
-            }
-            return null;
+        const renderFrameGraphs = (title) => {
+            if (!this.framegraphs.length) return nothing;
+
+            return html`
+                <menu-section title="${title}">
+                    ${this.framegraphs.map(({ fgid, name }) => html`
+                <div class="framegraph" 
+                    @click="${() => this._handleFrameGraphClick(fgid)}" 
+                    data-id="${fgid}">
+                    ${fgid === this.currentFrameGraph ? '● ' : ''}${name}
+                </div>
+            `)}
+                </menu-section>
+            `;
         };
-        const resourceDetails = (title) => {
+
+        const renderResourceDetails = (title) => {
             const currentResource = this._findCurrentResource();
-            if (!currentResource)
-                return nothing;
-            const details = currentResource.properties
-                .map((prop) => {
-                    return html`
-                        <div class="resource-content">
-                            ${prop.key}: ${prop.value}
-                        </div>
-                    `;
-                });
-            if (details.length > 0) {
-                return html`
-                    <menu-section title="${title}">
-                        <div class="resource-title">
-                            ${currentResource.id}: ${currentResource.name}
-                        </div>
-                        ${details}
-                    </menu-section>`;
-            }
-            return null;
+            if (!currentResource) return nothing;
+
+            return html`
+                <menu-section title="${title}">
+                    <div class="resource-title">${currentResource.id}: ${currentResource.name}</div>
+                    ${currentResource.properties?.map(({ key, value }) => html`
+                <div class="resource-content">${key}: ${value}</div>
+            `)}
+                </menu-section>
+            `;
         };
 
         return html`
             <style>${this.dynamicStyle()}</style>
             <div class="container">
                 <div class="title">fgviewer</div>
-                ${sections("Views", "views") ?? nothing}
-                ${resourceDetails("Resource Details") ?? nothing}
+                ${renderFrameGraphs("Views") ?? nothing}
+                ${renderResourceDetails("Resource Details") ?? nothing}
             </div>
         `;
     }
