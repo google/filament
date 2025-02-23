@@ -169,8 +169,8 @@ class FrameGraphSidePanel extends LitElement {
     static get properties() {
         return {
             connected: {type: Boolean, attribute: 'connected'},
-            currentFrameGraph: {type: String, attribute: 'current-framegraph'},
-            currentResourceId: {type: Number, attribute: 'current-resource'},
+            selectedFrameGraph: {type: String, attribute: 'selected-framegraph'},
+            selectedResourceId: {type: Number, attribute: 'selected-resource'},
 
             database: {type: Object, state: true},
             framegraphs: {type: Array, state: true},
@@ -209,11 +209,11 @@ class FrameGraphSidePanel extends LitElement {
     }
 
     _findCurrentResource() {
-        if (!this.currentFrameGraph)
+        if (!this.selectedFrameGraph)
             return null;
-        const frameGraph = this.database[this.currentFrameGraph];
+        const frameGraph = this.database[this.selectedFrameGraph];
         return Object.values(frameGraph?.resources)
-            .find(resource => resource.id === this.currentResourceId) || null;
+            .find(resource => resource.id === this.selectedResourceId) || null;
     }
 
     render() {
@@ -226,7 +226,7 @@ class FrameGraphSidePanel extends LitElement {
                 <div class="framegraph" 
                     @click="${() => this._handleFrameGraphClick(fgid)}" 
                     data-id="${fgid}">
-                    ${fgid === this.currentFrameGraph ? '● ' : ''}${name}
+                    ${fgid === this.selectedFrameGraph ? '● ' : ''}${name}
                 </div>
             `)}
                 </menu-section>
@@ -343,14 +343,14 @@ class FrameGraphTable extends LitElement {
     static get properties() {
         return {
             frameGraphData: {type: Object, state: true}, // Expecting a JSON frame graph structure
-            currentResourceId: {type: Number, attribute: 'current-resource'},
+            selectedResourceId: {type: Number, attribute: 'selected-resource'},
         };
     }
 
     constructor() {
         super();
         this.frameGraphData = null;
-        this.currentResourceId = -1;
+        this.selectedResourceId = -1;
     }
 
     updated(props) {
@@ -425,7 +425,7 @@ class FrameGraphTable extends LitElement {
     _renderResourceRow(resource, resourceIndex, resources, allPasses) {
         const hasSubresources = resources.some(subresource => this._isSubresourceOfParent(subresource, resource));
         const onClickResource = () => this._handleResourceClick(resource.id);
-        const selectedStyle = resource.id === this.currentResourceId ? "selected" : "";
+        const selectedStyle = resource.id === this.selectedResourceId ? "selected" : "";
 
         return html`
         <tr id="resource-${resourceIndex}">
@@ -449,7 +449,7 @@ class FrameGraphTable extends LitElement {
 
     _renderSubresourceRow(subresource, resourceIndex, subIndex, allPasses) {
         const onClickResource = () => this._handleResourceClick(subresource.id);
-        const selectedStyle = subresource.id === this.currentResourceId ? "selected" : "";
+        const selectedStyle = subresource.id === this.selectedResourceId ? "selected" : "";
 
         return html`
         <tr id="subresource-${resourceIndex}-${subIndex}" class="collapsible hidden">
@@ -528,8 +528,8 @@ class FrameGraphViewer extends LitElement {
     }
 
     _getFrameGraph() {
-        const framegraph = (this.database && this.currentFrameGraph) ?
-                this.database[this.currentFrameGraph] : null;
+        const framegraph = (this.database && this.selectedFrameGraph) ?
+                this.database[this.selectedFrameGraph] : null;
         return framegraph;
     }
 
@@ -537,19 +537,19 @@ class FrameGraphViewer extends LitElement {
         super();
         this.connected = false;
         this.database = {};
-        this.currentFrameGraph = null;
-        this.currentResourceId = -1;
+        this.selectedFrameGraph = null;
+        this.selectedResourceId = -1;
         this.init();
 
         this.addEventListener('select-framegraph',
                 (ev) => {
-                    this.currentFrameGraph = ev.detail;
+                    this.selectedFrameGraph = ev.detail;
                 }
         );
 
         this.addEventListener('select-resource',
             (ev) => {
-                this.currentResourceId = ev.detail;
+                this.selectedResourceId = ev.detail;
             }
         );
     }
@@ -558,13 +558,13 @@ class FrameGraphViewer extends LitElement {
         return {
             connected: {type: Boolean, state: true},
             database: {type: Object, state: true},
-            currentFrameGraph: {type: String, state: true},
-            currentResourceId: {type: Number, state: true},
+            selectedFrameGraph: {type: String, state: true},
+            selectedResourceId: {type: Number, state: true},
         }
     }
 
     updated(props) {
-        if (props.has('currentFrameGraph') || props.has('database')) {
+        if (props.has('selectedFrameGraph') || props.has('database')) {
             const framegraph = this._getFrameGraph();
             this._framegraphTable.frameGraphData = framegraph;
             this._sidePanel.database = this.database;
@@ -576,13 +576,13 @@ class FrameGraphViewer extends LitElement {
         return html`
             <framegraph-sidepanel id="sidepanel"
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}" 
-                current-resource="${this.currentResourceId}">
+                selected-framegraph="${this.selectedFrameGraph}" 
+                selected-resource="${this.selectedResourceId}">
             </framegraph-sidepanel>
             <framegraph-table id="table" 
                 ?connected="${this.connected}"
-                current-framegraph="${this.currentFrameGraph}" 
-                current-resource="${this.currentResourceId}">
+                selected-framegraph="${this.selectedFrameGraph}" 
+                selected-resource="${this.selectedResourceId}">
             </framegraph-table>
         `;
     }
