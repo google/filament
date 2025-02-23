@@ -384,7 +384,7 @@ class FrameGraphTable extends LitElement {
         }));
     }
 
-    _getRowHtml(allPasses, resourceId, defaultColor) {
+    _renderResourceUsage(allPasses, resourceId, defaultColor) {
         return allPasses.map((passData, index) => {
             const isRead = passData?.reads.includes(resourceId);
             const isWrite = passData?.writes.includes(resourceId);
@@ -435,7 +435,7 @@ class FrameGraphTable extends LitElement {
                         @click="${() => this._toggleCollapse(resourceIndex)}">▶</span>` : nothing}
                 ${resource.name}
             </th>
-            ${this._getRowHtml(allPasses, resource.id, DEFAULT_COLOR)}
+            ${this._renderResourceUsage(allPasses, resource.id, DEFAULT_COLOR)}
         </tr>
         ${this._renderSubresourceRows(resources, resource, resourceIndex, allPasses)}
     `;
@@ -458,7 +458,7 @@ class FrameGraphTable extends LitElement {
                 style="background-color: ${SUBRESOURCE_COLOR}">
                 ${subresource.name}
             </td>
-            ${this._getRowHtml(allPasses, subresource.id, SUBRESOURCE_COLOR)}
+            ${this._renderResourceUsage(allPasses, subresource.id, SUBRESOURCE_COLOR)}
         </tr>
     `;
     }
