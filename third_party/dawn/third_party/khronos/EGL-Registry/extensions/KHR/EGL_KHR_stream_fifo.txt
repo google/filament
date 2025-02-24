@@ -1,0 +1,433 @@
+Name
+
+    KHR_stream_fifo
+
+Name Strings
+
+    EGL_KHR_stream_fifo
+
+Contributors
+
+    Acorn Pooley
+
+Contacts
+
+    Acorn Pooley, NVIDIA  (apooley 'at' nvidia.com)
+
+Notice
+
+    Copyright (c) 2011-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Status
+
+    Complete.
+    Approved by the Khronos Board of Promoters on December 2, 2011.
+
+Version
+
+    Version 6, October 12, 2011
+
+Number
+
+    EGL Extension #36
+
+Dependencies
+
+    Requires EGL 1.2.
+    Requires the EGL_KHR_stream extension.
+
+    This extension is written based on the wording of the EGL 1.2
+    specification.
+
+    The EGL_KHR_stream_producer_eglsurface and
+    EGL_NV_stream_producer_eglsurface extensions affect the wording of
+    this extension.
+
+    The EGL_KHR_stream_producer_aldatalocator and
+    EGL_NV_stream_producer_aldatalocator extensions affect the wording
+    of this extension.
+
+    The EGL_KHR_stream_consumer_gltexture and
+    EGL_NV_stream_consumer_gltexture extensions affect the wording
+    of this extension.
+
+Overview
+
+    This extension allows an EGLStream to operate as a fifo rather
+    than as a mailbox.
+
+    The EGL_KHR_stream extension defines the EGLStream object.
+    The EGLStream object works like a 1 entry mailbox, allowing the
+    consumer to consume the frame that the producer most recently
+    inserted.  If the consumer requests image frames faster than the
+    producer creates them then it gets the most recent one over and
+    over until a new one is inserted.  If the producer inserts frames
+    faster than the consumer can consume them then the extra frames
+    are discarded.  The producer is never stalled.
+
+    This extension allows an EGLStream to be placed into fifo mode.
+    In fifo mode no images are discarded.  If the producer attempts to
+    insert a frame and the fifo is full then the producer will stall
+    until there is room in the fifo.  When the consumer retrieves an
+    image frame from the EGLStream it will see the image frame that
+    immediately follows the image frame that it last retrieved (unless
+    no such frame has been inserted yet in which case it retrieves the
+    same image frame that it retrieved last time).
+
+    Timing of the EGLStream in mailbox mode, as described by the
+    EGL_KHR_stream extension, is the responsibility of the
+    producer (with help from the consumer in the form of the
+    EGL_CONSUMER_LATENCY_USEC_KHR hint).
+
+    In contrast, timing of an EGLStream in fifo mode is the
+    responsibility of the consumer.  Each image frame in the fifo has
+    an associated timestamp set by the producer.  The consumer can use
+    this timestamp to determine when the image frame is intended to be
+    displayed to the user.
+
+
+New Types
+
+    This type represents an absolute time in nanoseconds.
+
+    typedef khronos_utime_nanoseconds_t EGLTimeKHR
+
+New functions
+
+    EGLBoolean eglQueryStreamTimeKHR(
+        EGLDisplay   dpy,
+        EGLStreamKHR stream,
+        EGLenum      attribute,
+        EGLTimeKHR  *value);
+
+New Tokens
+
+    Accepted as an attribute in the <attrib_list> parameter of
+    eglCreateStreamKHR and as the <attribute> parameter of
+    eglQueryStreamKHR.
+
+    EGL_STREAM_FIFO_LENGTH_KHR                  0x31FC
+
+    These enums are accepted the <attribute> parameter of
+    eglQueryStreamTimeKHR.
+
+    EGL_STREAM_TIME_NOW_KHR                     0x31FD
+    EGL_STREAM_TIME_CONSUMER_KHR                0x31FE
+    EGL_STREAM_TIME_PRODUCER_KHR                0x31FF
+
+Add 4 new entries to "Table 3.10.4.4 EGLStream Attributes" in the
+EGL_KHR_stream extension spec:
+
+        Attribute                   Read/Write   Type        Section
+        --------------------------  ----------   ----------  --------
+        EGL_STREAM_FIFO_LENGTH_KHR      io       EGLint      3.10.4.xx
+        EGL_STREAM_TIME_NOW_KHR         ro       EGLTimeKHR  3.10.4.xx
+        EGL_STREAM_TIME_CONSUMER_KHR    ro       EGLTimeKHR  3.10.4.xx
+        EGL_STREAM_TIME_PRODUCER_KHR    ro       EGLTimeKHR  3.10.4.xx
+
+Add a new paragraph to the end of section "3.10.4.2 Querying EGLStream
+Attributes" in the EGL_KHR_stream extension.
+
+    Call
+
+        EGLBoolean eglQueryStreamTimeKHR(
+            EGLDisplay   dpy,
+            EGLStreamKHR stream,
+            EGLenum      attribute,
+            EGLTimeKHR  *value);
+
+    to query <attribute> from <stream> for attributes whose type is
+    EGLTimeKHR.
+
+    If an error occurs EGL_FALSE is returned and an error is
+    generated.
+
+        - EGL_BAD_STREAM_KHR is generated if <stream> is not a valid
+          EGLStream created for <dpy>.
+
+        - EGL_BAD_ATTRIBUTE is generated if <attribute> is not a valid
+          EGLStream attribute with type EGLTimeKHR.
+
+
+Add new sections 3.1.4.xx at the end of section "3.10.4 EGLStream
+Attributes" in the EGL_KHR_stream extension.
+
+    3.1.4.x EGL_STREAM_FIFO_LENGTH_KHR Attribute
+
+    The EGL_STREAM_FIFO_LENGTH_KHR may be set in the <attrib_list>
+    parameter of eglCreateStreamKHR(), but is read-only once the
+    stream is created.  It can be queried with eglQueryStreamKHR().
+    Its default value is 0.  Setting it to a value less than 0
+    generates an EGL_BAD_PARAMETER error.
+
+    When EGL_STREAM_FIFO_LENGTH_KHR is 0 the EGLStream operates in
+    mailbox mode as described in section "3.10.5.1 EGLStream operation
+    in mailbox mode"
+
+    When EGL_STREAM_FIFO_LENGTH_KHR is greater than 0 then the
+    EGLStream operates in fifo mode as described in section "3.10.5.2
+    EGLStream operation in fifo mode".
+
+    In fifo mode the EGLStream contains up to N image frames, where N
+    is the value of the EGL_STREAM_FIFO_LENGTH_KHR attribute.
+
+    The value of EGL_STREAM_FIFO_LENGTH_KHR is independent from the
+    number of internal buffers used by the producer.  The producer may
+    require some number of internal buffers, but those are in addition
+    to the fifo buffers described by EGL_STREAM_FIFO_LENGTH_KHR.
+
+    3.1.4.x+1 EGL_STREAM_TIME_NOW_KHR Attribute
+
+    This indicates the current time.  It is measured as the number of
+    nanoseconds since some arbitrary event (e.g. the last time the
+    system rebooted).
+
+    3.1.4.x+2 EGL_STREAM_TIME_CONSUMER_KHR Attribute
+
+    This indicates the timestamp of the image frame that the consumer
+    most recently consumed (i.e. frame number EGL_CONSUMER_FRAME_KHR).
+    The frame should first be displayed to the user when
+    EGL_STREAM_TIME_NOW_KHR matches this value.
+
+    In mailbox mode the timestamp for an image frame is always equal
+    to the time that the producer inserted the image frame into the
+    EGLStream, minus the value of EGL_CONSUMER_LATENCY_USEC_KHR.
+
+    In fifo mode the timestamp for an image frame is set by the
+    producer when it is inserted into the EGLStream.
+
+    The timestamp uses the same time units as EGL_STREAM_TIME_NOW_KHR.
+
+    3.1.4.x+3 EGL_STREAM_TIME_PRODUCER_KHR Attribute
+
+    This indicates the timestamp of the image frame that the producer
+    most recently inserted into the EGLStream (i.e. frame number
+    EGL_PRODUCER_FRAME_KHR).
+
+
+Modify the first sentence of section "3.10.5.1 EGLStream operation in
+mailbox mode" in the EGL_KHR_stream extension to:
+
+    When the EGL_STREAM_FIFO_LENGTH_KHR attribute is 0
+    then the EGLStream conceptually operates as a mailbox.
+
+
+Add a new section after section "3.10.5.1 EGLStream operation in
+mailbox mode" in the EGL_KHR_stream extension.
+
+    3.10.5.2 EGLStream operation in fifo mode
+
+    When the EGL_STREAM_FIFO_LENGTH_KHR attribute is greater than 0
+    then the EGLStream operates in fifo mode.  The length of the fifo
+    is the value of the EGL_STREAM_FIFO_LENGTH_KHR attribute.
+
+    In fifo mode the EGLStream conceptually operates as a fifo.
+
+    When the consumer wants to consume a new image frame, behavior
+    depends on the state of the EGLStream.  If the state is
+    EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR then the fifo is not
+    empty and the image frame to consume is removed from the tail of
+    the fifo.  If the state is
+    EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR then the fifo is empty
+    and the consumer consumes the same frame that it most recently
+    consumed.  Otherwise there are no image frames available to
+    consume (behavior in this case is described in the documentation
+    for each type of consumer - see section "3.10.2 Connecting an
+    EGLStream to a consumer").
+
+    If the fifo is empty when the consumer is finished consuming an
+    image frame then the consumer holds on to the image frame in case
+    it needs to be consumed again later (this happens if the consumer
+    wants to consume another image frame before the producer has
+    inserted a new image frame into the fifo).  In this case the state
+    of the EGLStream will be EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR
+    until the producer inserts a new image frame (or until the state
+    becomes EGL_STREAM_STATE_DISCONNECTED_KHR).
+
+    The producer inserts image frames at the head of the fifo.  If the
+    fifo is full (already contains <L> image frames, where <L> is the
+    value of the EGL_STREAM_FIFO_LENGTH_KHR attribute) then producer
+    is stalled until the fifo is no longer full.  When the fifo is not
+    empty the EGLStream state is
+    EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR.
+
+    This operation implies:
+
+        - Frames are never discarded until the consumer has examined
+          them.
+
+        - If the consumer consumes frames slower than the producer
+          inserts frames, then the producer will stall.
+
+        - If the consumer consumes frames faster than the producer
+          inserts frames, then the consumer may see some frames more
+          than once.
+
+        - The consumer can see each frame exactly once if it always
+          waits until the stream is in the
+          EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR state before
+          retrieving an image from the stream.
+
+    In mailbox mode the producer is responsible for timing.  In fifo
+    mode the consumer is responsible for timing.
+
+    In fifo mode the producer marks each image frame with a timestamp.
+    The timestamp indicates at what time the image frame should first
+    be visible to the user.  Exactly how a producer sets the timestamp
+    is described in the documentation for each type of producer.  If
+    the value of an image frame's timestamp is T then the producer
+    must insert that image frame *before* time
+        T - EGL_CONSUMER_LATENCY_USEC_KHR
+    Image frames must be inserted in increasing timestamp order.
+
+    The consumer is responsible for presenting each image frame to the
+    user at the time indicated by its timestamp.  The consumer should
+    indicate its minimum latency to the producer by setting the
+    EGL_CONSUMER_LATENCY_USEC_KHR attribute.
+
+
+If the EGL_KHR_stream_producer_eglsurface or
+EGL_NV_stream_producer_eglsurface extension is present then add a
+paragraph to the end of section "3.10.3.1 Stream Surface Producer"
+from that extension:
+
+    If <stream>'s EGL_STREAM_FIFO_LENGTH_KHR value is nonzero then
+    <stream> operates in fifo mode.  Each time the EGLSurface is
+    passed to eglSwapBuffers() an image frame is inserted into the
+    fifo.  The eglSwapBuffers call sets the timestamp of the image
+    frame to the time that eglSwapBuffers was called PLUS the value of
+    the EGL_CONSUMER_LATENCY_USEC_KHR attribute.
+
+If the EGL_KHR_stream_producer_eglsurface or
+EGL_NV_stream_producer_eglsurface extension is present then add a
+paragraph to section "3.9.x Posting to a Stream"
+from that extension, between the 2nd paragraph (which begins "If
+<surface> is the producer of an EGLStream...") and the 3rd paragraph
+(which begins "When eglSwapBuffers returns the contents..."):
+
+    If the value of the EGL_STREAM_FIFO_LENGTH_KHR attribute, <L> is
+    greater than zero, and there are already <L> image frames in the
+    EGLStream fifo, then the eglSwapBuffers function blocks (does not
+    return and does not insert the new image frame) until there is
+    room in the EGLStream fifo (i.e. there are less than <L> image
+    frames in the fifo).
+
+If the EGL_KHR_stream_producer_aldatalocator or
+EGL_NV_stream_producer_aldatalocator extension is present then replace
+the 2nd to last paragraph (the one that starts "The OpenMAX AL object
+will use the value of...") of section "3.10.3.1 OpenMAX AL Stream
+Producer" from that extension with the following 2 paragraphs:
+
+    If <stream>'s EGL_STREAM_FIFO_LENGTH_KHR value is zero then the
+    stream operates in mailbox mode.  The OpenMAX AL object will use
+    the value of the EGL_CONSUMER_LATENCY_USEC_KHR attribute of
+    <stream> to determine when to insert each image frame.  If the
+    EGL_CONSUMER_LATENCY_USEC_KHR attribute is modified (by the
+    consumer and/or by the application) then then OpenMAX AL object
+    will adjust its timing within 500 milliseconds of the change.  If
+    an image frame is intended to appear to the user at time T (e.g.
+    so that it is synchronized with audio) then the OpenMAX AL object
+    must insert the image frame at time
+        T - EGL_CONSUMER_LATENCY_USEC_KHR
+    and set the image frame's timestamp to T.
+
+    If the <stream>'s EGL_STREAM_FIFO_LENGTH_KHR value is nonzero then
+    <stream> operates in fifo mode.  If an image frame is intended to
+    appear to the user at time T then the OpenMAX AL object will
+    insert the image frame into the fifo before time
+        T - EGL_CONSUMER_LATENCY_USEC_KHR
+    and set the image frame's timestamp to T.
+
+If the EGL_KHR_stream_consumer_gltexture or
+EGL_NV_stream_consumer_gltexture extension is present then replace the
+3rd to last paragraph (the one that starts "If the producer has not
+inserted any new image frames...") of section "3.10.2.1 GL Texture
+External consumer" from that extension with the following 2
+paragraphs:
+
+    When <stream>'s EGL_STREAM_FIFO_LENGTH_KHR value is zero then the
+    stream operates in mailbox mode.  If the producer has not inserted
+    any new image frames since the last call to
+    eglStreamConsumerAcquireNV then eglStreamConsumerAcquireNV will
+    "latch" the same image frame it latched last time
+    eglStreamConsumerAcquireNV was called.  If the producer has
+    inserted one new image frame since the last call to
+    eglStreamConsumerAcquireNV then the eglStreamConsumerAcquireNV
+    will "latch" the newly inserted image frame.  If the producer has
+    inserted more than one new image frame since the last call to
+    eglStreamConsumerAcquireNV then all but the most recently inserted
+    image frames are discarded and the producer will "latch" the most
+    recently inserted image frame.
+
+    When <stream>'s EGL_STREAM_FIFO_LENGTH_KHR value is nonzero then
+    <stream> operates in fifo mode.  Each call to
+    eglStreamConsumerAcquireNV "latches" the next image frame in the
+    fifo into the OpenGL texture, removing that image frame from the
+    fifo.  If there are no new image frames in the fifo then
+    eglStreamConsumerAcquireNV will "latch" the same image frame it
+    latched last time eglStreamConsumerAcquireNV was called.
+
+
+Issues
+    1.  Is this extension useful?
+
+        RESOLVED: Yes.  Browser vendors and others have expressed
+        interest.
+
+    2.  Why not include this functionality in the base EGL_KHR_stream
+        extension?
+
+        RESOLVED: Including it there was confusing.  Several
+        developers interested in EGLStream have thought at first that
+        they want to use EGLStreams in fifo mode.  Later after
+        thinking about it they realize standard mode (non-fifo or
+        "mailbox" mode) is more useful.
+
+        Mailbox mode is easier to use and is less confusing for
+        aldatalocator-producer, gltexture-consumer usecase which was
+        the primary usecase for the extension at the time it was
+        devised.
+
+        Trying to describe both mailbox mode and fifo mode in
+        the same extension made the extension complicated.  It was
+        confusing when the timestamps were useful (only in fifo mode).
+        It was confusing how the EGL_CONSUMER_LATENCY_USEC_KHR
+        attribute worked in different modes.
+
+        these problems the fifo functionality was split into this
+        separate extension.  This also allows existing consumer and
+        producer extensions to be defined in terms of mailbox mode,
+        simplifying them and making them easier to understand.  Then
+        interactions with fifo mode can be described separately.
+
+        Also, the fifo mode is more complicated to use and implement than
+        the mailbox mode.  It was thought that there might be problems
+        with the fifo mode that could lead to a new extension
+        replacing the fifo mode extension.  By keeping the fifo mode
+        functionality segregated into its own extension this would be
+        easier to accomplish.
+
+Revision History
+
+    #6 (October 12, 2011) Acorn Pooley
+        - Clarify fifo mode operation.  (Does not change behavior.)
+
+
+    #5 (October 11, 2011) Acorn Pooley
+        - Resolve issue 1
+        - fix typos
+        - add issue 2
+
+    #4 (September 27, 2011) Acorn Pooley
+        - Assign enum values (bug 8064)
+
+    #3 (July 6, 2011) Acorn Pooley
+        - Rename EGL_KHR_image_stream to EGL_KHR_stream
+
+    #2 (version #2 skipped)
+
+    #1  (July 1, 2011) Acorn Pooley
+        - Initial draft
+
+# vim:ai:ts=4:sts=4:expandtab:textwidth=70

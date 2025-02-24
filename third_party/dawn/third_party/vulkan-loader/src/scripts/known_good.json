@@ -1,0 +1,45 @@
+{
+    "repos": [
+        {
+            "name": "Vulkan-Headers",
+            "api": "vulkan",
+            "url": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+            "sub_dir": "Vulkan-Headers",
+            "build_dir": "Vulkan-Headers/build",
+            "install_dir": "Vulkan-Headers/build/install",
+            "commit": "v1.4.307"
+        },
+        {
+            "name": "googletest",
+            "url": "https://github.com/google/googletest.git",
+            "sub_dir": "googletest",
+            "build_dir": "googletest",
+            "install_dir": "googletest",
+            "build_step": "skip",
+            "commit": "v1.14.0",
+            "optional": [
+                "tests"
+            ]
+        },
+        {
+            "name": "detours",
+            "url": "https://github.com/microsoft/Detours.git",
+            "sub_dir": "detours",
+            "build_dir": "detours",
+            "install_dir": "detours",
+            "build_step": "skip",
+            "commit": "4b8c659f549b0ab21cf649377c7a84eb708f5e68",
+            "optional": [
+                "tests"
+            ],
+            "build_platforms": [
+                "windows"
+            ]
+        }
+    ],
+    "install_names": {
+        "Vulkan-Headers": "VULKAN_HEADERS_INSTALL_DIR",
+        "googletest": "GOOGLETEST_INSTALL_DIR",
+        "detours": "DETOURS_INSTALL_DIR"
+    }
+}

@@ -1,0 +1,2646 @@
+Name
+
+    EXT_geometry_shader
+
+Name String
+
+    GL_EXT_geometry_shader
+    GL_EXT_geometry_point_size
+
+Contact
+
+    Jon Leech (oddhack 'at' sonic.net)
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Daniel Koch, NVIDIA (dkoch 'at' nvidia.com)
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Slawomir Grajewski, Intel
+    Dominik Witczak, Mobica
+    Jesse Hall, Google
+    Maurice Ribble, Qualcomm
+    Bill Licea-Kane, Qualcomm
+    Graham Connor, Imagination
+    Ben Bowman, Imagination
+    Jonathan Putsman, Imagination
+    Contributors to ARB_geometry_shader4
+
+Notice
+
+    Copyright (c) 2008-2016 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+    Portions Copyright (c) 2013-2014 NVIDIA Corporation.
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: May 31, 2016
+    Revision: 21
+
+Number
+
+    OpenGL ES Extension #177
+
+Dependencies
+
+    OpenGL ES 3.1 and OpenGL ES Shading Language 3.10 are required.
+
+    This specification is written against the OpenGL ES 3.1 (March 17, 2014)
+    and OpenGL ES 3.10 Shading Language (March 17, 2014) Specifications.
+
+    EXT_shader_io_blocks is required.
+
+    OES_sample_variables trivially affects the definition of this extension.
+
+    OES_texture_storage_multisample_2d_array affects the definition of this
+    extension.
+
+    OES_shader_multisample_interpolation trivially affects the definition of
+    this extension.
+
+    EXT_texture_buffer trivially affects the definition of this extension.
+
+Overview
+
+    EXT_geometry_shader defines a new shader type available to be run on the
+    GPU, called a geometry shader. Geometry shaders are run after vertices are
+    transformed, but prior to color clamping, flatshading and clipping.
+
+    A geometry shader begins with a single primitive (point, line,
+    triangle). It can read the attributes of any of the vertices in the
+    primitive and use them to generate new primitives. A geometry shader has a
+    fixed output primitive type (point, line strip, or triangle strip) and
+    emits vertices to define a new primitive. A geometry shader can emit
+    multiple disconnected primitives. The primitives emitted by the geometry
+    shader are clipped and then processed like an equivalent primitive
+    specified by the application.
+
+    Furthermore, EXT_geometry_shader provides four additional primitive
+    types: lines with adjacency, line strips with adjacency, separate
+    triangles with adjacency, and triangle strips with adjacency.  Some of the
+    vertices specified in these new primitive types are not part of the
+    ordinary primitives, instead they represent neighboring vertices that are
+    adjacent to the two line segment end points (lines/strips) or the three
+    triangle edges (triangles/tstrips). These vertices can be accessed by
+    geometry shaders and used to match up the vertices emitted by the geometry
+    shader with those of neighboring primitives.
+
+    Since geometry shaders expect a specific input primitive type, an error
+    will occur if the application presents primitives of a different type.
+    For example, if a geometry shader expects points, an error will occur at
+    drawing time if a primitive mode of TRIANGLES is specified.
+
+    This extension also adds the notion of layered framebuffer attachments
+    and framebuffers that can be used in conjunction with geometry shaders
+    to allow programs to direct primitives to a face of a cube map or layer
+    of a three-dimensional texture or two-dimensional array texture. The
+    layer used for rendering can be selected by the geometry shader at run
+    time. The framebuffer layer count present in GL 4.x and removed from
+    ES 3.1 is restored.
+
+    Not all geometry shader implementations have the ability to write the
+    point size from a geometry shader. Thus a second extension string and
+    shading language enable are provided for implementations which do
+    support geometry shader point size.
+
+    This extension relies on the EXT_shader_io_blocks extension to provide
+    the required functionality for declaring input and output blocks and
+    interfacing between shaders.
+
+New Procedures and Functions
+
+    void FramebufferTextureEXT(enum target, enum attachment,
+                               uint texture, int level);
+
+New Tokens
+
+    Accepted by the <type> parameter of CreateShader and
+    CreateShaderProgramv, by the <pname> parameter of
+    GetProgramPipelineiv and returned in the <params> parameter of
+    GetShaderiv when <pname> is SHADER_TYPE:
+
+        GEOMETRY_SHADER_EXT                             0x8DD9
+
+    Accepted by the <stages> parameter of UseProgramStages:
+
+        GEOMETRY_SHADER_BIT_EXT                         0x00000004
+
+    Accepted by the <pname> parameter of GetProgramiv:
+
+        GEOMETRY_LINKED_VERTICES_OUT_EXT                0x8916
+        GEOMETRY_LINKED_INPUT_TYPE_EXT                  0x8917
+        GEOMETRY_LINKED_OUTPUT_TYPE_EXT                 0x8918
+        GEOMETRY_SHADER_INVOCATIONS_EXT                 0x887F
+
+    Accepted by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetInteger64v:
+
+        LAYER_PROVOKING_VERTEX_EXT                      0x825E
+        MAX_GEOMETRY_UNIFORM_COMPONENTS_EXT             0x8DDF
+        MAX_GEOMETRY_UNIFORM_BLOCKS_EXT                 0x8A2C
+        MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS_EXT    0x8A32
+        MAX_GEOMETRY_INPUT_COMPONENTS_EXT               0x9123
+        MAX_GEOMETRY_OUTPUT_COMPONENTS_EXT              0x9124
+        MAX_GEOMETRY_OUTPUT_VERTICES_EXT                0x8DE0
+        MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS_EXT        0x8DE1
+        MAX_GEOMETRY_SHADER_INVOCATIONS_EXT             0x8E5A
+        MAX_GEOMETRY_TEXTURE_IMAGE_UNITS_EXT            0x8C29
+        MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS_EXT         0x92CF
+        MAX_GEOMETRY_ATOMIC_COUNTERS_EXT                0x92D5
+        MAX_GEOMETRY_IMAGE_UNIFORMS_EXT                 0x90CD
+        MAX_GEOMETRY_SHADER_STORAGE_BLOCKS_EXT          0x90D7
+
+    Returned in the <data> parameter from a Get query with a <pname> of
+    LAYER_PROVOKING_VERTEX_EXT:
+
+        FIRST_VERTEX_CONVENTION_EXT                     0x8E4D
+        LAST_VERTEX_CONVENTION_EXT                      0x8E4E
+        UNDEFINED_VERTEX_EXT                            0x8260
+
+    Accepted by the <target> parameter of BeginQuery, EndQuery,
+    GetQueryiv, and GetQueryObjectuiv:
+
+        PRIMITIVES_GENERATED_EXT                        0x8C87
+
+    Accepted by the <mode> parameter of DrawArrays, DrawElements,
+    and other commands which draw primitives:
+
+        LINES_ADJACENCY_EXT                             0xA
+        LINE_STRIP_ADJACENCY_EXT                        0xB
+        TRIANGLES_ADJACENCY_EXT                         0xC
+        TRIANGLE_STRIP_ADJACENCY_EXT                    0xD
+
+    Accepted by the <pname> parameter of FramebufferParameteri,
+    and GetFramebufferParameteriv:
+
+        FRAMEBUFFER_DEFAULT_LAYERS_EXT                  0x9312
+
+    Accepted by the <pname> parameter of GetIntegerv, GetBooleanv,
+    GetInteger64v, and GetFloatv:
+
+        MAX_FRAMEBUFFER_LAYERS_EXT                      0x9317
+
+    Returned by CheckFramebufferStatus:
+
+        FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_EXT        0x8DA8
+
+    Accepted by the <pname> parameter of
+    GetFramebufferAttachmentParameteriv:
+
+        FRAMEBUFFER_ATTACHMENT_LAYERED_EXT              0x8DA7
+
+    Accepted by the <props> parameter of
+    GetProgramResourceiv:
+
+        REFERENCED_BY_GEOMETRY_SHADER_EXT               0x9309
+
+Additions to the OpenGL ES 3.1 Specification
+
+    Modify chapter 3 "Dataflow Model"
+
+    Change the second paragraph, on p. 28:
+
+    ... In the next stage vertices may be transformed, followed by assembly
+    into geometric primitives. Geometry shaders may then optionally generate
+    multiple new primitives from single input primitives. Optionally, the
+    results ...
+
+
+    Modify figure 3.1 "Block diagram of the OpenGL ES pipeline" to insert a
+    new box "Geometry Shader" following "Vertex Shader" and preceding
+    "Rasterization". Connect the Geometry Shader box to Transform Feedback
+    and Rasterization boxes, and remove the connection from Vertex Shader to
+    Transform Feedback. Extend the arrows from the boxes "Image Load/Store"
+    .. "Uniform Block" to the right of "Vertex Shader" to connect to the new
+    "Geometry Shader" box.
+
+
+    Modify section 4.2, "Query Objects and Asynchronous Queries" on p. 36
+    to add to the bullet list of supported query types
+
+    * Primitive queries with a target of PRIMITIVES_GENERATED_EXT (see
+      section 12.2) return information on the number of primitives processed
+      by the GL.
+
+
+    Replace the two paragraphs of chapter 7, "Programs and Shaders"
+    on p. 64 starting "Shader stages including ..." with:
+
+    Shader stages including vertex, geometry, fragment, and compute shaders
+    can be created, compiled, and linked into program objects.
+
+    Vertex shaders describe the operations that occur on vertex attributes.
+    Geometry shaders affect the processing of primitives assembled from
+    vertices (see section 11.1gs). Fragment shaders affect the processing of
+    fragments during rasterization (see chapter 14). A single program
+    object can contain all of these shaders, or any subset thereof.
+
+    Compute shaders ...
+
+
+    Add to table 7.1 "CreateShader <type> values" on p. 65:
+
+        <type>                  Shader Stage
+        -------------------     ---------------
+        GEOMETRY_SHADER_EXT     Geometry shader
+
+
+    Change bullet list describing reasons for link failure below the
+    LinkProgram command on p. 70:
+
+    ... Linking can fail for a variety of reasons as specified in the OpenGL
+    ES Shading Language Specification, as well as any of the following
+    reasons:
+
+    * One or more of the shader objects attached to <program> are not
+      compiled successfully.
+    * More active uniform or active sampler variables are used in <program>
+      than allowed (see sections 7.6 and 7.9).
+    * The shaders do not use the same shader language version.
+    * <program> contains objects to form a geometry shader (see section
+      11.1gs), and
+      - <program> is not separable and contains no objects to form a
+        vertex shader; or
+      - the input primitive type, output primitive type, or maximum output
+        vertex count is not specified in the compiled geometry shader
+        object.
+    * <program> contains objects to form a compute shader (see section 17)
+      and
+      - <program> also contains objects to form any other type of shader.
+
+    If LinkProgram failed, ...
+
+
+    Modify section 7.3, "Program Objects":
+
+    Add to the second paragraph after UseProgram on p. 71:
+
+    The executable code ... the results of vertex and/or fragment processing
+    will be undefined. However, this is not an error. If there is no active
+    program for the geometry shader stage, that stage is ignored. If there
+    is no active program for the compute shader stage ...
+
+
+    Modify section 7.3.1, "Program Interfaces":
+
+    Modify table 7.2 "GetProgramResourceiv properties and supported
+    interfaces" on p. 81 to add "REFERENCED_BY_GEOMETRY_SHADER_EXT" to the
+    "Property" cell already containing REFERENCED_BY_<stage>_SHADER for
+    VERTEX, FRAGMENT, and COMPUTE stages, with the same supported
+    interfaces.
+
+
+    Add geometry shaders to the paragraph describing the REFERENCED_BY
+    properties, on p. 83:
+
+    For the properties REFERENCED_BY_VERTEX_SHADER,
+    REFERENCED_BY_GEOMETRY_SHADER_EXT, REFERENCED_BY_FRAGMENT_SHADER, and
+    REFERENCED_BY_COMPUTE_SHADER, a single integer is written to <params>,
+    identifying whether the active resource is referenced by the vertex,
+    geometry, fragment, or compute shaders, respectively, in the program
+    object. ...
+
+
+    Modify section 7.4, "Program Pipeline Objects" in the first paragraph
+    paragraph after UseProgramStages on p. 89:
+
+    ... These stages may include vertex, geometry, fragment, or compute,
+    indicated respectively by VERTEX_SHADER_BIT, GEOMETRY_SHADER_BIT_EXT,
+    FRAGMENT_SHADER_BIT, or COMPUTE_SHADER_BIT. ...
+
+
+    Modify section 7.4.1, "Shader Interface Matching" on p. 91, changing
+    the second paragraph and adding a new paragraph:
+
+    Variables and block members declared as structures ... in the OpenGL ES
+    Shading Language Specification.
+
+    Geometry shader per-vertex input variables and blocks are required to be
+    declared as arrays, with each element representing input or output
+    values for a single vertex of a multi-vertex primitive. For the purposes
+    of interface matching, such variables and blocks are treated as though
+    they were not declared as arrays.
+
+    For program objects containing multiple shaders...
+
+
+    Modify section 7.4.2 "Program Pipeline Object State" on p. 92,
+    replacing the first bullet point:
+
+    * Unsigned integers are required to hold the names of the active program
+      and each of the current vertex, geometry, fragment, and compute stage
+      programs. Each integer is initially zero.
+
+
+    Modify section 7.6, "Uniform Variables"
+
+    Add to table 7.4 "Query targets for default uniform block storage ..."
+    on p. 96:
+
+    Shader Stage                    <pname> for querying default uniform block
+                                    storage, in components
+    ----------------------------    -------------------------------------------
+    Geometry (see sec. 11.1gs.3)    MAX_GEOMETRY_UNIFORM_COMPONENTS_EXT
+
+
+    Add to table 7.5 "Query targets for combined uniform block storage ..."
+    on p. 97:
+
+
+    Shader Stage                    <pname> for querying combined uniform block
+                                    storage, in components
+    ----------------------------    --------------------------------------------
+    Geometry                        MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS_EXT
+
+
+    Modify section 7.6.2, "Uniform Blocks" on p. 104, changing the second
+    paragraph of the section:
+
+    There is a set of implementation-dependent maximums for the number of
+    active uniform blocks used by each shader. If the number of uniform
+    blocks used by any shader in the program exceeds its corresponding
+    limit, the program will fail to link. The limits for vertex, geometry,
+    fragment, and compute shaders can be obtained by calling GetIntegerv
+    with <pname> values of MAX_VERTEX_UNIFORM_BLOCKS,
+    MAX_GEOMETRY_UNIFORM_BLOCKS_EXT, MAX_FRAGMENT_UNIFORM_BLOCKS, and
+    MAX_COMPUTE_UNIFORM_BLOCKS, respectively.
+
+
+    Modify section 7.7, "Atomic Counter Buffers" on p. 108, changing the
+    second paragraph of the section:
+
+    There is a set of implementation-dependent maximums for the number of
+    active atomic counter buffers referenced by each shader. If the number
+    of atomic counter buffers referenced by any shader in the program
+    exceeds its corresponding limit, the program will fail to link. The
+    limits for vertex, geometry, fragment, and compute shaders can be
+    obtained by calling GetIntegerv with <pname> values of
+    MAX_VERTEX_ATOMIC_COUNTER_BUFFERS,
+    MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS_EXT,
+    MAX_FRAGMENT_ATOMIC_COUNTER_BUFFERS, or
+    MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, respectively.
+
+
+    Modify section 7.8, "Shader Buffer Variables and Shader Storage Blocks"
+    on p. 110, changing the fourth paragraph:
+
+    If the number of active shader storage blocks referenced by the shaders
+    in a program exceeds implementation-dependent limits, the program will
+    fail to link. The limits for vertex, geometry, fragment, and compute
+    shaders can be obtained by calling GetIntegerv with pname values of
+    MAX_VERTEX_SHADER_STORAGE_BLOCKS,
+    MAX_GEOMETRY_SHADER_STORAGE_BLOCKS_EXT,
+    MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, and
+    MAX_COMPUTE_SHADER_STORAGE_BLOCKS, respectively. Additionally, a ...
+
+
+    Modify section 7.11.1 "Shader Memory Access Ordering" on p. 113 to add
+    to the list of ordering rules:
+
+    * The relative order of invocations of different shader types is largely
+      undefined. However, when executing a shader whose inputs are generated
+      from a previous programmable stage, the shader invocations from the
+      previous stage are guaranteed to have executed far enough to generate
+      final values for all next-stage inputs. That implies shader completion
+      for all stages except geometry; geometry shaders are guaranteed only
+      to have executed far enough to emit all needed vertices.
+
+
+    Modify section 7.12, "Shader, Program, and Program Pipeline Queries"
+    to add to the list of valid <pname>s for GetProgramiv on p. 121:
+
+    If <pname> is GEOMETRY_LINKED_VERTICES_OUT_EXT, the maximum number of
+    vertices the geometry shader will output is returned.
+
+    If <pname> is GEOMETRY_LINKED_INPUT_TYPE_EXT, the geometry shader input
+    type, which must be one of POINTS, LINES, LINES_ADJACENCY_EXT, TRIANGLES
+    or TRIANGLES_ADJACENCY_EXT, is returned.
+
+    If <pname> is GEOMETRY_LINKED_OUTPUT_TYPE_EXT, the current geometry shader
+    output type, which must be one of POINTS, LINE_STRIP or TRIANGLE_STRIP,
+    is returned.
+
+    If <pname> is GEOMETRY_SHADER_INVOCATIONS_EXT, the number of geometry
+    shader invocations per primitive will be returned.
+
+
+    Add to the Errors for GetProgramiv on p. 121:
+
+    An INVALID_OPERATION error is generated if
+    GEOMETRY_LINKED_VERTICES_OUT_EXT, GEOMETRY_LINKED_INPUT_TYPE_EXT,
+    GEOMETRY_LINKED_OUTPUT_TYPE_EXT, or GEOMETRY_SHADER_INVOCATIONS_EXT are
+    queried for a program which has not been linked successfully, or which
+    does not contain objects to form a geometry shader,
+
+
+    Modify section 7.13 "Required State" to change the last two paragraphs
+    of the section on p. 127:
+
+    This list of program object state is not complete. Tables 20.20-20.28
+    describe additional program object state specific to program binaries,
+    geometry shaders, and uniform blocks.
+
+    Table 20.29 describes state related to vertex and geometry shaders that
+    is not program object state.
+
+
+    Modify section 9.2, "Binding and Managing Framebuffer Objects" to add to
+    the list of bullet points for BindFramebuffer on p. 205:
+
+    * If the number of layers of each attachment are not all identical,
+      rendering will be limited to the smallest number of layers of any
+      attachment. If there are no attachments, the number of layers will be
+      taken from the framebuffer object's default layer count.
+
+
+    Modify section 9.2.1, "Framebuffer Object Parameters" to replace the
+    second and third paragraphs of the section, adding default and maximum
+    layer counts to FramebufferParameteri, on p. 206 and p. 207:
+
+    When a framebuffer has one or more attachments, the width, height, layer
+    count (section 9.7gs), sample count, and sample location pattern of the
+    framebuffer are derived from the properties of the framebuffer
+    attachments. When the framebuffer has no attachments, these properties
+    are taken from framebuffer parameters. When <pname> is
+    FRAMEBUFFER_DEFAULT_WIDTH, FRAMEBUFFER_DEFAULT_HEIGHT,
+    FRAMEBUFFER_DEFAULT_LAYERS_EXT, FRAMEBUFFER_DEFAULT_SAMPLES, or
+    FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS, the value in <param>
+    specifies the width, height, layer count, sample count, or sample
+    location pattern, respectively, used when the framebuffer has no
+    attachments.
+
+    When a framebuffer has no attachments, it is considered layered (section
+    9.7gs) if and only if the value of FRAMEBUFFER_DEFAULT_LAYERS_EXT is
+    non-zero. It is considered to have sample buffers ...
+
+
+    Modify the error for invalid parameter values on p. 207 to add
+    layer counts:
+
+    An INVALID_VALUE error is generated if <pname> is
+    FRAMEBUFFER_DEFAULT_WIDTH, FRAMEBUFFER_DEFAULT_HEIGHT,
+    FRAMEBUFFER_DEFAULT_LAYERS_EXT, or FRAMEBUFFER_DEFAULT_SAMPLES, and
+    <param> is either negative or greater than the value of the
+    corresponding implementation-dependent limits MAX_FRAMEBUFFER_WIDTH,
+    MAX_FRAMEBUFFER_HEIGHT, MAX_FRAMEBUFFER_LAYERS_EXT, or
+    MAX_FRAMEBUFFER_SAMPLES, respectively.
+
+
+    Replace the bullet list in section 9.2.2, "Attaching Images to
+    Framebuffer Objects" on p. 208:
+
+    There are several types of framebuffer-attachable images:
+
+    * The image of a renderbuffer object, which is always two-dimensional.
+    * A single level of a two-dimensional or two-dimensional multisample
+      texture.
+    * A single face of a cube map texture level, which is treated as a
+      two-dimensional image.
+    * A single layer of a two-dimensional array texture, two-dimensional
+      multidimensional array texture, or three-dimensional texture, which is
+      treated as a two-dimensional image.
+
+    Additionally, an entire level of a three-dimensional, cube map,
+    two-dimensional array, or two-dimensional multisample array texture can
+    be attached to an attachment point. Such attachments are treated as an
+    array of two-dimensional images, arranged in layers, and the
+    corresponding attachment point is considered to be <layered> (also see
+    section 9.7gs)
+
+
+    Modify section 9.2.3, "Framebuffer Object Queries"
+
+    In the description of GetFramebufferAttachmentParameteriv for texture
+    attachments, replace the bullet point for
+    FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER on p. 210:
+
+    * If <pname> is FRAMEBUFFER_ATTACHMENT_LAYERED_EXT then <params> will
+      contain TRUE if an entire level of a three-dimensional, cube map,
+      two-dimensional array, or two-dimensional multisample array texture is
+      attached. Otherwise, <params> will contain FALSE.
+    * If pname is FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER; the value of
+      FRAMEBUFFER_ATTACHMENT_OBJECT_NAME is the name of a three-dimensional,
+      or a two-dimensional array texture; and the value of
+      FRAMEBUFFER_ATTACHMENT_LAYERED_EXT is FALSE, then <params> will
+      contain the value of the texture layer which contains the attached
+      image.
+
+
+    Modify section 9.2.8, "Attaching Texture Images to a Framebuffer" on
+    p. 217:
+
+    The GL supports copying the rendered contents of the framebuffer into
+    the images of a texture object through the use of the routines
+    CopyTexImage* and CopyTexSubImage*. Additionally, the GL supports
+    rendering directly into the images of a texture object.
+
+    To render directly into a texture image, a specified level of a texture
+    object can be attached as one of the logical buffers of the currently
+    bound framebuffer object by calling
+
+      void FramebufferTextureEXT(enum target, enum attachment,
+                                 uint texture, int level);
+
+    <target> must be DRAW_FRAMEBUFFER, READ_FRAMEBUFFER, or FRAMEBUFFER.
+    FRAMEBUFFER is equivalent to DRAW_FRAMEBUFFER. <attachment> must be one
+    of the attachment points of the framebuffer listed in table 9.1.
+
+    If <texture> is non-zero, the specified mipmap <level> of the texture
+    object named <texture> is attached to the framebuffer attachment point
+    named by <attachment>.
+
+    If <texture> is the name of a three-dimensional texture, cube map
+    texture, two-dimensional array, or two-dimensional multisample array
+    texture, the texture level attached to the framebuffer attachment point
+    is an array of images, and the framebuffer attachment is considered
+    <layered>.
+
+    Errors
+
+    An INVALID_ENUM error is generated if <target> is not DRAW_FRAMEBUFFER,
+    READ_FRAMEBUFFER, or FRAMEBUFFER.
+
+    An INVALID_ENUM error is generated if <attachment> is not one of the
+    attachments in table 9.1.
+
+    An INVALID_OPERATION error is generated if zero is bound to <target>.
+
+    An INVALID_VALUE error is generated if <texture> is not the name of a
+    texture object, or if <level> is not a supported texture level for
+    <texture>.
+
+    An INVALID_OPERATION error is generated if <texture> is the name of a
+    buffer texture.
+
+
+    Additionally, a specified image from a texture object can be attached as
+    one of the logical buffers of a currently bound framebuffer object by
+    calling
+
+      void FramebufferTexture2D
+
+    ...
+
+    The command
+
+      void FramebufferTextureLayer(enum target, enum attachment,
+                                   uint texture, int level, int layer);
+
+    operates similarly to FramebufferTexture2D, except that it attaches a
+    single layer of a three-dimensional, two-dimensional array, or
+    two-dimensional multisample array texture level.
+
+    <target> and <attachment> are specified with the same values, and have
+    the same meanings as the corresponding arguments of
+    FramebufferTexture2D.
+
+    <level> specifies the mipmap level of the texture image to be attached
+    to the framebuffer.
+
+    If <texture> is a three-dimensional texture, then <level> must be
+    greater than or equal to zero and less than or equal to log2 of the
+    value of MAX_3D_TEXTURE_SIZE. If <texture> is a two-dimensional array
+    texture, then <level> must be greater than or equal to zero and no
+    larger than log2 of the value of MAX_TEXTURE_SIZE. If <texture> is a
+    two-dimensional multisample array texture, then <level> must be zero.
+
+    <layer> specifies the layer of a two-dimensional image within <texture>.
+
+    Unlike FramebufferTexture2D, no <textarget> parameter is accepted.
+
+    If <texture> is non-zero and the command does not result in an error,
+    the framebuffer attachment state corresponding to <attachment> is
+    updated as in the other FramebufferTexture commands, except that the
+    value of FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER is set to <layer>.
+
+    Errors
+
+    An INVALID_ENUM error is generated if <target> is not DRAW_FRAMEBUFFER,
+    READ_FRAMEBUFFER, or FRAMEBUFFER.
+
+    An INVALID_ENUM error is generated if <attachment> is not one of the
+    attachments in table 9.1.
+
+    An INVALID_VALUE error is generated if texture is non-zero and <level>
+    is not a supported texture level for <texture>, as described above.
+
+    An INVALID_VALUE error is generated if <texture> is non-zero and <layer>
+    is larger than the value of MAX_3D_TEXTURE_SIZE minus one (for
+    three-dimensional textures), or larger than the value of
+    MAX_ARRAY_TEXTURE_LAYERS minus one (for array textures).
+
+    An INVALID_VALUE error is generated if <texture> is non-zero and <layer>
+    is negative.
+
+    An INVALID_OPERATION error is generated if <texture> is non-zero and is
+    not the name of a three dimensional, two-dimensional multisample array,
+    or two-dimensional array texture.
+
+
+    Modify section 9.2.8.1, "Effects of Attaching a Texture Image" to add
+    to the list of bullet points on p. 220:
+
+    * If FramebufferTextureEXT is called and <texture> is the name of a
+      three-dimensional, cube map, two-dimensional multisample array, or
+      two-dimensional array texture, the value of
+      FRAMEBUFFER_ATTACHMENT_LAYERED_EXT is set to TRUE; otherwise it is set
+      to FALSE.
+
+
+    Modify section 9.4.1, "Framebuffer Completeness" to replace the bullet
+    point starting "If <image> is a three-dimensional texture" on p. 223:
+
+    * If <image> is a three-dimensional texture or a two-dimensional array
+      texture and the attachment is not layered, the selected layer is less
+      than the depth or layer count, respectively, of the texture.
+
+    * If <image> is a three-dimensional texture or a two-dimensional array
+      texture and the attachment is layered, the depth or layer count,
+      respectively, of the texture is less than or equal to the value of
+      MAX_FRAMEBUFFER_LAYERS_EXT.
+
+
+    Modify section 9.4.2 "Whole Framebuffer Completeness" to add to the list
+    of bullet points on p. 224:
+
+    * If any framebuffer attachment is layered, all populated attachments
+      must be layered. Additionally, all populated color attachments must be
+      from textures of the same target (i.e., three-dimensional, cube map,
+      two-dimensional array, or two-dimensional multisample array textures).
+
+      { FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS_EXT }
+
+
+    Add new section 9.7gs on p. 229, following existing section 9.7
+    "Conversion to RGBA Values":
+
+    Section 9.7gs Layered Framebuffers
+
+    A framebuffer is considered to be layered if it is complete and all of
+    its populated attachments are layered. When rendering to a layered
+    framebuffer, each fragment generated by the GL is assigned a layer
+    number. The layer number for a fragment is zero if
+
+      * geometry shaders are disabled, or
+
+      * the current geometry shader does not statically assign a value to
+        the built-in output variable "gl_Layer".
+
+    Otherwise, the layer for each point, line, or triangle emitted by the
+    geometry shader is taken from the "gl_Layer" output of one of the
+    vertices of the primitive. The vertex used is implementation-dependent
+    and may be queried as described in section 11.1gs.4.
+    To get defined results, all vertices of each primitive emitted should
+    set the same value for "gl_Layer". Since the "EndPrimitive" built-in
+    function starts a new output primitive, defined results can be achieved
+    if "EndPrimitive" is called between two vertices emitted with different
+    layer numbers. A layer number written by a geometry shader has no effect
+    if the framebuffer is not layered.
+
+    When fragments are written to a layered framebuffer, the fragment's
+    layer number selects a single image from the array of images at each
+    attachment point to use for the stencil test (see section 4.1.4), depth
+    buffer test (see section 4.1.5), and for blending and color buffer
+    writes (see section 4.1.7). If the fragment's layer number is negative,
+    or greater than or equal to the minimum number of layers of any
+    attachment, the effects of the fragment on the framebuffer contents are
+    undefined.
+
+    When the Clear or ClearBuffer* commands are used to clear a layered
+    framebuffer attachment, all layers of the attachment are cleared.
+
+    When commands such as ReadPixels read from a layered framebuffer, the
+    image at layer zero of the selected attachment is always used to obtain
+    pixel values.
+
+    When cube map texture levels are attached to a layered framebuffer, there
+    are six layers attached, numbered zero through five.  Each layer number is
+    mapped to a cube map face, as indicated in table 8.25.
+
+
+    Modify section 10.1, "Primitive Types" to add new figure 10.X1 and new
+    sections 10.1.7la, 10.1.7lsa, 10.1.7ta, and 10.1.7tsa following section
+    10.1.7, "Separate Triangles", on p. 234:
+
+
+    Section 10.1.7la Lines with Adjacency
+
+    Add figure 10.X1:
+
+        1 - - - 2----->3 - - - 4     1 - - - 2--->3--->4--->5 - - - 6
+
+        5 - - - 6----->7 - - - 8
+
+               (a)                             (b)
+
+      Figure 10.X1 (a) Lines with adjacency, (b) Line strip with adjacency.
+      The vertices connected with solid lines belong to the main primitives;
+      the vertices connected by dashed lines are the adjacent vertices that
+      may be used in a geometry shader.
+
+    Lines with adjacency are specified with <mode> LINES_ADJACENCY_EXT, and
+    are independent line segments where each endpoint has a corresponding
+    "adjacent" vertex that can be accessed by a geometry shader (see section
+    11.1gs). If a geometry shader is not active, the "adjacent" vertices are
+    ignored.
+
+    A line segment is drawn from the 4i + 2nd vertex to the 4i + 3rd vertex
+    for each i = 0, 1, ... , n-1, where there are 4n+k vertices passed. k is
+    either 0, 1, 2, or 3; if k is not zero, the final k vertices are
+    ignored. For line segment i, the 4i + 1st and 4i + 4th vertices are
+    considered adjacent to the 4i + 2nd and 4i + 3rd vertices, respectively.
+    See Figure 10.X1.
+
+
+    Section 10.1.7lsa Line Strips with Adjacency
+
+    Line strips with adjacency are specified with <mode>
+    LINE_STRIP_ADJACENCY_EXT and are similar to line strips, except that
+    each line segment has a pair of adjacent vertices that can be accessed
+    by a geometry shader. If a geometry shader is not active, the "adjacent"
+    vertices are ignored.
+
+    A line segment is drawn from the i + 2nd vertex to the i + 3rd vertex
+    for each i = 0, 1, ..., n-1, where there are n+3 vertices passed. If
+    there are fewer than four vertices, all vertices are ignored. For line
+    segment i, the i + 1st and i + 4th vertex are considered adjacent to the
+    i + 2nd and i + 3rd vertices, respectively. See Figure 10.X1.
+
+
+    Section 10.1.7ta Triangles with Adjacency
+
+    Add new figure 10.X2:
+
+                   2 - - - 3 - - - 4     8 - - - 9 - - - 10
+                           ^\                    ^\
+                     \     | \     |       \     | \     |
+                           |  \                  |  \
+                       \   |   \   |         \   |   \   |
+                           |    \                |    \
+                         \ |     \ |           \ |     \ |
+                           |      v              |      v
+                           1<------5             7<------11
+
+                             \     |               \     |
+
+                               \   |                 \   |
+
+                                 \ |                   \ |
+
+                                   6                     12
+
+      Figure 10.X2 Triangles with adjacency.  The vertices connected with solid
+      lines belong to the main primitive; the vertices connected by dashed
+      lines are the adjacent vertices that may be used in a geometry shader.
+
+
+    Triangles with adjacency are specified with <mode> TRIANGLES_ADJACENCY_EXT,
+    and are similar to separate triangles except that
+    each triangle edge has an adjacent vertex that can be accessed by a
+    geometry shader.  If a geometry shader is not active, the
+    "adjacent" vertices are ignored.
+
+    The 6i + 1st, 6i + 3rd, and 6i + 5th vertices (in that order) determine a
+    triangle for each i = 0, 1, ..., n-1, where there are 6n+k vertices
+    passed. k is either 0, 1, 2, 3, 4, or 5; if k is
+    non-zero, the final k vertices are ignored.  For triangle i, the i + 2nd,
+    i + 4th, and i + 6th vertices are considered adjacent to edges from the i
+    + 1st to the i + 3rd, from the i + 3rd to the i + 5th, and from the i +
+    5th to the i + 1st vertices, respectively.  See Figure 10.X2.
+
+
+    Section 10.1.7 tsa Triangle Strips with Adjacency
+
+    Add figure 10.X3:
+
+                                  6                     6
+
+                                  | \                   | \
+
+                                  |   \                 |   \
+
+                                  |     \               |     \
+
+      2 - - - 3- - - >6   2 - - - 3------>7     2 - - - 3------>7- - - 10
+              ^\                  ^^      |             ^^      ^^      |
+        \     | \     |     \     | \     | \     \     | \     | \
+              |  \                |  \    |             |  \    |  \    |
+          \   |   \   |       \   |   \   |   \     \   |   \   |   \
+              |    \              |    \  |             |    \  |    \  |
+            \ |     \ |         \ |     \ |     \     \ |     \ |     \
+              |      v            |      vv             |      vv      v|
+              1<------5           1<------5 - - - 8     1<------5<------9
+
+                \     |             \     |               \     | \     |
+
+                  \   |               \   |                 \   |   \   |
+
+                    \ |                 \ |                   \ |     \ |
+
+                      4                   4                     4       8
+
+
+                                   6       10
+
+                                   | \     | \
+
+                                   |   \   |   \
+
+                                   |     \ |     \
+                           2 - - - 3------>7------>11
+                                   ^^      ^^      |
+                             \     | \     | \     | \
+                                   |  \    |  \    |
+                               \   |   \   |   \   |   \
+                                   |    \  |    \  |
+                                 \ |     \ |     \ |     \
+                                   |      vv      vv
+                                   1<------5<------9 - - - 12
+
+                                     \     | \     |
+
+                                       \   |   \   |
+
+                                         \ |     \ |
+
+                                           4       8
+
+      Figure 10.X3 Triangle strips with adjacency.  The vertices connected with
+      solid lines belong to the main primitives; the vertices connected by
+      dashed lines are the adjacent vertices that may be used in a geometry
+      shader.
+
+    Triangle strips with adjacency are specified with <mode>
+    TRIANGLE_STRIP_ADJACENCY_EXT and are similar to triangle strips except that
+    each line triangle edge has an adjacent vertex that can be accessed by a
+    geometry shader (see section 11.1gs). If a geometry shader is not
+    active, the "adjacent" vertices are ignored.
+
+    In triangle strips with adjacency, n triangles are drawn where there are
+    2 * (n+2) + k vertices passed.  k is either 0 or 1; if k is 1, the
+    final vertex is ignored.  If there are fewer than 6 vertices,
+    the entire primitive is ignored.  Table 10.X1 describes
+    the vertices and order used to draw each triangle, and which vertices are
+    considered adjacent to each edge of the triangle.  See Figure 10.X3.
+
+
+    Add table 10.X1:
+
+                                 primitive          adjacent
+                                 vertices           vertices
+      primitive               1st   2nd   3rd     1/2  2/3  3/1
+      ---------------        ----  ----  ----    ---- ---- ----
+      only (i==0, n==1)        1     3     5       2    6    4
+      first (i==0)             1     3     5       2    7    4
+      middle (i odd)         2i+3  2i+1  2i+5    2i-1 2i+4 2i+7
+      middle (i even)        2i+1  2i+3  2i+5    2i-1 2i+7 2i+4
+      last (i==n-1, i odd)   2i+3  2i+1  2i+5    2i-1 2i+4 2i+6
+      last (i==n-1, i even)  2i+1  2i+3  2i+5    2i-1 2i+6 2i+4
+
+      Table 10.X1:  Triangles generated by triangle strips with adjacency.
+      Each triangle is drawn using the vertices in the "1st", "2nd", and "3rd"
+      columns under "primitive vertices", in that order.  The vertices in the
+      "1/2", "2/3", and "3/1" columns under "adjacent vertices" are considered
+      adjacent to the edges from the first to the second, from the second to
+      the third, and from the third to the first vertex of the triangle,
+      respectively.  The six rows correspond to the six cases:  the first and
+      only triangle (i=0, n=1), the first triangle of several (i=0, n>0),
+      "odd" middle triangles (i=1,3,5...), "even" middle triangles
+      (i=2,4,6,...), and special cases for the last triangle,
+      when i is either even or odd.  For the purposes of this
+      table, the first vertex passed is numbered "1" and the
+      first triangle is numbered "0".
+
+
+    Modify section 10.5, "Drawing Commands using Vertex Arrays"
+
+    On p. 250 in the errors section for the DrawArraysIndirect command,
+    and on p. 254 in the errors section for the DrawElementsIndirect command,
+    delete the errors which state:
+
+    "An INVALID_OPERATION error is generated if transform feedback is
+    active and not paused."
+
+    (thus allowing transform feedback to work with indirect draw commands).
+
+
+    Modify section 11.1.2.1, "Output Variables" on p. 262, starting with the
+    second paragraph of the section:
+
+    The OpenGL ES Shading Language specification also defines a
+    set of built-in outputs that vertex shaders can write to (see
+    section 7.1 ("Built-In Language Variables") of the OpenGL ES Shading
+    Language Specification). These output variables
+    are used to communicate values to the next active stage in the
+    vertex processing pipeline; either the geometry shader, or the
+    fixed-function vertex processing stages leading to rasterization.
+
+    If the output variables are passed directly to the vertex processing
+    stages leading to rasterization, the values of all outputs are expected
+    to be interpolated across the primitive being rendered, unless
+    flatshaded. Otherwise the values of all outputs are collected by the
+    primitive assembly stage and passed on to the subsequent pipeline stage
+    once enough data for one primitive has been collected.
+
+    The number of components (individual scalar numeric values) of output
+    variables that can be written by the vertex shader, whether or not a
+    geometry shader is active, is given by the value of the
+    implementation-dependent constant MAX_VERTEX_OUTPUT_COMPONENTS.
+    For the purposes of counting input and output components
+    consumed by a shader, variables declared as vectors, matrices, and
+    arrays will all consume multiple components.
+
+    When a program is linked...
+
+    Additionally, when linking a program containing only a vertex and
+    fragment shader, there is a limit on the total number of components...
+
+    Each program object can specify a set of output variables from one
+    shader to be recorded in transform feedback mode (see section 12.1).
+    The variables that can be recorded are those emitted by the first active
+    shader, in order, from the following list:
+
+    * geometry shader
+    * vertex shader
+
+    The set of variables to record is specified with the command
+
+    void TransformFeedbackVaryings ...
+
+
+    Modify starting with the list of TransformFeedbackVaryings link failures
+    on p. 263:
+
+    ... A program will fail to link if:
+
+    * the <count> specified by TransformFeedbackVaryings is non-zero, but
+      the program object has no vertex or geometry shader;
+    * any variable name specified in the <varyings> array is not declared as
+      a built-in or user-defined output variable in the shader stage whose
+      outputs can be recorded;
+    * any two entries in the <varyings> array specify the same output
+      variable;
+    * the total number of components to capture in any output in <varyings>
+      is greater than the value of
+      MAX_TRANSFORM_FEEDBACK_SEPARATE_COMPONENTS and the buffer mode is
+      SEPARATE_ATTRIBS; or
+    * the total number of components to capture is greater than the value of
+      MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS and the buffer mode is
+      INTERLEAVED_ATTRIBS.
+
+    When a program is linked ...
+
+
+    Modify section 11.1.3 "Shader Execution"
+
+    Change the first paragraph of the section on p. 264:
+
+    If there is an active program object present for the vertex or geometry
+    shader stages, the executable code for those active programs is used to
+    process incoming vertex values. The following sequence of operations is
+    performed:
+
+    * Vertices are processed by the vertex shader (see section 11.1) and
+      assembled into primitives as described in sections 10.1 through 10.3.
+    * If the current program contains a geometry shader, each individual
+      primitive is processed by the geometry shader (see section 11.1gs).
+      Otherwise, primitives are passed through unmodified. If active, the
+      geometry shader consumes its input primitive. However, each geometry
+      shader invocation may emit new vertices, which are arranged into
+      primitives and passed to subsequent pipeline stages.
+
+    Following shader execution, the fixed-function operations described in
+    chapter 12 are applied.
+
+    Special considerations for ...
+
+
+    Rename section 11.1.3.1 "Shader Texturing" to "Shader Only Texturing"
+    on p. 264.
+
+
+    Modify the bullet list in section 11.1.3.5 "Texture Access" on p. 266 to
+    add a limit for geometry shaders:
+
+    * MAX_GEOMETRY_TEXTURE_IMAGE_UNITS_EXT (for geometry shaders)
+
+
+    Modify the bullet list in section 11.1.3.6 "Atomic Counter Access" on p.
+    268 to add a limit for geometry shaders:
+
+    * MAX_GEOMETRY_ATOMIC_COUNTERS_EXT (for geometry shaders)
+
+
+    Modify the bullet list in section 11.1.3.7 "Image Access" on p. 268 to
+    add a limit for geometry shaders:
+
+    * MAX_GEOMETRY_IMAGE_UNIFORMS_EXT (for geometry shaders)
+
+
+    Modify the bullet list in section 11.1.3.8 "Shader Storage Buffer
+    Access" on p. 268 to add a limit for geometry shaders:
+
+    * MAX_GEOMETRY_SHADER_STORAGE_BLOCKS_EXT (for geometry shaders)
+
+
+
+    Modify section 11.1.3.11 "Validation" to add to the list of validation
+    errors on p. 270:
+
+    * One program object is active for at least two shader stages and a
+      second program is active for a shader stage between two stages for
+      which the first program was active.
+
+    * There is an active program for the geometry stage with corresponding
+      executable shader, but there is no active program with an executable
+      vertex shader.
+
+
+    Add new section 11.1gs, "Geometry Shaders" on p. 272, following
+    section 11.1, "Vertex Shaders"
+
+    Section 11.1.gs Geometry Shaders
+
+    After vertices are processed, they are arranged into primitives, as
+    described in section 10.1 (Primitive Types). This section describes
+    <geometry shaders>, an additional pipeline stage defining operations to
+    further process those primitives. Geometry shaders are defined by source
+    code in the OpenGL ES Shading Language, in the same manner as vertex
+    shaders. They operate on a single primitive at a time and emit one or
+    more output primitives, all of the same type, which are then processed
+    like an equivalent GL primitive specified by the application. The
+    original primitive is discarded after geometry shader execution. The
+    inputs available to a geometry shader are the transformed attributes of
+    all the vertices that belong to the primitive. Additional <adjacency
+    primitives> are available which also make the transformed attributes of
+    neighboring vertices available to the shader. The results of the shader
+    are a new set of transformed vertices, arranged into primitives by the
+    shader.
+
+    The geometry shader pipeline stage is inserted after primitive assembly,
+    prior to transform feedback (see section 12.1), as discussed in section
+    11.1.3.
+
+    Geometry shaders are created as described in section 7.1 using a <type>
+    of GEOMETRY_SHADER_EXT. They are attached to and used in program objects
+    as described in section 7.3. When the program object currently in use
+    includes a geometry shader, its geometry shader is considered active,
+    and is used to process primitives. If the program object has no geometry
+    shader, this stage is bypassed.
+
+    A non-separable program object or program pipeline object that includes
+    a geometry shader must also include a vertex shader.
+
+    Errors
+
+    An INVALID_OPERATION error is generated by any command that transfers
+    vertices to the GL if the current program state has a geometry shader
+    but no vertex shader.
+
+
+    Section 11.1gs.1, Geometry Shader Input Primitives
+
+    A geometry shader can operate on one of five input primitive types.
+    Depending on the input primitive type, one to six input vertices are
+    available when the shader is executed. Each input primitive type
+    supports a subset of the primitives provided by the GL.
+
+    An INVALID_OPERATION error is generated by any command that transfers
+    vertices to the GL if a geometry shader is active and the primitive
+    <mode> parameter is incompatible with the input primitive type of the
+    geometry shader of the active geometry program object, as discussed
+    below.
+
+    A geometry shader that accesses more input vertices than are available
+    for a given input primitive type can be successfully compiled, because
+    the input primitive type is not part of the shader object. However, a
+    program object containing a shader object that accesses more input
+    vertices than are available for the input primitive type of the program
+    object will not link.
+
+    The input primitive type is specified in the geometry shader source code
+    using an input layout qualifier, as described in the OpenGL ES Shading
+    Language Specification. A program will fail to link if the input
+    primitive type is not specified by the geometry shader object attached
+    to the program. The input primitive type may be queried by calling
+    GetProgramiv with the symbolic constant GEOMETRY_LINKED_INPUT_TYPE_EXT.
+    The supported types and the corresponding OpenGL ES Shading Language
+    input layout qualifier keywords are:
+
+    Points (points)
+
+    Geometry shaders that operate on points are valid only for the POINTS
+    primitive type. There is only a single vertex available for each
+    geometry shader invocation.
+
+    Lines (lines)
+
+    Geometry shaders that operate on line segments are valid only for the
+    LINES, LINE_STRIP, and LINE_LOOP primitive types. There are two vertices
+    available for each geometry shader invocation. The first vertex refers
+    to the vertex at the beginning of the line segment and the second vertex
+    refers to the vertex at the end of the line segment. See also section
+    11.1gs.4.
+
+    Lines with Adjacency (lines_adjacency)
+
+    Geometry shaders that operate on line segments with adjacent vertices
+    are valid only for the LINES_ADJACENCY_EXT and LINE_STRIP_ADJACENCY_EXT
+    primitive types. There are four vertices available for each program
+    invocation. The second vertex refers to attributes of the vertex at the
+    beginning of the line segment and the third vertex refers to the vertex
+    at the end of the line segment. The first and fourth vertices refer to
+    the vertices adjacent to the beginning and end of the line segment,
+    respectively.
+
+    Triangles (triangles)
+
+    Geometry shaders that operate on triangles are valid for the TRIANGLES,
+    TRIANGLE_STRIP and TRIANGLE_FAN primitive types. There are three
+    vertices available for each program invocation. The first, second and
+    third vertices refer to attributes of the first, second and third vertex
+    of the triangle, respectively.
+
+    Triangles with Adjacency (triangles_adjacency)
+
+    Geometry shaders that operate on triangles with adjacent vertices are
+    valid for the TRIANGLES_ADJACENCY_EXT and TRIANGLE_STRIP_ADJACENCY_EXT
+    primitive types. There are six vertices available for each program
+    invocation. The first, third and fifth vertices refer to attributes of
+    the first, second and third vertex of the triangle, respectively. The
+    second, fourth and sixth vertices refer to attributes of the vertices
+    adjacent to the edges from the first to the second vertex, from the
+    second to the third vertex, and from the third to the first vertex,
+    respectively.
+
+
+    Section 11.1gs.2, Geometry Shader Output Primitives
+
+    A geometry shader can generate primitives of one of three types. The
+    supported output primitive types are points (POINTS), line strips
+    (LINE_STRIP), and triangle strips (TRIANGLE_STRIP). The vertices output
+    by the geometry shader are assembled into points, lines, or triangles
+    based on the output primitive type in the manner described in section
+    10.5. The resulting primitives are then further processed as described
+    in section 11.1gs.4. If the number of vertices emitted by the geometry
+    shader is not sufficient to produce a single primitive, nothing is
+    drawn. The number of vertices output by the geometry shader is limited
+    to a maximum count specified in the shader.
+
+    The output primitive type and maximum output vertex count are specified
+    in the geometry shader source code using an output layout qualifier, as
+    described in section 4.4.2.gs ("Geometry Outputs") of the OpenGL ES
+    Shading Language Specification. A program will fail to link if either
+    the output primitive type or maximum output vertex count are not
+    specified by the geometry shader object attached to the program. The
+    output primitive type and maximum output vertex count of a linked
+    program may be queried by calling GetProgramiv with the symbolic
+    constants GEOMETRY_LINKED_OUTPUT_TYPE_EXT and
+    GEOMETRY_LINKED_VERTICES_OUT_EXT, respectively.
+
+
+    Section 11.1gs.3 Geometry Shader Variables
+
+    Geometry shaders can access uniforms belonging to the current program
+    object. Limits on uniform storage and methods for manipulating uniforms
+    are described in section 7.6.
+
+    Geometry shaders also have access to samplers to perform texturing
+    operations, as described in section 7.9.
+
+    Geometry shaders can access the transformed attributes of all vertices
+    for their input primitive type using input variables. A vertex shader
+    writing to output variables generates the values of these input
+    variables. Values for any inputs that are not written by a vertex shader
+    are undefined. Additionally, a geometry shader has access to a built-in
+    variable that holds the ID of the current primitive. This ID is
+    generated by the primitive assembly stage that sits in between the
+    vertex and geometry shader.
+
+    Additionally, geometry shaders can write to one or more output variables
+    for each vertex they output. These values are optionally flatshaded
+    (using the OpenGL ES Shading Language varying qualifier "flat") and
+    clipped, then the clipped values interpolated across the primitive (if
+    not flatshaded). The results of these interpolations are available to
+    the fragment shader.
+
+
+    Section 11.1gs.4, Geometry Shader Execution Environment
+
+    If there is an active program for the geometry stage, the executable
+    version of the program's geometry shader is used to process primitives
+    resulting from the primitive assembly stage.
+
+    There are several special considerations for geometry shader execution
+    described in the following sections.
+
+
+    Section 11.1gs.4.1 Texture Access
+
+    Section 11.1.3.1 describes texture lookup functionality accessible to a
+    vertex shader. The texel fetch and texture size query functionality
+    described there also applies to geometry shaders.
+
+
+    Section 11.1gs.4.2 Instanced Geometry Shaders
+
+    For each input primitive received by the geometry shader pipeline stage,
+    the geometry shader may be run once or multiple times. The number of
+    times a geometry shader should be executed for each input primitive may
+    be specified using a layout qualifier in a geometry shader of a linked
+    program. If the invocation count is not specified in any layout
+    qualifier, the invocation count will be one.
+
+    Each separate geometry shader invocation is assigned a unique invocation
+    number. For a geometry shader with <N> invocations, each input primitive
+    spawns <N> invocations, numbered 0 through <N>-1. The built-in uniform
+    gl_InvocationID may be used by a geometry shader invocation to determine
+    its invocation number.
+
+    When executing instanced geometry shaders, the output primitives
+    generated from each input primitive are passed to subsequent pipeline
+    stages using the shader invocation number to order the output. The first
+    primitives received by the subsequent pipeline stages are those emitted
+    by the shader invocation numbered zero, followed by those from the
+    shader invocation numbered one, and so forth. Additionally, all output
+    primitives generated from a given input primitive are passed to
+    subsequent pipeline stages before any output primitives generated from
+    subsequent input primitives.
+
+
+    Section 11.1gs.4.3 Geometry Shader Inputs
+
+    Section 7.1 ("Built-In Language Variables") of the OpenGL ES Shading
+    Language Specification describes the built-in variable array gl_in[]
+    available as input to a geometry shader. gl_in[] receives values from
+    the equivalent built-in output variables written by the vertex shader.
+    Each array element of gl_in[] is a structure holding values for a
+    specific vertex of the input primitive. The length of gl_in[] is
+    determined by the geometry shader input type (see section 11.1gs.1). The
+    members of each element of the gl_in[] array are:
+
+      [[ If EXT_geometry_point_size is supported: ]]
+    * structure member gl_PointSize holds the per-vertex point size written
+      by the previous shader to its built-in output variable gl_PointSize.
+      If the previous shader does not write gl_PointSize, the value of
+      gl_PointSize is undefined.
+
+    * structure member gl_Position holds the per-vertex position, as written
+      by the previous shader to its built-in output variable gl_Position.
+      Note that writing to gl_Position from either the vertex or geometry
+      shader is optional (also see section 7.1 ("Built-In Language
+      Variables") of the OpenGL ES Shading Language Specification)
+
+    Geometry shaders also have available the built-in input variable
+    gl_PrimitiveIDIn, which is not an array and has no vertex shader
+    equivalent. It is filled with the number of primitives processed by the
+    drawing command which generated the input vertices. The first primitive
+    generated by a drawing command is numbered zero, and the primitive ID
+    counter is incremented after every individual point, line, or triangle
+    primitive is processed. For triangles drawn in point or line mode, the
+    primitive ID counter is incremented only once, even though multiple
+    points or lines may eventually be drawn. The counter is reset to zero
+    between each instance drawn. Restarting a primitive topology using the
+    primitive restart index has no effect on the primitive ID counter.
+
+    Similarly to the built-in inputs, each user-defined input has a value
+    for each vertex and thus needs needs to be declared as arrays or inside
+    input blocks declared as arrays. Declaring an array size is optional. If
+    no size is specified, it will be inferred by the linker from the input
+    primitive type. If a size is specified, it must match the number of
+    vertices for the input primitive type; otherwise a link error will
+    occur. The OpenGL ES Shading Language doesn't support multi-dimensional
+    arrays as shader inputs or outputs; therefore, user-defined geometry
+    shader inputs corresponding to vertex shader outputs declared as arrays
+    must be declared as array members of an input block that is itself
+    declared as an array. See section 4.3.6 ("Output Variables") of the
+    OpenGL ES Shading Language Specification for more information.
+
+    Similarly to the limit on vertex shader output components (see section
+    11.1.2.1), there is a limit on the number of components of input
+    variables that can be read by the geometry shader, given by the value of
+    the implementation-dependent constant MAX_GEOMETRY_INPUT_COMPONENTS_EXT.
+
+    When a program is linked, all components of any input read by a geometry
+    shader will count against this limit. A program whose geometry shader
+    exceeds this limit may fail to link, unless device-dependent
+    optimizations are able to make the program fit within available hardware
+    resources.
+
+    Component counting rules for different variable types and variable
+    declarations are the same as for MAX_VERTEX_OUTPUT_COMPONENTS (see
+    section 11.1.2.1).
+
+
+    Section 11.1gs.4.4 Geometry Shader Outputs
+
+    A geometry shader is limited in the number of vertices it may emit per
+    invocation. The maximum number of vertices a geometry shader can
+    possibly emit is specified in the geometry shader source and may be
+    queried after linking by calling GetProgramiv with the symbolic constant
+    GEOMETRY_LINKED_VERTICES_OUT_EXT. If a single invocation of a geometry
+    shader emits more vertices than this value, the emitted vertices may
+    have no effect.
+
+    There are two implementation-dependent limits on the value of
+    GEOMETRY_LINKED_VERTICES_OUT_EXT; it may not exceed the value of
+    MAX_GEOMETRY_OUTPUT_VERTICES_EXT, and the product of the total number of
+    vertices and the sum of all components of all active output variables
+    may not exceed the value of MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS_EXT.
+    LinkProgram will fail if it determines that the total component limit
+    would be violated.
+
+    A geometry shader can write to built-in as well as user-defined output
+    variables. These values are expected to be interpolated across the
+    primitive it outputs, unless they are specified to be flatshaded. To
+    enable seamlessly inserting or removing a geometry shader from a program
+    object, the rules, names and types of the built-in and user-defined
+    output variables are the same as for the vertex shader. Refer to section
+    11.1.2.1, and to sections 4.3.6 ("Output Variables") and 7.1 ("Built-In
+    Language Variables") of the the OpenGL ES Shading Language Specification
+    for more detail.
+
+    After a geometry shader emits a vertex, all output variables are
+    undefined, as described in section 8.12gs ("Geometry Shader Functions")
+    of the OpenGL Shading Language Specification.
+
+    The built-in output gl_Position is intended to hold the homogeneous
+    vertex position. Writing gl_Position is optional.
+
+      [[ If EXT_geometry_point_size is supported: ]]
+    The built-in output gl_PointSize, if written, holds the size of the
+    point to be rasterized, measured in pixels.
+
+    The built-in output gl_PrimitiveID holds the primitive ID counter read
+    by the fragment shader, replacing the value of gl_PrimitiveID generated
+    by drawing commands when no geometry shader is active. The geometry
+    shader must write to gl_PrimitiveID for the provoking vertex (see
+    section 12.3) of a primitive being generated, or the primitive ID
+    counter read by the fragment shader for that primitive is undefined.
+
+    The built-in output gl_Layer is used in layered rendering, and discussed
+    further in the next section.
+
+    Similarly to the limit on vertex shader output components (see section
+    11.1.2.1), there is a limit on the number of components of output
+    variables that can be written by the geometry shader, given by the value
+    of the implementation-dependent constant
+    MAX_GEOMETRY_OUTPUT_COMPONENTS_EXT.
+
+    When a program is linked, all components of any output variable written
+    by a geometry shader will count against this limit. A program whose
+    geometry shader exceeds this limit may fail to link, unless
+    device-dependent optimizations are able to make the program fit within
+    available hardware resources.
+
+    Component counting rules for different variable types and variable
+    declarations are the same as for MAX_VERTEX_OUTPUT_COMPONENTS. (see
+    section 11.1.2.1).
+
+
+    Section 11.1gs.4.5 Layer Selection
+
+    Geometry shaders can be used to render to one of several different
+    layers of cube map textures, three-dimensional textures, or
+    two-dimensional texture arrays. This functionality allows an application
+    to bind an entire complex texture to a framebuffer object, and render
+    primitives to arbitrary layers computed at run time. For example, this
+    mechanism can be used to project and render a scene onto all six faces
+    of a cube map texture in one pass. The layer to render to is specified
+    by writing to the built-in output variable "gl_Layer". Layered rendering
+    requires the use of framebuffer objects (see section 9.7gs).
+
+    The specific vertex of a primitive that is used to select the rendering
+    layer is implementation-dependent and thus portable applications will
+    assign the same layer for all vertices in a primitive. The vertex
+    convention followed for "gl_Layer" may be determined by calling
+    GetIntegerv with the symbolic constant LAYER_PROVOKING_VERTEX_EXT. If
+    the value returned is FIRST_VERTEX_CONVENTION_EXT, selection is always
+    taken from the first vertex of a primitive. If the value returned is
+    LAST_VERTEX_CONVENTION_EXT, the selection is always taken from the last
+    vertex of a primitive. If the value returned is UNDEFINED_VERTEX_EXT,
+    the selection is not guaranteed to be taken from any specific vertex in
+    the primitive. The vertex considered the provoking vertex for particular
+    primitive types is given in table 12.2.
+
+
+    Section 11.1gs.4.6 Primitive Type Mismatches and Drawing Commands
+
+    An INVALID_OPERATION error is generated by any command that transfers
+    vertices to the GL, and no fragments will be rendered, if a mismatch
+    exists between the type of primitive being drawn and the input primitive
+    type of a geometry shader. A mismatch exists under any of the following
+    conditions:
+
+      * the input primitive type of the current geometry shader is
+        POINTS and <mode> is not POINTS,
+
+      * the input primitive type of the current geometry shader is
+        LINES and <mode> is not LINES, LINE_STRIP, or LINE_LOOP,
+
+      * the input primitive type of the current geometry shader is
+        TRIANGLES and <mode> is not TRIANGLES, TRIANGLE_STRIP or
+        TRIANGLE_FAN,
+
+      * the input primitive type of the current geometry shader is
+        LINES_ADJACENCY_EXT and <mode> is not LINES_ADJACENCY_EXT or
+        LINE_STRIP_ADJACENCY_EXT, or
+
+      * the input primitive type of the current geometry shader is
+        TRIANGLES_ADJACENCY_EXT and <mode> is not
+        TRIANGLES_ADJACENCY_EXT or TRIANGLE_STRIP_ADJACENCY_EXT.
+
+
+    Modify section 12.1, "Transform Feedback"
+
+    Replace the second paragraph of the section on p. 274:
+
+    The data captured in transform feedback mode depends on the active
+    programs on each of the shader stages. If a program is active for the
+    geometry shader stage, transform feedback captures the vertices of each
+    primitive emitted by the geometry shader. Otherwise, transform feedback
+    captures each primitive processed by the vertex shader.
+
+
+    Modify the second paragraph following ResumeTransformFeedback on p. 277
+
+    When transform feedback is active and not paused, all geometric
+    primitives generated must be compatible with the value of
+    <primitiveMode> passed to BeginTransformFeedback. If a geometry shader
+    is active, the type of primitive emitted by that shader is used instead
+    of the <mode> parameter passed to drawing commands for the purposes of
+    this error check. Any primitive type may be used while transform
+    feedback is paused.
+
+    Add table 12.1gs:
+
+    Transform Feedback  Allowed render primitive
+    <primitiveMode>     <modes>
+    -------------------+----------------------------------------
+    POINTS             | POINTS
+    LINES              | LINES, LINE_LOOP, LINE_STRIP
+    TRIANGLES          | TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN
+    ------------------------------------------------------------
+    Table 12.1gs: Legal combinations of the transform feedback
+    primitive mode, as passed to BeginTransformFeedback, and the
+    current primitive mode.
+
+
+    In the Errors section, replace "An INVALID_OPERATION error is generate
+    by DrawArrays and DrawArraysInstanced if <mode> is not identical to
+    <primitiveMode>" with:
+
+    An INVALID_OPERATION error is generated by any command that transfers
+    vertices to the GL if <mode> is not one of the allowed modes in table
+    12.1gs.
+
+    and delete the error condition which states:
+
+    An INVALID_OPERATION error is generated by any drawing commands other
+    than DrawArrays and DrawArraysInstanced while transform feedback is
+    active and not paused, regardless of mode.
+
+    Modify the last sentence of the second paragraph on p. 278:
+
+    When writing output variables that are arrays ... The value for any
+    output variable specified to be streamed to a buffer object but not
+    actually written by a vertex or geometry shader is undefined. The
+    results of appending an output variable to a transform feedback buffer
+    are undefined if any component of that variable would be written at an
+    offset not aligned to the size of the component.
+
+
+    Modify the sixth paragraph on p. 278:
+
+    In INTERLEAVED_ATTRIBS mode, the values of one or more output variables
+    written by a vertex or geometry shader are written, interleaved, ...
+
+
+    Modify the eighth paragraph on p. 278, describing errors on buffer
+    overflow:
+
+
+    The error INVALID_OPERATION ... as set by BindBufferRange. No vertices
+    of that primitive are recorded in any buffer object, and the counter
+    corresponding to the asynchronous query target
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN (see section 12.2) is not
+    incremented.
+
+
+    Modify the second paragraph on p. 280:
+
+    When BeginTransformFeedback is called with an active program object
+    containing a vertex or geometry shader, the set of output variables
+    captured ...
+
+
+    Replace section 12.2, "Primitive Queries" on p. 281:
+
+    Primitive queries use query objects to track the number of primitives
+    that are generated by the GL and the number of primitives that are
+    written to buffer objects in transform feedback mode.
+
+    When BeginQuery is called with a target of PRIMITIVES_GENERATED_EXT, the
+    primitives generated count maintained by the GL is set to zero. When a
+    generated primitive query is active, the primitives-generated count is
+    incremented every time an emitted primitive reaches the transform
+    feedback stage (see section 12.1), whether or not transform feedback is
+    active. This counter counts the number of primitives emitted by a
+    geometry shader, if active, possibly further tessellated into separate
+    primitives during the transform feedback stage, if active.
+
+    When BeginQuery is called with a target of
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, the transform feedback primitives
+    written count maintained by the GL is set to zero. When the transform
+    feedback primitive written query is active, the transform feedback
+    primitives written count is incremented every time the vertices of a
+    primitive are recorded into a buffer object. If transform feedback is
+    not active or if a primitive to be recorded does not fit in a buffer
+    object, this counter is not incremented.
+
+    These two types of queries can be used together to determine if all
+    primitives have been written to the bound feedback buffer; if both
+    queries are run simultaneously and the query results are equal, all
+    primitives have been written to the buffer. If the number of primitives
+    written is less than the number of primitives generated, the buffer
+    overflowed.
+
+
+    Modify section 12.5 "Coordinate Transformations" on p. 283:
+
+    <Clip coordinates> for a vertex result from shader execution, which
+    yields ...
+
+
+    Modify section 13.3, "Points"
+
+    Replace the second paragraph starting "The point size..." on p. 290:
+
+    The point size is determined by the last active stage before the
+    rasterizer:
+
+    * the geometry shader, if active; or
+    * the vertex shader, otherwise.
+
+    If the last active stage is not a vertex shader and does not statically
+    assign a value to gl_PointSize, the point size is 1.0. Otherwise, the
+    point size is taken from the shader built-in gl_PointSize written by
+    that stage.
+        [[ Note that it is impossible to assign a value to gl_PointSize if
+           EXT_geometry_point_size is not supported and enabled in the
+           geometry shader stage. ]]
+
+    If the last active stage is a vertex shader, the point size is taken
+    from the shader built-in gl_PointSize written by the vertex shader.
+
+    In all cases, the point size is clamped to the implementation-dependent
+    point size range. If the value written to gl_PointSize is less than or
+    equal to zero, or if no value is written to gl_PointSize (except as
+    noted above) the point size is undefined. The supported range ...
+
+
+    Modify section 14.2.2, "Shader Inputs"
+
+    Add a new paragraph following the paragraph starting "The built-in
+    variable gl_FrontFacing" on p. 305:
+
+    If a geometry shader is active, the built-in variable gl_PrimitiveID
+    contains the ID value emitted by the geometry shader for the provoking
+    vertex. If no geometry shader is active, gl_PrimitiveID contains the
+    number of primitives processed by the rasterizer since the last drawing
+    command was called. The first primitive generated by a drawing command
+    is numbered zero, and the primitive ID counter is incremented after
+    every individual point, line, or polygon primitive is processed.
+    The counter is reset to zero between each instance drawn.
+
+    Restarting a primitive using the primitive restart index (see section
+    10.3.4) has no effect on the primitive ID counter.
+
+    gl_PrimitiveID is only defined under the same conditions that
+    gl_VertexID is defined, as described under "Shader Inputs" in section
+    11.1.3.9.
+
+    Similarly to the limit on geometry shader output components (see section
+    11.1gs.4), there is a limit on the number of components of built-in and
+    user-defined input variables that can be read by the fragment shader,
+    given by the value of the implementation-dependent constant
+    MAX_FRAGMENT_INPUT_COMPONENTS.
+
+    When a program is linked ...
+
+
+    Modify section 16.2.1, "Blitting Pixel Rectangles" to add following the
+    paragraph starting "When values are written to the draw buffers" on p.
+    337:
+
+    If the read framebuffer is layered (see section 9.7gs), pixel values are
+    read from layer zero. If the draw framebuffer is layered, pixel values
+    are written to layer zero. If both read and draw framebuffers are
+    layered, the blit operation is still performed only on layer zero.
+
+
+    Modify the first sentence of chapter 17, "Compute Shaders" on p. 340:
+
+    In addition to graphics-oriented shading operations such as vertex,
+    geometry, and fragment shading, generic computation ...
+
+
+Dependencies on OES_sample_variables
+
+    If OES_sample_variables is not supported, references to
+    the extension edits should be ignored.
+
+Dependencies on OES_texture_storage_multisample_2d_array
+
+    If OES_texture_storage_multisample_2d_array is not supported, references
+    to two-dimensional multisample array textures should be ignored.
+
+Dependencies on OES_shader_multisample_interpolation
+
+    If OES_shader_multisample_interpolation is not supported, references
+    to "sample in", "sample out" and the extension should be ignored.
+
+Dependencies on EXT_texture_buffer
+
+    If EXT_texture_buffer is not supported, references to
+    buffer textures should be removed.
+
+New State
+
+    Add to table 20.14, "Framebuffer (state per framebuffer object)":
+                                                                    Initial
+    Get Value                      Type  Get Command                Value   Description               Sec.
+    ------------------------------ ----  -------------------------  ------- ------------------------  -----
+    FRAMEBUFFER_DEFAULT_LAYERS_EXT  Z+   GetFramebufferParameteriv    0     default layer count of    9.2.1
+                                                                            framebuffer w/o
+                                                                            attachments
+
+    Add to table 20.15, "Framebuffer (state per attachment point)":
+
+                                                                                         Initial
+    Get Value                                Type    Get Command                         Value   Description            Sec.
+    ---------------------------------------- ----    ----------------------------------- ------- ---------------------- -------
+    FRAMEBUFFER_ATTACHMENT_LAYERED_EXT       B       GetFramebufferAttachmentParameteriv FALSE   Framebuffer attachment 9.2.8.1
+                                                                                                 is layered
+
+    Modify description of SHADER_TYPE in table 20.18, "Shader Object State":
+
+                                            Initial
+    Get Value           Type    Get Command Value   Description                   Sec.
+    -----------         ----    ----------- ------- ----------------------------- ----
+    SHADER_TYPE         E       GetShaderiv -       Type of shader (shader stage) 7.1
+
+    Add to table 20.19, "Program Pipeline Object State":
+
+                                                   Initial
+    Get Value           Type  Get Command          Value   Description               Sec.
+    ------------------  ----  -------------------- ------- ------------------------  ----
+    GEOMETRY_SHADER_EXT Z+    GetProgramPipelineiv 0       Name of current geometry  7.4
+                                                           shader program object
+
+
+    Add to table 20.22, "Program Object State (cont.)":
+
+                                                          Initial
+    Get Value                        Type   Get Command   Value          Description               Sec.
+    -------------------------        ----  ------------   -------------- ------------------------  --------
+    GEOMETRY_LINKED_VERTICES_OUT_EXT Z+    GetProgramiv   0              Max.# of output vertices  11.1gs.4
+    GEOMETRY_LINKED_INPUT_TYPE_EXT   E     GetProgramiv   TRIANGLES      Primitive input type      11.1gs.1
+    GEOMETRY_LINKED_OUTPUT_TYPE_EXT  E     GetProgramiv   TRIANGLE_STRIP Primitive output type     11.1gs.2
+    GEOMETRY_SHADER_INVOCATIONS_EXT  Z+    GetProgramiv   1              # of times a geom. shader 7.12
+                                                                         should be executed for
+                                                                         each input primitive
+
+    Add to table 20.28, "Program Object Resource State (cont.)":
+
+                                                                 Initial
+    Get Value                         Type  Get Command          Value   Description             Sec.
+    --------------------------------- ----  -------------------- ------- ----------------------- -----
+    REFERENCED_BY_GEOMETRY_SHADER_EXT Z+    GetProgramResourceiv    -    active resource used by 7.3.1
+                                                                         geometry shader
+
+
+    Rename table 20.29, "Vertex Shader State (not part of program objects)"
+    to "Vertex and Geometry Shader State (not part of program objects)".
+
+
+New Implementation Dependent State
+
+    Add to table 20.40, "Implementation-Dependent Values (cont.)":
+
+    Get Value                      Type  Get Command    Minimum Value  Description                Sec.
+    --------------------------     ----  -----------    -------------  -------------------------- --------
+    MAX_FRAMEBUFFER_LAYERS_EXT     Z+    GetIntegerv    256            maximum layer count for    9.2.1
+                                                                       layered framebuffer object
+    LAYER_PROVOKING_VERTEX_EXT     E     GetIntegerv    -- (*)         vertex convention followed 11.1gs.4
+                                                                       by the gl_Layer GLSL
+                                                                       variable
+
+    Add new footnote:
+      (*) Note: Valid values are FIRST_VERTEX_CONVENTION_EXT,
+      LAST_VERTEX_CONVENTION_EXT, and UNDEFINED_VERTEX_EXT.
+
+
+
+    Add new table 20.43gs "Implementation Dependent Geometry Shader Limits"
+    following table 20.43 "Implementation Dependent Vertex Shader Limits":
+
+                                                               Min.
+    Get Value                                Type Get Command  Value Description             Sec.
+    ---------------------------------------- ---- -----------  ----- ----------------------- --------
+    MAX_GEOMETRY_UNIFORM_COMPONENTS_EXT      Z+   GetIntegerv  1024  Number of comp. for     11.1gs.3
+                                                                     geom. shader uniform
+                                                                     variables
+    MAX_GEOMETRY_UNIFORM_BLOCKS_EXT          Z+   GetIntegerv  12    Max number of geom.     7.6.2
+                                                                     uniform buffers per
+                                                                     program
+    MAX_GEOMETRY_INPUT_COMPONENTS_EXT        Z+   GetIntegerv  64    Max number of comp.     11.1gs.4
+                                                                     of inputs read by a
+                                                                     geom. shader
+    MAX_GEOMETRY_OUTPUT_COMPONENTS_EXT       Z+   GetIntegerv  64    Max number of comp.     11.1gs.4
+                                                                     of outputs written
+                                                                     by a geom. shader
+    MAX_GEOMETRY_OUTPUT_VERTICES_EXT         Z+   GetIntegerv  256   Max number of vertices  11.1gs.4
+                                                                     that any geom. shader
+                                                                     can emit
+    MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS_EXT Z+   GetIntegerv  1024  Max number of total     11.1gs.4
+                                                                     comp. (all vertices) of
+                                                                     active outputs that a
+                                                                     geom. shader can emit
+    MAX_GEOMETRY_TEXTURE_IMAGE_UNITS_EXT     Z+   GetIntegerv  16    Number of texture       11.1.3.5
+                                                                     image units accessible
+                                                                     by a geom. shader
+    MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS_EXT  Z+   GetIntegerv  0     Number of atom. counter 7.7
+                                                                     buffers accessed
+                                                                     by a geom. shader
+    MAX_GEOMETRY_ATOMIC_COUNTERS_EXT         Z+   GetIntegerv  0     Number of atomic        11.1.3.6
+                                                                     counters accessed by a
+                                                                     geom. shader
+    MAX_GEOMETRY_SHADER_STORAGE_BLOCKS_EXT   Z+   GetIntegerv  0     Num. of shader storage  7.8
+                                                                     blocks accessed by a
+                                                                     geom. shader
+    MAX_GEOMETRY_SHADER_INVOCATIONS_EXT      Z+   GetIntegerv  32    Max supported geom.     11.1gs.4
+                                                                     shader invocation count
+
+
+
+    Add to table 20.46 "Implementation Dependent Aggregate Shader Limits"
+    ([fn] is a dagger mark referring to existing text in the table caption):
+
+                                                                   Minimum
+    Get Value                                    Type  Get Command Value    Description               Sec.
+    -------------------------------------------- ----  ----------- -------- ------------------------- --------
+    MAX_GEOMETRY_IMAGE_UNIFORMS_EXT              Z+    GetIntegerv 0        Number of image variables 11.1.3.7
+                                                                            in geometry shaders
+    MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS_EXT Z+    GetIntegerv [fn]     No. of words for geom.    7.6.2
+                                                                            shader uniform vars. in
+                                                                            all uniform blocks
+                                                                            (including default)
+
+    Modify existing entries in table 20.46:
+
+                                                                   Minimum
+    Get Value                                    Type  Get Command Value    Description               Sec.
+    -------------------------------------------- ----  ----------- -------- ------------------------- --------
+    MAX_UNIFORM_BUFFER_BINDINGS                  Z+    GetIntegerv 48       Max no. of uniform buf.   7.6.2
+                                                                            binding points
+    MAX_COMBINED_UNIFORM_BLOCKS                  Z+    GetIntegerv 36       Max. no. of uniform       7.6.2
+                                                                            buffers per program
+    MAX_COMBINED_TEXTURE_IMAGE_UNITS             Z+    GetIntegerv 64       Total no. of tex. units   11.1.3.5
+                                                                            accessible by the GL
+
+Additions to the OpenGL ES Shading Language 3.10 Specification
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_EXT_geometry_shader : <behavior>
+      #extension GL_EXT_geometry_point_size : <behaviour>
+
+    where <behavior> is as specified in section 3.4.
+
+    A new preprocessor #define is added to the OpenGL ES Shading Language:
+
+      #define GL_EXT_geometry_shader 1
+      #define GL_EXT_geometry_point_size 1
+
+    If the EXT_geometry_shader extension is enabled, the
+    EXT_shader_io_blocks extension is also implicitly enabled.
+
+
+    Change the introduction to Chapter 2 "Overview of OpenGL ES Shading" as
+    follows:
+
+    The OpenGL ES Shading Language is actually several closely related
+    languages. These languages are used to create shaders for each of the
+    programmable processors contained in the OpenGL ES processing pipeline.
+    Currently, these processors are the compute, vertex, geometry, and
+    fragment processors.
+
+    Unless otherwise noted in this Specification, a language feature applies
+    to all languages, and common usage will refer to these languages as a
+    single language. The specific languages will be referred to by the name
+    of the processor they target: compute, vertex, geometry, or fragment.
+
+
+    Add new subsection 2.gs preceding subsection 2.2 "Fragment Processor":
+
+    Section 2.gs, Geometry Processor
+
+    The <geometry processor> is a programmable unit that operates on data
+    for incoming vertices for a primitive assembled after vertex processing
+    and outputs a sequence of vertices forming output primitives.
+    Compilation units written in the OpenGL ES Shading Language to run on
+    this processor are called <geometry shaders>. When a geometry shader is
+    compiled and linked, it results in a <geometry shader executable> that
+    runs on the geometry processor.
+
+    A single invocation of the geometry shader executable on the geometry
+    processor will operate on a declared input primitive with a fixed number
+    of vertices. This single invocation can emit a variable number of
+    vertices that are assembled into primitives of a declared output
+    primitive type and passed to subsequent pipeline stages.
+
+
+    Modify section 4.3.4 "Input Variables", adding following the paragraph
+    starting "It is expected that ... columns in the matrix" on p. 40:
+
+    Geometry shader input variables get the per-vertex values written out by
+    output variables of the same names in the previous active (vertex)
+    shader stage. For these inputs, "centroid in", "sample in", and
+    interpolation qualifiers are allowed, but are equivalent to "in". Since
+    geometry shaders operate on a set of vertices, each input variable or
+    input block (see section 4.3.9 "Interface Blocks") needs to be declared
+    as an array. For example,
+
+       in float foo[];    // geometry shader input for vertex "out float foo"
+
+    Each element of such an array corresponds to one vertex of the primitive
+    being processed. Each array can optionally have a size declared. The
+    array size will be set by (or if provided must be consistent with) the
+    input layout declaration(s) establishing the type of input primitive, as
+    described later in section 4.4.1 "Input Layout Qualifiers".
+
+    Some inputs and outputs are <arrayed>, meaning that for an interface
+    between two shader stages either the input or output declaration
+    requires an extra level of array indexing for the declarations to match.
+    For example, with the interface between a vertex shader and a geometry
+    shader, vertex shader output variables and geometry shader input
+    variables of the same name must match in type and qualification (other
+    than precision and "out" matching to "in"), except that the geometry
+    shader will have one more array dimension than the vertex shader, to
+    allow for vertex indexing. If such an arrayed interface variable is not
+    declared with the necessary additional input or output array dimension,
+    a link-time error will result.
+
+    For non-arrayed interfaces (meaning array dimensionally stays the same
+    between stages), it is a link-time error if the input variable is not
+    declared with the same type, including array dimensionality, and
+    qualification (other than precision and "out" matching to "in") as the
+    matching output variable.
+
+    Fragment shader inputs get per-fragment values...
+
+
+    Modify section 4.3.6 "Output Variables" starting with the third
+    paragraph of the section, as modified by
+    OES_shader_multisample_interpolation, on p. 42:
+
+    Vertex and geometry output variables output per-vertex data and are
+    declared using the "out", "centroid out", or "sample out" storage
+    qualifiers. ...
+
+    Individual vertex and geometry outputs are declared as in the following
+    examples: ...
+
+        ...
+        flat out vec3 myColor;
+        sample out vec4 perSampleColor;
+
+    These can also appear in interface blocks, as described in section 4.3.9
+    "Interface Blocks". Interface blocks allow simpler addition of arrays to
+    the interface from vertex to geometry shader. They also allow a fragment
+    shader to have the same input interface as a geometry shader for a given
+    vertex shader.
+
+    Fragment outputs output per-fragment data ...
+
+
+    Modify section 4.3.9 "Interface Blocks" as modified by
+    EXT_shader_io_blocks, to add following the paragraph starting "When
+    using OpenGL ES API entry points to identify the name":
+
+    Geometry shader input blocks must be declared as arrays and follow the
+    array declaration and linking rules for all geometry shader inputs. All
+    other input and output block arrays must specify an array size.
+
+
+    Modify section 4.4.1 "Input Layout Qualifiers" as modified
+    by EXT_shader_io_blocks:
+
+    Insert a new section 4.4.1.gs, before section 4.4.1.fs:
+
+    Section 4.4.1.gs, Geometry Shader Inputs
+
+    Additional layout qualifier identifiers for geometry shader inputs
+    include primitive identifiers and an invocation count identifier:
+
+      <layout-qualifier-id>
+        points
+        lines
+        lines_adjacency
+        triangles
+        triangles_adjacency
+        invocations = integer-constant
+
+    The identifiers points, lines, lines_adjacency, triangles, and
+    triangles_adjacency are used to specify the type of input primitive
+    accepted by the geometry shader, and only one of these is accepted. The
+    geometry shader object in a program must declare this input primitive
+    layout, and all geometry shader input layout declarations in a program
+    must declare the same layout.
+
+    The identifier invocations is used to specify the number of times the
+    geometry shader executable is invoked for each input primitive received.
+    Invocation count declarations are optional. If no invocation count is
+    declared in any geometry shader in a program, the geometry shader will
+    be run once for each input primitive. If an invocation count is
+    declared, all such declarations must specify the same count. If a shader
+    specifies an invocation count greater than the implementation-dependent
+    maximum, it will fail to compile.
+
+    For example,
+
+      layout(triangles, invocations = 6) in;
+
+    will establish that all inputs to the geometry shader are triangles and
+    that the geometry shader executable is run six times for each triangle
+    processed.
+
+    All geometry shader input unsized array declarations will be sized by an
+    earlier input primitive layout qualifier, when present, as per the
+    following table.
+
+        Layout                Size of Input Arrays
+        -------------------   --------------------
+        points                        1
+        lines                         2
+        lines_adjacency               4
+        triangles                     3
+        triangles_adjacency           6
+
+    The intrinsically declared input array gl_in[] will also be sized by any
+    input primitive-layout declaration. Hence, the expression
+
+      gl_in.length()
+
+    will return the value from the table above.
+
+    For inputs declared without an array size, including intrinsically
+    declared inputs (i.e., gl_in), a layout must be declared before any use
+    of the method length or other any array use that requires the array size
+    to be known.
+
+    It is a compile-time error if a layout declaration's array size (from
+    table above) does not match all the explicit array sizes specified in
+    declarations of an input variables in the same shader. The following
+    includes examples of compile-time errors:
+
+      // code sequence within one shader...
+      in vec4 Color1[];      // legal, size still unknown
+      in vec4 Color2[2];     // legal, size is 2
+      in vec4 Color3[3];     // illegal, input sizes are inconsistent
+      layout(lines) in;      // legal for Color2, input size is 2, matching Color2
+      in vec4 Color4[3];     // illegal, contradicts layout of lines
+      layout(lines) in;      // legal, matches other layout() declaration
+      layout(triangles) in;  // illegal, does not match earlier layout() declaration
+
+    It is a link-time error if not all provided sizes (sized input arrays
+    and layout size) match in the geometry shader of a program.
+
+
+    Add new section 4.4.2.gs before section 4.4.2.fs, as added by
+    EXT_shader_io_blocks:
+
+
+    Section 4.4.2.gs Geometry Outputs
+
+    Geometry shaders can have two additional types of output layout
+    identifiers: an output primitive type and a maximum output vertex count.
+    The primitive type and vertex count identifiers are allowed only on the
+    interface qualifier out, not on an output block, block member, or
+    variable declaration.
+
+    The layout qualifier identifiers for geometry shader outputs are
+
+      layout-qualifier-id
+          points
+          line_strip
+          triangle_strip
+          max_vertices = integer-constant
+
+    The primitive type identifiers points, line_strip, and triangle_strip
+    are used to specify the type of output primitive produced by the
+    geometry shader, and only one of these is accepted. The geometry shader
+    object in a program must declare an output primitive type, and all
+    geometry shader output primitive type declarations in a program must
+    declare the same primitive type.
+
+    The vertex count identifier max_vertices is used to specify the maximum
+    number of vertices the shader will ever emit in a single invocation. The
+    geometry shader object in a program must declare a maximum output vertex
+    count, and all geometry shader output vertex count declarations in a
+    program must declare the same count.
+
+    In this example,
+
+      layout(triangle_strip, max_vertices = 60) out;  // order does not matter
+      layout(max_vertices = 60) out;      // redeclaration okay
+      layout(triangle_strip) out;         // redeclaration okay
+      layout(points) out;                 // error, contradicts triangle_strip
+      layout(max_vertices = 30) out;      // error, contradicts 60
+
+    all outputs from the geometry shader are triangles and at most 60
+    vertices will be emitted by the shader. It is an error for the maximum
+    number of vertices to be greater than gl_MaxGeometryOutputVertices.
+
+    All geometry shader output layout declarations in a program must declare
+    the same layout and same value for max_vertices. If geometry shaders are
+    in a program, there must be at least one geometry output layout
+    declaration somewhere in that program.
+
+
+    Modify section 4.7.4, "Default Precision Qualifiers":
+
+    Modify the third paragraph on p. 64:
+
+    "All languages except for the fragment language have the following
+    predeclared globally scoped default precision statements: ..."
+
+
+    Add new section 7.1.1gs following section 7.1.1 "Vertex Shader Special
+    Variables":
+
+    Section 7.1.1gs, Geometry Shader Special Variables
+
+    In the geometry language, the built-in variables are intrinsically
+    declared as:
+
+        [[ If EXT_geometry_point_size is supported and enabled: ]]
+      in gl_PerVertex {
+          highp vec4 gl_Position;
+          highp float gl_PointSize;
+      } gl_in[];
+
+        [[ Otherwise: ]]
+      in gl_PerVertex {
+          highp vec4 gl_Position;
+      } gl_in[];
+
+      in highp int gl_PrimitiveIDIn;
+      in highp int gl_InvocationID;
+
+        [[ If EXT_geometry_point_size is supported and enabled: ]]
+      out gl_PerVertex {
+          highp vec4 gl_Position;
+          highp float gl_PointSize;
+      };
+
+        [[ Otherwise: ]]
+      out gl_PerVertex {
+          highp vec4 gl_Position;
+      };
+
+      out highp int gl_PrimitiveID;
+      out highp int gl_Layer;
+
+
+    Section 7.1.1gs.1, Geometry Shader Input Variables
+
+    gl_Position contains the output written in the previous shader stage to
+    gl_Position.
+
+      [[ If EXT_geometry_point_size is supported: ]]
+    gl_PointSize contains the output written in the previous shader stage to
+    gl_PointSize.
+
+    gl_PrimitiveIDIn contains the number of primitives processed by the
+    shader since the current set of rendering primitives was started.
+
+    gl_InvocationID contains the invocation number assigned to the geometry
+    shader invocation. It is assigned integer values in the range [0, N-1],
+    where N is the number of geometry shader invocations per primitive.
+
+
+    Section 7.1.1gs.2, Geometry Shader Output Variables
+
+    gl_Position is used in the same fashion as the corresponding output
+    variable in the vertex shader. Its value is undefined after geometry
+    processing if the shader calls EmitVertex() without having written
+    gl_Position since the last EmitVertex(), or does not write it at all.
+
+      [[ If EXT_geometry_point_size is supported: ]]
+    gl_PointSize is used in the same fashion as the corresponding output
+    variable in the vertex shader.
+
+    gl_PrimitiveID is filled with a single integer that serves as a
+    primitive identifier to the fragment shader. This is then available to
+    fragment shaders, which will select the written primitive ID from the
+    provoking vertex of the primitive being shaded. If a fragment shader
+    using gl_PrimitiveID is active and a geometry shader is also active, the
+    geometry shader must write to gl_PrimitiveID or the fragment shader
+    input gl_PrimitiveID is undefined. See section 11.1gs.4 "Geometry Shader
+    Outputs" of the OpenGL ES Specification for more information.
+
+    gl_Layer is used to select a specific layer (or face and layer of a cube
+    map) of a multi-layer framebuffer attachment. The actual layer used will
+    come from one of the vertices in the primitive being shaded. Which
+    vertex the layer comes from is determined as discussed in section
+    11.1gs.4 of the OpenGL ES Specification but may be undefined, so it is
+    best to write the same layer value for all vertices of a primitive. If a
+    shader statically assigns a value to gl_Layer, layered rendering mode is
+    enabled. See section 11.1gs.4 "Geometry Shader Outputs"and section 9.7gs
+    "Layered Framebuffers" of the OpenGL ES Specification for more
+    information. If a shader statically assigns a value to gl_Layer, and
+    there is an execution path through the shader that does not set
+    gl_Layer, then the value of gl_Layer is undefined for executions of the
+    shader that take that path.
+
+
+    Modify section 7.1.2 "Fragment Shader Special Variables", as modified by
+    OES_sample_variables:
+
+    Add to the list of built-in variables:
+
+      in highp int gl_PrimitiveID;
+      in highp int gl_Layer;
+
+    Add descriptions of these variables:
+
+    The input variable gl_PrimitiveID is filled with the value written to
+    the gl_PrimitiveID geometry shader output, if a geometry shader is
+    present. Otherwise, it is filled with the number of primitives processed
+    by the shader since the current set of rendering primitives was started.
+
+    The input variable gl_Layer is filled with the value written to the
+    gl_Layer geometry shader output, if a geometry shader is present. If the
+    geometry stage does not dynamically assign a value to gl_Layer, the
+    value of gl_Layer in the fragment stage will be undefined. If the
+    geometry stage makes no static assignment to gl_Layer, the input value
+    in the fragment stage will be zero. Otherwise, the fragment stage will
+    read the same value written by the geometry stage, even if that value is
+    out of range. If a fragment shader contains a static access to gl_Layer,
+    it will count against the implementation defined limit for the maximum
+    number of inputs to the fragment stage.
+
+    Modify the description of gl_FrontFacing:
+
+    The input variable gl_FrontFacing is true if the fragment belongs to a
+    front-facing primitive. One use of this is to emulate two-sided lighting
+    by selecting one of two colors calculated by a vertex or geometry
+    shader.
+
+
+    Add to Section 7.2 "Built-In Constants", matching the
+    corresponding API implementation-dependent limits:
+
+      const mediump int gl_MaxGeometryInputComponents = 64;
+      const mediump int gl_MaxGeometryOutputComponents = 128;
+      const mediump int gl_MaxGeometryImageUniforms = 0;
+      const mediump int gl_MaxGeometryTextureImageUnits = 16;
+      const mediump int gl_MaxGeometryOutputVertices = 256;
+      const mediump int gl_MaxGeometryTotalOutputComponents = 1024;
+      const mediump int gl_MaxGeometryUniformComponents = 1024;
+      const mediump int gl_MaxGeometryAtomicCounters = 0;
+      const mediump int gl_MaxGeometryAtomicCounterBuffers = 0;
+
+    Modify gl_MaxCombinedTextureImageUnits to match the API:
+
+      const mediump int gl_MaxCombinedTextureImageUnits = 64;
+
+
+    Add new section 8.12gs preceding section 8.13 "Fragment Processing
+    Functions":
+
+    Section 8.12gs, Geometry Shader Functions
+
+    These functions are only available in geometry shaders. They are
+    described in more depth following the table.
+
+        Syntax              Description
+        ------------------- -----------------------------------------------
+        void EmitVertex()   Emits the current values of output variables to
+                            the current output primitive. On return from
+                            this call, the values of output variables are
+                            undefined.
+        void EndPrimitive() Completes the current output primitive and
+                            starts a new one. No vertex is emitted.
+
+    The function EmitVertex() specifies that a vertex is completed. A vertex
+    is added to the current output primitive using the current values of all
+    built-in and user-defined output variables. The values of all output
+    variables are undefined after a call to EmitVertex(). If a geometry
+    shader invocation has emitted more vertices than permitted by the output
+    layout qualifier max_vertices, the results of calling EmitVertex() are
+    undefined.
+
+    The function EndPrimitive() specifies that the current output primitive
+    is completed and a new output primitive (of the same type) will be
+    started by any subsequent EmitVertex(). This function does not emit a
+    vertex. If the output layout is declared to be "points", calling
+    EndPrimitive() is optional.
+
+    A geometry shader starts with an output primitive containing no
+    vertices. When a geometry shader terminates, the current output
+    primitive is automatically completed. It is not necessary to call
+    EndPrimitive() if the geometry shader writes only a single primitive.
+
+
+    Modify section 8.16, "Shader Memory Control Functions" to change the
+    paragraph starting "When these functions return..." on p. 139:
+
+    When these functions return ... the execution of the original shader
+    invocation (e.g., fragment shader invocations for a primitive resulting
+    from a particular vertex or geometry shader invocation).
+
+Issues
+
+    Note: These issues apply specifically to the definition of the
+    EXT_geometry_shader specification, which is based on the OpenGL
+    extension ARB_geometry_shader4 as updated in OpenGL 4.x. Resolved issues
+    from ARB_geometry_shader4 have been removed, but remain largely
+    applicable to this extension. ARB_geometry_shader4 can be found in the
+    OpenGL Registry.
+
+    (1) What functionality was removed from ARB_geometry_shader4 / GL 4.4?
+
+      - Interactions with features not supported by the underlying
+        ES 3.1 API and Shading Language, including:
+          * one-dimensional, rectangular, and cube map array textures (cube
+            map array textures are restored in EXT_texture_cube_map_array).
+          * vertex program point size mode
+          * viewport arrays and other support for multiple viewports
+          * multiple vertex streams (these require ARB_transform_feedback3)
+          * gl_ClipDistance shader inputs and outputs.
+          * CopyPixels and Bitmap
+          * fixed-functionality vertex and fragment shader stages
+          * "component" layout
+          * Implicit references to glPolygonMode
+          * References allowing or assuming more than one shader object per
+            pipeline stage.
+      - FramebufferTexture3D (use FramebufferTextureLayer instead).
+      - gl_MaxGeometryVaryingComponents
+      - gl_VerticesIn
+      - FramebufferTextureFaceARB (also removed from GL core)
+      - The FRAMEBUFFER_INCOMPLETE_LAYER_COUNT_EXT completeness condition,
+        also removed from desktop GL.
+      - Description of limitations of GeForce series 8 chips.
+      - GLSL two-dimensional arrays (already supported by GLSL-ES 3.10 in a
+        more general fashion). Note that while multi-dimensional arrays are
+        supported, they are explicitly not supported as shader inputs and
+        outputs, and that decision is respected here.
+      - multiple compilation units of the same shader type.
+
+    (2) What functionality was changed and added relative to
+        ARB_geometry_shader4 and GL 4.4?
+
+      - EXT_geometry_shader closely matches OpenGL 4.4 geometry shader
+        language, rather than ARB_geometry_shader language.
+      - In particular, input and output interface blocks were added from GL
+        4.4 / GLSL 4.40, via the required EXT_shader_io_blocks extension.
+      - Interactions were added with OpenGL ES 3.1 functionality including
+        separate shader objects, shader atomic counters, shader storage
+        buffer objects, and shader image load/store.
+      - Geometry instancing was added from ARB_gpu_shader5.
+      - FRAMEBUFFER_DEFAULT_LAYERS_EXT and MAX_FRAMEBUFFER_LAYERS_EXT state
+        and related spec language from ARB_framebuffer_no_attachments (it
+        was removed from OpenGL ES 3.1).
+      - PRIMITIVES_GENERATED_EXT query from OpenGL 3.0, to count primitives
+        due to geometry amplification by geometry shaders.
+      - LAYER_PROVOKING_VERTEX_EXT query from ARB_provoking_vertex /
+        ARB_viewport_array (but did not add ProvokingVertex control, just
+        this query).
+      - Specify undefined behavior when appending outputs to XFB buffers if
+        any component would be written at a misaligned offset, from
+        ARB_enhanced_layouts. Bug 11191 is tracking this into ES 3.1, as
+        it's not specific to geometry shaders.
+      - Writing point size from geometry shaders is optional functionality.
+        If it's not supported or written, the point size of 1.0 is used.
+      - Added precision qualifiers to builtins.
+      - Clarification from Bug 11508.
+      - Added program interface query properties relevant to geometry
+        shaders.
+
+    (3) Should GetActiveUniformBlockiv support queries for uniform blocks
+        and atomic counter buffers referenced by geometry shaders?
+
+    RESOLVED: No. Use the new generic program interface query supported by
+    OpenGL ES 3.1, following the behavior of features added to 3.1 such as
+    compute shaders, which also dropped these legacy tokens / queries.
+
+    (4) How are aggregate shader limits computed?
+
+    RESOLVED: Following the GL 4.4 model, but we restrict uniform
+    buffer bindings to 12/stage instead of 14, this results in
+
+        MAX_UNIFORM_BUFFER_BINDINGS = 48
+            This is 12 bindings/stage * 4 shader stages, allowing a static
+            partitioning of the bindings even though at most 5 stages can
+            appear in a program object).
+        MAX_COMBINED_UNIFORM_BLOCKS = 36
+            This is 12 blocks/stage * 3 stages, since compute shaders can't
+            be mixed with other stages.
+        MAX_COMBINED_TEXTURE_IMAGE_UNITS = 64
+            This is 16 textures/stage * 4 stages.
+
+    Khronos internal bugs 5870, 8891, and 9424 cover the ARB's thinking on
+    these limits for GL 4.0 and beyond.
+
+    (5) Are arrays supported as shader inputs and outputs?
+
+    RESOLVED: No. In several places in the tessellation and geometry API
+    language based on GL 4.4, it says that "the OpenGL ES Shading Language
+    doesn't support multi-dimensional arrays" and restricts declarations of
+    inputs and outputs which are array members to blocks themselves declared
+    as arrays.
+
+    Strictly speaking this is no longer true. GLSL-ES 3.10 supports
+    multi-dimensional arrays, but arrays of
+    arrays are not allowed as shader inputs or outputs.
+
+    Given this constraint, and since the same constraint is in OpenGL 4.4,
+    I've resolved this by continuing to limit array inputs and outputs
+    in this fashion, and change the language to "...doesn't support
+    multi-dimensional arrays as shader inputs or outputs".
+
+    (6) What component counting rules are used for inputs and outputs?
+
+    RESOLVED: In several places I've inserted language from OpenGL 4.4 to
+    the effect of
+
+       "Component counting rules for different variable types and variable
+        declarations are the same as for MAX_VERTEX_OUTPUT_COMPONENTS (see
+        section 11.1.2.1)."
+
+    I think this is essentially cleaning up an oversight in the earlier ARB
+    extension language but it is a bit orthogonal to the extension
+    functionality and I'm bringing it up in case this is a potential issue.
+
+    (7) What component counting rules are used for the default
+    uniform block?
+
+    RESOLVED: In several places I've inserted language from OpenGL 4.2 to
+    the effect of
+
+       "A uniform matrix in the default uniform block with single-precision
+        components will consume no more than 4 x min(r,c) uniform
+        components."
+
+    This is based on bug 5432 and is language that was later expanded in
+    OpenGL 4.4 and refactored into the generic "Uniform Variables" section,
+    which is something we should consider in the EXT extensions as well to
+    avoid duplication. I believe it is what we want but am noting it for the
+    same reason as the language in issue (7). I'm hoping to be able to
+    include this refactored language into the OpenGL ES 3.1 Specification,
+    so we can refer to it more easily here. Tracking bug 11192 has been
+    opened for this and this language was approved there.
+
+    (8) What should the minimum value of MAX_GEOMETRY_UNIFORM_COMPONENTS_EXT
+    be?
+
+    RESOLVED: GL 4.4 has 512, but we use 1024 to match the ES vertex
+    shader limit.
+
+    (9) What should the minimum value of MAX_GEOMETRY_OUTPUT_COMPONENTS_EXT
+    be?
+
+    RESOLVED: This was reduced to 64 in revision 20, from an initial value
+    of 128 (matching GL 4.4), to match the limits on vertex shader outputs
+    and fragment shader inputs (Bug 12823).
+
+    (10) What naming and token values should we use for
+    GEOMETRY_VERTICES_OUT_EXT, GEOMETRY_INPUT_TYPE_EXT, and
+    GEOMETRY_OUTPUT_TYPE_EXT?
+
+    DISCUSSION: In EXT_geometry_shader4 and ARB_geometry_shader4, the
+    vertice and input and output type are specified by a program parameter
+    state. OpenGL 3.2 requires this to be provided in the shader text and
+    provided a query for these values after linking. Since this was a
+    functionality change the similarly named enumerants were given different
+    values. Thus we have the following token names and enumerants in GL:
+
+    (from EXT_geometry_shader4)
+        GEOMETRY_VERTICES_OUT_EXT        0x8DDA
+        GEOMETRY_INPUT_TYPE_EXT          0x8DDB
+        GEOMETRY_OUTPUT_TYPE_EXT         0x8DDC
+
+    (from ARB_geometry_shader4)
+        GEOMETRY_VERTICES_OUT_ARB        0x8DDA
+        GEOMETRY_INPUT_TYPE_ARB          0x8DDB
+        GEOMETRY_OUTPUT_TYPE_ARB         0x8DDC
+
+    (from OpenGL 3.2)
+        GEOMETRY_VERTICES_OUT            0x8916
+        GEOMETRY_INPUT_TYPE              0x8917
+        GEOMETRY_OUTPUT_TYPE             0x8918
+
+    Now for this extensions we are providing the GL 3.2-type functionality
+    and thus we should use the token *values* from GL core.  However,
+    it is expected that this extension will ship as an EXT, so we would
+    end up with:
+        GEOMETRY_VERTICES_OUT_EXT        0x8916
+        GEOMETRY_INPUT_TYPE_EXT          0x8917
+        GEOMETRY_OUTPUT_TYPE_EXT         0x8918
+    which gives us the same token names as the EXT_geometry_shader4 but
+    the same token values as OpenGL 3.2. This would potentially be
+    quite confusing if headers are mix and matched.
+
+    OPTIONS: If this extension ships as an EXT,
+    a) invent a new suffix. Ideally we'd have a different EXT-like suffix
+    to disambiguate between GL and ES multivendor extensions.  However this
+    has not happened yet.
+    b) we use a _VENDOR suffix for these 3 enumerants to disambiguate them
+    c) change the tokens to GEOMETRY_LINKED_*_EXT, with the expectation that
+    we'd rename them back if this becomes core functionality.
+
+    RESOLVED.  Pick c). We will include the "_LINKED" term in the tokens
+    to indicate that they represent the values generated at link time. At
+    such a time as this becomes core functionality in ES, they should
+    be renamed back to be the same as the GL tokens (possibly with an
+    alias for compatibility with this extension).
+
+    (11) How should we handle the enablement of input/output blocks in
+    non-geometry stages?
+
+    RESOLVED: Early drafts of this extension added a number
+    of capabilities that were not specific to geometry shaders, namely:
+     * allowed the declaration and use of input and output blocks
+     * moved the built-in "per-vertex" in/out variables into the
+       built-in gl_PerVertex block
+     * allowed the redeclaration of the gl_PerVertex block.
+
+    In OpenGL these capabilities are provided by the GLSL 1.50 version.
+    Furthermore, when separable programs are in use, OpenGL *requires*
+    that the gl_PerVertex block be declared in any shader which uses any of
+    its members (including vertex and fragment shaders).
+
+    Since this capability is being added as an extension to OpenGL ES 3.1
+    we don't have a core shading language version to hang this feature
+    off of and thus we need an extension to enable this.
+
+    Using the earlier drafts, we would have needed to use the
+    EXT_geometry_shader #extension in vertex or fragment shaders to enable
+    this functionality. Since this was rather unintuitive and this
+    functionality does have utility on it's own, we opted instead to pull
+    this out to a separate extension that is a required dependency
+    (EXT_shader_io_blocks).
+
+    The geometry (and tessellation) extensions will automatically imply
+    that the EXT_shader_io_blocks functionality is enabled, since it is
+    impossible to use them in a useful manner without accessing
+    gl_PerVertex input/output blocks.
+
+    (12) Due to HW limitations, some vendors may not be able
+    to support writing gl_PointSize from geometry shaders, how should we
+    accomodate this?
+
+    RESOLVED: There are two extensions described in this document. The
+    base extension does not support writing to gl_PointSize from geometry
+    shaders and the gl_PerVertex block does not include gl_PointSize.
+    Additionally there is a layered extension which provides the ability
+    to write to gl_PointSize from geometry shaders.  When this extension
+    is enabled, the gl_PerVertex block does include gl_PointSize and it
+    can be written from geometry shaders as normal.
+
+    If the point-size extension is not supported, all points written
+    from a geometry shader will have size of one. If the point-size
+    extension is supported but not enabled, or if it's enabled but
+    gl_PointSize is not written, it as if a point size of one was written.
+    Otherwise, if you statically assign gl_PointSize in the last stage
+    before the rasterizer, the (potentially clamped) value written will
+    determine the size of the point for rasterization.
+
+    (13) Does this extension change how transform feedback operates
+    compared to unextended OpenGL ES 3.0 or 3.1?
+
+    RESOLVED: Yes. Because dynamic geometry amplification in a geometry
+    shader can make it difficult if not impossible to predict the amount
+    of geometry that may be generated in advance of executing the shader,
+    the draw-time error for transform feedback buffer overflow conditions
+    is removed and replaced with the GL behavior (primitives are not written
+    and the corresponding counter is not updated). Since we no longer
+    require being able to predict how much geometry will be generated, we
+    also lift the restriction that only DrawArray* commands are supported
+    and also support the DrawElements* commands for transform feedback.
+    We also allow Draw*Indirect to be used with transform feedback.
+
+    (14) Should GetShaderPrecisionFormat support the new GEOMETRY_SHADER_EXT
+    stage?
+
+    RESOLVED: No. Following the precedence of OpenGL ES 3.1 which did not
+    extend this query to COMPUTE_SHADERS due to the following reason:
+    GetShaderPrecisionFormat is listed in ES 3.0 appendix F.1 Legacy Features
+    whose use is not recommended.  Adding new capabilities to a feature that
+    is effectively deprecated seems silly (Bug 11464).
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------- -------------------------------------------------
+     21   05/31/16  Jon Leech Note that primitive ID counters are reset to zero
+                              after each instance drawn (Bug 14024).
+     20   07/23/15  Jon Leech Reduce minimum value of
+                              MAX_GEOMETRY_OUTPUT_COMPONENTS_EXT to 64 (Bug
+                              12823).
+     19   10/08/14  dkoch     change max_vertices identifier to integer-constant
+                              to match rest of ES layout-qualifier-id's
+                              (Bug 12878)
+     18   04/23/14  dkoch     Add GetProgramPipelineiv to the list of functions
+                              which accept GEOMETRY_SHADER token. Add issue 14.
+                              (Bug 12152)
+     17   03/28/14  Jon Leech Sync with released ES 3.1 specs. Reflow text and
+                              remove irrelevant footnote to table 20.40.
+     16   03/26/14  dkoch     Update contributors, update issue 14 and
+                              allow XFB with draw indirect.
+     15   03/10/14  Jon Leech Rebase on OpenGL ES 3.1 and change suffix to EXT.
+                              Remove material now in the 3.1 spec and fix up
+                              references between API and GLSL specs.
+     14   02/27/14  dkoch     Fix typo in issue 14.
+     13   02/18/14  dkoch     Resolve issues 5, 9, 10.
+                              Resolve issue 11, by adding _LINKED to the
+                              affected tokens.
+                              Clarify XFB error relaxations and add issue 14
+                              explaining the difference from ES 3.0.
+     12   02/12/14  dkoch     Correct some entry points/token acceptance.
+                              Explicitly delete error condition for non-arrayed
+                              drawing commands with transform feedback.
+     11   01/16/14  dkoch     Clarification from Bug 11508
+                              Remove mention of multiple compilation units.
+     10   12/19/13  dkoch     Move input and output interface block and
+                              related functionality to separate extension.
+                              Rewrote / renumbered the issues.
+                              Added missing enum.
+                              Add geometry point size extension.
+                              Added precision qualifiers to builtins.
+                              Remove duplicated edits to Shader Memory Access
+
+      9   12/02/13  dkoch     Add Issues 11-14
+
+      8   11/21/13  dkoch     Minor updates
+        - Remove DSA commands
+        - update MAX_FRAMEBUFFER_LAYERS_EXT to match MAX_ARRAY_TEXTURES (256)
+
+      7   11/20/13  Jon Leech Minor updates
+        - Sync with ES 3.1 spec language update.
+        - Refer to ES 3.1 instead of ES 3plus.
+
+      6   11/14/13  Jon Leech Minor updates
+        - Incorporate language tweak on output variables from bug 11100
+
+      5   11/08/13  Jon Leech Minor updates
+        - Incorporate language tweak from bug 11102.
+
+      4   11/08/13  Jon Leech Minor updates
+        - Remove FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER_EXT (token and
+          language is already in ES 3.0).
+        - Reorganize errors for commands completely described in this
+          specification into separate "Errors" subsections like GL 4.4.
+        - Add complete set of error conditions for FramebufferTextureEXT.
+
+      3   11/06/13  Jon Leech Updates based on Daniel Koch's feedback
+        - Remove references from desktop language allowing multiple shader
+          objects per stage.
+        - Clean up typos identified by Daniel.
+        - Disallow multi-dimensional arrays as shader inputs & outputs,
+          consistent with ES 3.1 multidimensional arrays and geometry_shader
+          issue 7.
+        - Drop implicit reference to nonexistent glPolygonMode in section
+          3.4.
+        - Drop FramebufferTexture3D in favor of FramebufferTextureLayer.
+        - Add trivial interactions with compute shaders.
+        - Drop gl_MaxGeometryVaryingComponents constant.
+        - Added FRAMEBUFFER_DEFAULT_LAYERS_EXT and
+          MAX_FRAMEBUFFER_LAYERS_EXT state, and related spec language from
+          ARB_framebuffer_no_attachments (it was removed from
+          ES 3.1).
+        - Added PRIMITIVES_GENERATED_EXT query from GL 3.0.
+        - Added LAYER_PROVOKING_VERTEX_EXT query from ARB_provoking_vertex /
+          ARB_viewport_array.
+        - Dropped reference to cube map array texture layer selection, this
+          will go in EXT_texture_cube_map_array.
+
+      2   11/03/13  Jon Leech
+        - Revisions based on NVIDIA feedback and first draft of
+          EXT_tessellation_shader.
+        - Rearrange descriptions of built-in variables in chapter 7 GLSL-ES
+          language.
+        - Fix minor inconsistencies and descriptions relative to GL 4.2/4.4
+          and EXT_tessellation_shader.
+        - Expand Issues list with open issues.
+
+      1   10/20/13  Jon Leech Initial version based on ARB_geometry_shader4.

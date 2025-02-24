@@ -1,0 +1,160 @@
+{{/*
+ Copyright 2021 The Dawn & Tint Authors
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+
+ 1. Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+ 3. Neither the name of the copyright holder nor the names of its
+    contributors may be used to endorse or promote products derived from
+    this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/}}
+
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/idlgen/main.go.
+This file provides common template definitions and is included by WebGPU.h.tmpl
+and WebGPU.cpp.tmpl.
+
+See:
+* https://github.com/ben-clayton/webidlparser/blob/main/ast/ast.go for the AST
+  types used by this template
+* tools/src/cmd/idlgen/main.go for additional structures and functions used by
+  this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Type generates the C++ type for the given ast.Type
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Type" -}}
+{{-        if IsUndefinedType $}}void
+{{-   else if IsTypeName      $}}
+{{-          if eq $.Name "boolean"             }}bool
+{{-     else if eq $.Name "short"               }}int16_t
+{{-     else if eq $.Name "unsigned short"      }}uint16_t
+{{-     else if eq $.Name "long"                }}int32_t
+{{-     else if eq $.Name "unsigned long"       }}uint32_t
+{{-     else if eq $.Name "long long"           }}int64_t
+{{-     else if eq $.Name "unsigned long long"  }}uint64_t
+{{-     else if eq $.Name "object"              }}Object
+{{-     else if eq $.Name "DOMString"           }}std::string
+{{-     else if eq $.Name "USVString"           }}std::string
+{{-     else if eq $.Name "ArrayBuffer"         }}ArrayBuffer
+{{-     else if IsInterface (Lookup $.Name)     }}Interface<{{$.Name}}>
+{{-     else                                    }}{{$.Name}}
+{{-     end                                     }}
+{{-   else if IsParametrizedType $}}{{$.Name}}<{{template "TypeList" $.Elems}}>
+{{-   else if IsNullableType     $}}std::optional<{{template "Type" $.Type}}>
+{{-   else if IsUnionType        $}}std::variant<{{template "VariantTypeList" $.Types}}>
+{{-   else if IsSequenceType     $}}std::vector<{{template "Type" $.Elem}}>
+{{-   else if IsRecordType       $}}std::unordered_map<{{template "Type" $.Key}}, {{template "Type" $.Elem}}>
+{{-   else                        }} /* Unhandled Type {{printf "%T" $}} */
+{{-   end -}}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- AttributeType generates the C++ type for the given ast.Member
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "AttributeType" -}}
+{{-   if      $.Required }}{{template "AttributeClampHelper" $}}
+{{-   else if $.Init     }}{{template "AttributeClampHelper" $}}
+{{-   else               }}std::optional<{{template "AttributeClampHelper" $}}>
+{{-   end}}
+{{- end }}
+
+
+{{- /*
+    A helper for AttributeType that wraps integer types if necessary for WebIDL attributes.
+    Note that [Clamp] and [EnforceRange] are supposed to be an annotation on the type and not
+    the attribute, but webidlparser doesn't parse this correctly.
+*/ -}}
+{{- define "AttributeClampHelper" -}}
+{{-   if HasAnnotation $ "Clamp" }}
+ClampedInteger<{{template "Type" $.Type}}>
+{{-   else if HasAnnotation $ "EnforceRange" }}
+EnforceRangeInteger<{{template "Type" $.Type}}>
+{{-   else}}
+{{template "Type" $.Type}}
+{{-   end }}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Literal generates a C++ literal value using the following arguments:
+--   Value - the ast.Literal
+--   Type  - the ast.Type of the literal
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Literal" -}}
+{{-   if      IsDefaultDictionaryLiteral $.Value}}{{template "Type" $.Type}}{}
+{{-   else if IsTypeName                 $.Type }}
+{{-     $ty := Lookup $.Type.Name}}
+{{-     if      IsTypedef      $ty     }}{{Eval "Literal" "Value" $.Value "Type" $ty.Type}}
+{{-     else if IsEnum         $ty     }}{{$.Type.Name}}::{{EnumEntryName $.Value.Value}}
+{{-     else if IsBasicLiteral $.Value }}{{$.Value.Value}}
+{{-     else                           }}/* Unhandled Type {{printf "ty: %T $.Type.Name: %T $.Value: %T" $ty $.Type.Name $.Value}} */
+{{-     end                            }}
+{{-   else if IsSequenceType $.Type  }}{{template "Type" $.Type}}{} {{- /* TODO: Assumes the initialiser is empty */}}
+{{-   else if IsBasicLiteral $.Value }}{{$.Value.Value}}
+{{-   else }} /* Unhandled Type {{printf "%T %T" $.Type $.Value}} */
+{{-   end}}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- TypeList generates a C++ comma separated list of types from the given
+-- []ast.Type
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "TypeList" -}}
+{{-   range $i, $ty := $}}
+{{-     if $i }}, {{end}}
+{{-     template "Type" $ty}}
+{{-   end}}
+{{- end }}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- VariantTypeList generates a C++ comma separated list of types from the given
+-- []ast.Type, skipping any 'undefined' types
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "VariantTypeList" -}}
+{{-   range $i, $ty := $}}
+{{-     if $i }}, {{end}}
+{{-     if IsUndefinedType $ty -}}
+          UndefinedType
+{{-     else}}
+{{-       template "Type" $ty}}
+{{-     end}}
+{{-   end}}
+{{- end }}
+

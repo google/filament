@@ -1,0 +1,241 @@
+{
+    "name": "WGSL",
+    "scopeName": "source.wgsl",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#attributes"
+        },
+        {
+            "include": "#functions"
+        },
+        {
+            "include": "#function_calls"
+        },
+        {
+            "include": "#literals"
+        },
+        {
+            "include": "#punctuation"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "comment": "single line comment",
+            "name": "comment.line.double-slash.wgsl",
+            "match": "\\s*//.*"
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "comment": "function definition",
+                    "name": "meta.function.definition.wgsl",
+                    "begin": "\\b(fn)\\s+([A-Za-z0-9_]+)(\\([^)]*\\))\\s+(->)\\s+([^{]+)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.fn.wgsl"
+                        },
+                        "2": {
+                            "name": "entity.name.function.wgsl"
+                        },
+                        "3": {
+                            "name": "punctuation.brackets.round.wgsl"
+                        },
+                        "4": {
+                            "name": "punctuation.fn.arrow.wgsl"
+                        }
+                    },
+                    "end": "\\{",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.brackets.curly.wgsl"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "include": "#keywords"
+                        },
+                        {
+                            "include": "#function_calls"
+                        },
+                        {
+                            "include": "#literals"
+                        },
+                        {
+                            "include": "#punctuation"
+                        }
+                    ]
+                }
+            ]
+        },
+        "function_calls": {
+            "patterns": [
+                {
+                    "comment": "function call",
+                    "name": "meta.function.call.wgsl",
+                    "begin": "([A-Za-z0-9_]+)(\\()",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.wgsl"
+                        },
+                        "2": {
+                            "name": "punctuation.brackets.round.wgsl"
+                        }
+                    },
+                    "end": "\\)",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.brackets.round.wgsl"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "include": "#keywords"
+                        },
+                        {
+                            "include": "#function_calls"
+                        },
+                        {
+                            "include": "#literals"
+                        },
+                        {
+                            "include": "#punctuation"
+                        }
+                    ]
+                }
+            ]
+        },
+        "attributes": {
+            "patterns": [
+                {
+                    "comment": "attribute",
+                    "name": "keyword.attribute.wgsl",
+                    "match": "(@[A-Za-z0-9_]+[^(])"
+                }
+            ]
+        },
+        "literals": {
+            "patterns": [
+                {
+                    "comment": "floating point literal",
+                    "name": "constant.numeric.float.wgsl",
+                    "match": "(-?\\b[0-9][0-9]*\\.[0-9][0-9]*)([eE][+-]?[0-9]+)?[fh]?\\b"
+                },
+                {
+                    "comment": "integer literal",
+                    "name": "constant.numeric.integer.wgsl",
+                    "match": "-?\\b0x[0-9a-fA-F]+[iufh]?\\b|\\b0[iufh]?\\b|-?\\b[1-9][0-9]*[iufh]?\\b"
+                },
+                {
+                    "comment": "boolean constant",
+                    "name": "constant.language.boolean.wgsl",
+                    "match": "\\b(true|false)\\b"
+                }
+            ]
+        },
+        "punctuation": {
+            "patterns": [
+                {
+                    "comment": "comma",
+                    "name": "punctuation.comma.wgsl",
+                    "match": ","
+                },
+                {
+                    "comment": "braces",
+                    "name": "punctuation.brackets.curly.wgsl",
+                    "match": "[{}]"
+                },
+                {
+                    "comment": "parentheses",
+                    "name": "punctuation.brackets.round.wgsl",
+                    "match": "[()]"
+                },
+                {
+                    "comment": "semicolon",
+                    "name": "punctuation.semi.wgsl",
+                    "match": ";"
+                },
+                {
+                    "comment": "square brackets",
+                    "name": "punctuation.brackets.square.wgsl",
+                    "match": "[\\[\\]]"
+                },
+                {
+                    "comment": "angle brackets",
+                    "name": "punctuation.brackets.angle.wgsl",
+                    "match": "(?<!=)[<>]"
+                },
+                {
+                    "comment": "function ret",
+                    "name": "punctuation.fn.ret.wgsl",
+                    "match": "(->)"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "comment": "other keywords",
+                    "name": "keyword.control.wgsl",
+                    "match": "\\b(alias|break|case|const_assert|continue|continuing|default|diagnostic|discard|else|enable|false|fn|for|if|loop|override|requires|return|struct|switch|true|while)\\b"
+                },
+                {
+                    "comment": "reserved keywords",
+                    "name": "keyword.control.wgsl.reserved",
+                    "match": "\\b(NULL|Self|abstract|active|alignas|alignof|as|asm|asm_fragment|async|attribute|auto|await|become|binding_array|cast|catch|class|co_await|co_return|co_yield|coherent|column_major|common|compile|compile_fragment|concept|const_cast|consteval|constexpr|constinit|crate|debugger|decltype|delete|demote|demote_to_helper|do|dynamic_cast|enum|explicit|export|extends|extern|external|fallthrough|filter|final|finally|friend|from|fxgroup|get|goto|groupshared|highp|impl|implements|import|inline|instanceof|interface|layout|lowp|macro|macro_rules|match|mediump|meta|mod|module|move|mut|mutable|namespace|new|nil|noexcept|noinline|nointerpolation|noperspective|null|nullptr|of|operator|package|packoffset|partition|pass|patch|pixelfragment|precise|precision|premerge|priv|protected|pub|public|readonly|ref|regardless|register|reinterpret_cast|require|resource|restrict|self|set|shared|sizeof|smooth|snorm|static|static_assert|static_cast|std|subroutine|super|target|template|this|thread_local|throw|trait|try|type|typedef|typeid|typename|typeof|union|unless|unorm|unsafe|unsized|use|using|varying|virtual|volatile|wgsl|where|with|writeonly|yield)\\b"
+                },
+                {
+                    "comment": "variable keywords",
+                    "name": "keyword.other.wgsl storage.type.wgsl",
+                    "match": "\\b(const|let|var|override)\\b"
+                },
+                {
+                    "comment": "struct keyword",
+                    "name": "keyword.declaration.struct.wgsl storage.type.wgsl",
+                    "match": "\\b(struct)\\b"
+                },
+                {
+                    "comment": "fn",
+                    "name": "keyword.other.fn.wgsl",
+                    "match": "\\bfn\\b"
+                },
+                {
+                    "comment": "logical operators",
+                    "name": "keyword.operator.logical.wgsl",
+                    "match": "(\\^|\\||\\|\\||&&|<<|>>|!)(?!=)"
+                },
+                {
+                    "comment": "assignment operators",
+                    "name": "keyword.operator.assignment.wgsl",
+                    "match": "(\\+=|-=|\\*=|/=|%=|\\^=|&=|\\|=|<<=|>>=)"
+                },
+                {
+                    "comment": "comparison operators",
+                    "name": "keyword.operator.comparison.wgsl",
+                    "match": "(==|!=|<|<=|>|>=)"
+                },
+                {
+                    "comment": "math operators",
+                    "name": "keyword.operator.math.wgsl",
+                    "match": "(([+%]|(\\*(?!\\w)))(?!=))|(-(?!>))|(/(?!/))"
+                },
+                {
+                    "comment": "member access",
+                    "name": "keyword.operator.access.dot.wgsl",
+                    "match": "\\.(?!\\.)"
+                }
+            ]
+        }
+    }
+}

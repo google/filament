@@ -1,0 +1,106 @@
+/*
+ * This file is used by `./tools/run gen build` to map include paths to external projects.
+ * See docs/tint/gen.md for more information.
+ */
+{
+    "abseil": {
+        "IncludePatterns": [
+            "absl/**"
+        ]
+    },
+    "dl": {
+        "IncludePatterns": [
+            "dlfcn.h"
+        ],
+        "Condition": "tint_build_hlsl_writer"
+    },
+    "dxc-include": {
+        "IncludePatterns": [
+            "dxc/**"
+        ],
+        "Condition": "tint_build_hlsl_writer"
+    },
+    "dxcompiler-for-fuzzer": {
+        "Condition": "tint_build_hlsl_writer"
+    },
+    "google-benchmark": {
+        "IncludePatterns": [
+            "benchmark/benchmark.h"
+        ]
+    },
+    "jsoncpp": {
+        "IncludePatterns": [
+            "json/**"
+        ],
+        "Condition": "tint_build_tintd"
+    },
+    "langsvr": {
+        "IncludePatterns": [
+            "langsvr/**"
+        ],
+        "Condition": "tint_build_tintd"
+    },
+    "metal": {
+        "IncludePatterns": [
+            "Metal/Metal.h"
+        ],
+        "Condition": "tint_build_is_mac"
+    },
+    "thread": {
+        "IncludePatterns": [
+            "thread"
+        ]
+    },
+    "spirv-tools": {
+        "IncludePatterns": [
+            "spirv-tools/**"
+        ],
+        "Condition": "tint_build_spv_reader || tint_build_spv_writer"
+    },
+    "spirv-headers": {
+        "IncludePatterns": [
+            "spirv/**"
+        ],
+        "Condition": "tint_build_spv_reader || tint_build_spv_writer"
+    },
+    "spirv-opt-internal": {
+        "IncludePatterns": [
+            "source/opt/**"
+        ],
+        "Condition": "tint_build_spv_reader || tint_build_spv_writer"
+    },
+    "glslang": {
+        "IncludePatterns": [
+            "glslang/Public/ShaderLang.h"
+        ],
+        "Condition": "tint_build_glsl_validator"
+    },
+    "glslang-res-limits": {
+        "IncludePatterns": [
+            "glslang/Public/ResourceLimits.h"
+        ],
+        "Condition": "tint_build_glsl_validator"
+    },
+    "gtest": {
+        "IncludePatterns": [
+            "gtest/**",
+            "gmock/**"
+        ]
+    },
+    "winsock": {
+        "IncludePatterns": [
+            "winsock2.h"
+        ],
+        "Condition": "tint_build_is_win"
+    },
+    "libprotobuf-mutator": {
+      "IncludePatterns": [
+          "libprotobuf-mutator/**"
+      ]
+    },
+    "src_utils": {
+        "IncludePatterns": [
+            "src/utils/*",
+        ]
+    }
+}

@@ -1,0 +1,439 @@
+Name
+
+    SGIS_detail_texture
+
+Name Strings
+
+    GL_SGIS_detail_texture
+
+Version
+
+    $Date: 1995/07/09 06:48:46 $ $Revision: 1.31 $
+
+Number
+
+    21
+
+Dependencies
+
+    EXT_texture is required
+    EXT_subtexture affects the definition of this extension
+    EXT_copy_texture affects the definition of this extension
+    EXT_texture_object affects the definition of this extension
+
+Overview
+
+    This extension introduces texture magnification filters that blend
+    between the level 0 image and a separately defined "detail" image.
+    The detail image represents the characteristics of the high frequency
+    subband image above the band-limited level 0 image.  The detail image is
+    typically a rectangular portion of the subband image which is modified
+    so that it can be repeated without discontinuities along its edges.
+    Detail blending can be enabled for all color channels, for the alpha
+    channel only, or for the red, green, and blue channels only.  It is
+    available only for 2D textures.
+
+    WARNING - Silicon Graphics has filed for patent protection for some
+	      of the techniques described in this extension document.
+
+Issues
+
+    *	Should detail textures be supported in 1D?  3D?  (Currently
+	written to support 2D only)
+
+    *	Is there any need to support detail textures with NEAREST
+	or FILTER4 filtering?  (No)
+
+    *	How does detail texture interact with a texture whose
+	minimum LOD image is not layer zero?  (Handle this in the LOD
+	extension.)
+
+    *	Should six detail filters be defined, so that the MODE is part
+	of the filter name?  (LINEAR_ADD_DETAIL_SGIS,
+	LINEAR_ADD_DETAIL_ALPHA_SGIS, ...)  (No)
+
+    *	I have scaled and biased the detail texture value to the range [-1,1]
+	in this specification.	I believe that Iris GL scaled and biased to
+	[-0.5,0.5].  The [-1,1] range seems clearer to me, if it allows F()
+	to be limited to [0,1].  Is this acceptable?
+
+    *	Should detail texture objects and 2D texture objects be separate
+	sets, or should it be possible to use the same texture object both
+	as a detail texture and as a 2D texture?  (Keep them separate)
+
+New Procedures and Functions
+
+    void DetailTexFuncSGIS(enum target,
+			   sizei n,
+			   const float* points);
+
+    void GetDetailTexFuncSGIS(enum target,
+			      float* points);
+
+New Tokens
+
+    Accepted by the <target> parameters of GetTexImage,
+    GetTexLevelParameterfv, GetTexLevelParameteriv, GetTexParameterfv,
+    GetTexParameteriv, TexImage2D, TexParameterf, TexParameterfv,
+    TexParameteri, and TexParameteriv.	If the corresponding extensions are
+    supported, also accepted by the <target> parameters of TexSubImage2DEXT,
+    CopyTexImage2DEXT, CopyTexSubImage2DEXT, and BindTextureEXT:
+
+	DETAIL_TEXTURE_2D_SGIS
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	DETAIL_TEXTURE_2D_BINDING_SGIS
+
+    Accepted by the <param> parameter of TexParameteri and TexParameterf,
+    and by the <params> parameter of TexParameteriv and TexParameterfv,
+    when their <pname> parameter is TEXTURE_MAG_FILTER:
+
+	LINEAR_DETAIL_SGIS
+	LINEAR_DETAIL_ALPHA_SGIS
+	LINEAR_DETAIL_COLOR_SGIS
+
+    Accepted by the <pname> parameter of TexParameteri, TexParameterf,
+    TexParameteriv, TexParameterfv, GetTexParameteriv, and GetTexParameterfv:
+
+	DETAIL_TEXTURE_LEVEL_SGIS
+	DETAIL_TEXTURE_MODE_SGIS
+
+    Accepted by the <pname> parameter of GetTexParameteriv and
+    GetTexParameterfv:
+
+	DETAIL_TEXTURE_FUNC_POINTS_SGIS
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    GL Specification Table 3.7 is updated as follows:
+
+	Name				Type	    Legal Values
+	----				----	    ------------
+	TEXTURE_WRAP_S			integer     CLAMP, REPEAT
+	TEXTURE_WRAP_T			integer     CLAMP, REPEAT
+	TEXTURE_WRAP_R_EXT		integer     CLAMP, REPEAT
+	TEXTURE_MIN_FILTER		integer     NEAREST, LINEAR,
+						    NEAREST_MIPMAP_NEAREST,
+						    NEAREST_MIPMAP_LINEAR,
+						    LINEAR_MIPMAP_NEAREST,
+						    LINEAR_MIPMAP_LINEAR,
+						    FILTER4_SGIS
+	TEXTURE_MAG_FILTER		integer     NEAREST, LINEAR,
+						    FILTER4_SGIS,
+						    LINEAR_DETAIL_SGIS,
+						    LINEAR_DETAIL_ALPHA_SGIS,
+						    LINEAR_DETAIL_COLOR_SGIS
+	TEXTURE_BORDER_COLOR		4 floats    any 4 values in [0,1]
+	DETAIL_TEXTURE_LEVEL_SGIS	integer     any non-positive integer
+	DETAIL_TEXTURE_MODE_SGIS	integer     ADD, MODULATE
+
+	Table 3.7: Texture parameters and their values.
+
+    3.8.2.1 Texture magnification with detail
+
+    Three additional texture magnification filters are defined for texture
+    magnification.  These values, which are assigned to TEXTURE_MAG_FILTER,
+    are LINEAR_DETAIL_SGIS, LINEAR_DETAIL_ALPHA_SGIS, and
+    LINEAR_DETAIL_COLOR_SGIS.  All three filters sample the level zero
+    texture array exactly as it would be sampled with filter mode LINEAR.
+    All three also sample the level zero texture array of a second
+    texture, known as the detail texture, when three conditions are met.
+    The detail texture corresponding to texture TEXTURE_2D is
+    DETAIL_TEXTURE_2D_SGIS.  The conditions are:
+
+	1.  The active texture must be TEXTURE_2D.
+
+	2.  The internal formats of TEXTURE_2D and DETAIL_TEXTURE_2D_SGIS
+	    must have been specified identically.
+
+	3.  The level 0 array of DETAIL_TEXTURE_2D_SGIS must have nonzero width
+	    and height.
+
+    If these conditions are not met, it is as though the magnification
+    texture filter was LINEAR.	(Although querying the magnification filter
+    value will return the value as specified.)	If they are met, the level
+    zero array of the detail texture is also linearly sampled, using the
+    following arithmetic:
+
+	n = log base 2 of the width of the level zero array of TEXTURE_2D
+	m = log base 2 of the height of the level zero array of TEXTURE_2D
+	N = log base 2 of the width of DETAIL_TEXTURE_2D_SGIS
+	M = log base 2 of the height of DETAIL_TEXTURE_2D_SGIS
+	L = DETAIL_TEXTURE_LEVEL_SGIS value of TEXTURE_2D
+
+	u = s * 2**(n-L)
+	v = t * 2**(m-L)
+
+	i0 = floor(u - 1/2) mod 2**N
+	j0 = floor(v - 1/2) mod 2**M
+
+	i1 = (i0 + 1) mod 2**N
+	j1 = (j0 + 1) mod 2**M
+
+	A = frac(u - 1/2)
+	B = frac(v - 1/2)
+
+	Tdetail = (1-A) * (1-B) * detail[i0,j0] +
+		    A	* (1-B) * detail[i1,j0] +
+		  (1-A) *   B	* detail[i0,j1] +
+		    A	*   B	* detail[i1,j1]
+
+    Note that magnification corresponds to negative values of level-of-detail
+    and minification corresponds to positive values.  Hence L, the value of the
+    DETAIL_TEXTURE_LEVEL_SGIS parameter of TEXTURE_2D, must be negative.  The
+    absolute value of L can be thought of as the number of levels that
+    separate the level 0 image of TEXTURE_2D and the image of
+    DETAIL_TEXTURE_2D, which is replicated as necessary to fill the appropriate
+    number of texels.  For example, if L is -2, the detail texture image is
+    replicated as necessary in x and y to form a single image whose dimensions
+    are four times larger than the level zero array of TEXTURE_2D.
+
+    The texture value computed from the primary texture (Ttexture) and
+    the value computed from the detail texture (Tdetail) are combined
+    in one of two ways to compute the final texture value (T).	The
+    values of Ttexture, Tdetail, and T are treated as though they range
+    from 0.0 through 1.0 in these equations.
+
+    If DETAIL_TEXTURE_MODE_SGIS of TEXTURE_2D is ADD, then
+
+	T' = Ttexture + F(LOD) * (2*Tdetail-1)
+
+	     / 0      T' < 0
+	T = <  T'     0 <= T' <= 1
+	     \ 1      T' > 1
+
+    where F is a function of the level-of-detail parameter LOD, which is
+    represented by the Greek character lambda in the GL specification.	In
+    effect, the detail texture is scaled and biased so that its range is
+    [-1,1].  The resulting signed value is scaled by a function of LOD,
+    added to the base texture, and clamped to [0,1].
+
+    If DETAIL_TEXTURE_MODE_SGIS or TEXTURE_2D is MODULATE, then
+
+	T' = Ttexture * (1 + F(LOD) * (2*Tdetail-1))
+
+	     / 0      T' < 0
+	T = <  T'     0 <= T' <= 1
+	     \ 1      T' > 1
+
+    Here again the detail texture is scaled and biased so that its range
+    is [-1,1].	The resulting signed value is scaled by a function of LOD,
+    and biased by 1.  This result scales the base texture, which is then
+    clamped to [0,1].
+
+    The function F of level-of-detail parameter LOD is specified by calling
+    DetailTexFuncSGIS with <target> set to TEXTURE_2D, <points> pointing at
+    an array of pairs of floating point values, and <n> set to the number
+    of value pairs in <points>.  The first value of each value pair in
+    <points> specifies a value of LOD, and the second value of each value
+    pair specifies the corresponding function value.  The order in which
+    the points are specified is not significant.  The <n> value pairs in
+    <points> completely specify the function, replacing any previous
+    specification that may have existed.  Since negative values of LOD
+    correspond to magnification and positive values correspond to
+    minification, the points should have negative values for LOD (though it
+    is not an error to specify positive values).
+
+    Function F is evaluated by sorting the value pairs specified by
+    DetailTexFuncSGIS by LOD value, then fitting a curve through these
+    points.  This curve may be linear between adjacent points, or it may be
+    smoothed, but it will pass exactly through the points, limited only by
+    the resolution of the implementation.  The value pair with the lowest
+    LOD value specifies the function value F for all values of LOD less than
+    or equal to that pair's LOD.  Likewise, the value pair with the greatest
+    LOD value specifies the function value F for all values of LOD greater
+    than or equal to that pair's LOD.  F is undefined if two or more value
+    pairs have the same LOD value.
+
+    If the texture magnification filter is LINEAR_DETAIL_SGIS, then both
+    the color and the alpha components of T are computed as described
+    in the equations above.  If the filter is LINEAR_DETAIL_COLOR_SGIS,
+    then all components of T other than alpha are computed as described
+    above, and the alpha component of T is computed as if the texture
+    magnification filter were LINEAR.  Finally, if the filter is
+    LINEAR_DETAIL_ALPHA_SGIS, the alpha component of T is computed as
+    described in the equations above, and all other components of T
+    are computed as if the texture magnification filter were LINEAR.
+
+    All OpenGL texture commands that accept a target value of TEXTURE_2D
+    also accept the target value DETAIL_TEXTURE_2D_SGIS.  These commands
+    operate on and return state of the detail texture just as they do
+    of the 2-dimensional texture.
+
+    If EXT_texture_object is supported, detail texture objects can be
+    created, operated on, and bound just as their 2D counterparts are.	The
+    sets of detail textures and 2D textures are exclusive, however, so it
+    is not possible to use a texture object both as a 2D texture and as
+    a detail texture.  By default zero is bound to DETAIL_TEXTURE_2D_SGIS,
+    just as zero is bound to TEXTURE_2D.
+
+    Specification of a detail texture
+    ---------------------------------
+
+    A detail texture is specified by calling TexImage2D or CopyTexImage2DEXT
+    with <target> set to DETAIL_TEXTURE_2D_SGIS, <level> set to 0, <border>
+    set to 0, and the other parameters specified to generate the desired
+    image.
+
+    Minification vs. Magnification
+    ------------------------------
+
+    If the magnification filter is given by LINEAR_DETAIL_SGIS,
+    LINEAR_DETAIL_ALPHA_SGIS, or LINEAR_DETAIL_COLOR_SGIS, and the
+    minification filter is given by NEAREST_MIPMAP_NEAREST or
+    LINEAR_MIPMAP_NEAREST, then c = 0.5.  The parameter c is used to
+    determine whether minification or magnification filtering is done,
+    as described in Section 3.8.2 of the GL Specification (Texture
+    Magnification).
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    GetDetailTexFuncSGIS is not included in display lists.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    Although many of the parameter values of a detail texture have no
+    effect on texture operation, they are maintained and may be queried.
+    There is no value associated with the binding point
+    DETAIL_TEXTURE_2D_SGIS, so it is not accepted as the <pname> parameter
+    of GetBooleanv, GetIntegerv, GetFloatv, or GetDoublev.  The name of
+    the detail texture that is bound to DETAIL_TEXTURE_2D_SGIS is queried
+    by calling GetBooleanv, GetIntegerv, GetFloatv, or GetDoublev with
+    <pname> set to DETAIL_TEXTURE_2D_BINDING_SGIS.  Zero is returned if
+    no texture has been bound.
+
+    The number of points in the detail texture function specification of
+    a texture is queried by calling GetTexParameteriv or GetTexParameterfv
+    with <target> set to the target of the desired texture and <pname> set
+    to DETAIL_TEXTURE_FUNC_POINTS_SGIS.  The function
+    GetDetailTexFuncSGIS returns in <points> all of the points in the detail
+    texture function of texture <target>.
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+    Two new GLX protocol commands are added.
+
+	 DetailTexFuncSGIS
+	     2		 12+4*2*n	 rendering command length
+	     2		 2051		 rendering command opcode
+	     4		 ENUM		 target
+	     4		 INT32		 n
+	     4*2*n	 LISTofFLOAT	 points
+
+	 GetDetailTexFuncSGIS
+	     1		 CARD8		 opcode (X assigned)
+	     1		 17		 GLX opcode (glXVendorPrivateWithReply)
+	     2		 4		 request length
+	     4		 4096		 vendor specific opcode
+	     4		 GLX_CONTEXT_TAG context tag
+	     4		 ENUM		 target
+	   =>
+	     1		 1		 reply
+	     1				 unused
+	     2		 CARD16		 sequence number
+	     4		 n		 reply length, m = n
+	     4				 unused
+	     4		 CARD32		 n
+	     16				 unused
+	     n*4	 LISTofFLOAT32	 points
+
+	 Note that n may be zero, indicating that a GL error occurred.
+	 Otherwise n must be even and n >= 2.
+
+Dependencies on EXT_texture
+
+    EXT_texture is required.
+
+Dependencies on EXT_texture3D
+
+    None, because detail texture is not specified for 3D textures.  This
+    extensions is designed to allow a subsequent extension to define 3D
+    detail textures, however.
+
+Dependencies on EXT_subtexture
+
+    If EXT_subtexture is not implemented, then the references to
+    TexSubImage2DEXT and CopyTexSubImage2DEXT in this file are invalid,
+    and should be ignored.
+
+Dependencies on EXT_copy_texture
+
+    If EXT_copy_texture is not implemented, then the references to
+    CopyTexImage2DEXT and CopyTexSubImage2DEXT in this file are invalid,
+    and should be ignored.
+
+Dependencies on EXT_texture_object
+
+    If EXT_texture_object is not implemented, then the references to
+    BindTextureEXT are invalid, and should be ignored.
+
+    If EXT_texture_object is implemented, the state values named
+
+	DETAIL_TEXTURE_LEVEL_SGIS
+	DETAIL_TEXTURE_MODE_SGIS
+	DETAIL_TEXTURE_FUNC_POINTS_SGIS
+	<DETAIL_TEXTURE_FUNC>
+
+    are added to the state vector of each texture object. When an attribute
+    set that includes texture information is popped, the bindings and
+    enables are first restored to their pushed values, then the bound
+    textures have their detail parameters restored to their pushed values.
+
+Errors
+
+    INVALID_VALUE is generated if TexImage2D or CopyTexImage2DEXT
+    parameter <target> is DETAIL_TEXTURE_2D_SGIS, and parameter <level>
+    or parameter <border> is not zero.
+
+    INVALID_VALUE is generated if BindTextureEXT parameter <target> is
+    DETAIL_TEXTURE_2D_SGIS, and parameter <texture> is not the name of a
+    detail texture, the name of an as yet unbound texture, or zero.
+
+    INVALID_VALUE is generated if TexParameteri, TexParameterf,
+    TexParameteriv, or TexParameterfv parameter <pname> is
+    DETAIL_TEXTURE_MODE_SGIS, and parameter <param> is not ADD or MODULATE,
+    or parameter <params> doesn't point to ADD or MODULATE.
+
+    INVALID_VALUE is generated if TexParameteri, TexParameterf,
+    TexParameteriv, or TexParameterfv parameter <pname> is
+    DETAIL_TEXTURE_LEVEL_SGIS, and parameter <param> is positive,
+    or parameter <params> points to a positive value.
+
+    INVALID_ENUM is generated if DetailTexFuncSGIS or
+    GetDetailTexFuncSGIS parameter <target> is not TEXTURE_2D.
+
+    INVALID_VALUE is generated if DetailTexFuncSGIS parameter <n> is
+    negative.
+
+    INVALID_OPERATION is generated if DetailTexFuncSGIS or
+    GetDetailTexFuncSGIS is executed between execution of Begin and the
+    corresponding execution to End.
+
+New State
+
+    Get Value				Get Command		Type		Initial Value	Attribute
+    ---------				-----------		----		-------------	---------
+    DETAIL_TEXTURE_2D_BINDING_SGIS	GetIntegerv		Z+		0		texture
+    DETAIL_TEXTURE_LEVEL_SGIS		GetTexParameteriv	n x Z-		-4		texture
+    DETAIL_TEXTURE_MODE_SGIS		GetTexParameteriv	n x Z2		ADD		texture
+    DETAIL_TEXTURE_FUNC_POINTS_SGIS	GetTexParameteriv	n x Z+		2		texture
+    <DETAIL_TEXTURE_FUNC>		GetDetailTexFuncSGIS	n x m x R	{0, 0}, {-4, 1} texture
+
+New Implementation Dependent State
+
+    None

@@ -1,0 +1,307 @@
+XXX - Not complete.
+
+Name
+
+    SGIX_datapipe
+
+Name Strings
+
+    GL_SGIX_datapipe
+
+Version
+
+    $Date: 1998/04/21 03:52:00 $ $Revision: 1.2 $
+
+Number
+
+    152
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension introduces a new source and destination for OpenGL
+    commands which currently write to and read from the application address
+    space.  The extension consists of two parts.  The first is an
+    infrastructure which allows the input/output of OpenGL commands to be
+    redirected to storage media or address spaces  other than normal
+    application memory.  This infrastructure can be used to encapsulate
+    transfers from different or special storage media such as locked memory
+    pools, memories which may have a special attachment to the graphics
+    accelerator, etc.  In all cases the storage medium is considered to be
+    part of the client address space of the application/context.  The
+    extension does not provide mechanisms to move data into these special
+    storage media other than OpenGL commands which return data to the
+    application address space.  The extension allows for the possibility
+    that not all OpenGL commands may support transfers to and from each
+    address space by grouping commands into classes Geometry, Image, and
+    Attribute in which each class either completely supports or does not
+    support such transfers.
+
+    The second part of the extension is more specific to the ISD proposed
+    datapipe mechanisms.  This part provides one or more datapipe 'heads'
+    as part of the client state of a rendering context.  These heads may
+    be selected as the current 'address space' from or to which data
+    is transferred during the execution of OpenGL commands.
+
+Issues
+
+    * Too general?
+    
+    * Asynchronous support?
+      
+
+New Procedures and Functions
+
+    void AddressSpace(enum space, bitfield mask);
+    int DataPipe(enum space);
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+	ADDRESS_SPACE		0x????
+	ADDRESS_CLASSES		0x????
+	DATAPIPE_MAX		0x????
+
+    Accepted by the <space> parameter of AddressSpace:
+
+	MEMORY			0x????
+    
+    Accepted by the <space> parameter of AddressSpace and the
+    <space> parameter of DataPipe:
+
+	DATAPIPE_0			0x????
+	DATAPIPE_1			0x????
+	DATAPIPE_2			0x????
+	DATAPIPE_3			0x????
+
+    Accepted by the <mask> parameter of AddressSpace:
+
+	GEOMETRY_BIT			0x1
+	IMAGE_BIT			0x2
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    Address Spaces
+
+    Many OpenGL commands read data or return data to client memory.  The
+    AddressSpace command selects the current address space to or from which
+    data is transferred for a subset of OpenGL commands which take
+    client memory pointers as parameters.  Commands which are not part
+    of the subset which are interepreted specially continue to transfer
+    data to and from normal client memory.  The address space is an
+    abstraction for alternate storage mediums.  The subset of commands whose
+    address pointers receive special interpretation are split into a
+    set of classes as follows:
+
+	GEOMETRY
+
+	    Color*v
+	    Normal*v
+	    TexCoord*v
+	    EdgeFlag*v
+	    Vertex*v
+	    Index*v
+	    RasterPos*v
+	    Rect*v
+	    EvalCoord*v
+	    LoadMatrix*
+	    MultMatrix*
+
+	    ColorPointerEXT
+	    EdgeFlagPointerEXT
+	    IndexPointerEXT
+	    NormalPointerEXT
+	    TexCoordPointerEXT
+	    VertexPointerEXT
+
+	    SpriteParameter[fi]vSGIX
+
+	    ReferencePlaneSGIX
+
+	IMAGE
+
+	    Bitmap
+	    TexImage*
+	    PixelMap*v
+	    ReadPixels
+	    DrawPixels
+	    GetTexImage
+	    TexSubImage*
+	    ConvolutionFilter*EXT
+	    SeparableFilter2DEXT
+	    GetHistogramEXT
+	    ColorTableSGI
+
+    The set of commands which continue to operate from normal client memory are
+    as follows:
+
+	CallLists
+	ClipPlane
+	Fog*v
+	Light*v
+	LightModel*v
+	Material*v
+	PolygonStipple
+	TexParameter*v
+	TexEnv*v
+	TexGen*v
+	FeedbackBuffer
+	SelectBuffer
+	Map*
+
+	GetBooleanv
+	GetClipPlane
+	GetDoublev
+	GetFloatv
+	GetIntegerv
+	GetLight*v
+	GetMap*v
+	GetMaterial*v
+	GetPixelMap*v
+	GetPolygonStipple
+	GetTexEnv*v
+	GetTexGen*v
+	GetTexParameter*v
+	GetTexLevelParameter*v
+
+	ConvolutionParameter*vEXT
+	GetConvolutionFilter*EXT
+	GetConvolutionParameter*vEXT
+	GetSeparableFilterEXT
+
+	GetHistogramParameter*vEXT
+	GetMinmaxEXT
+	GetMinmaxParameter*vEXT
+
+	DetailTexFuncSGIS
+	GetDetailTexFuncSGIS
+	SharpenTexFuncSGIS
+	GetSharpenTexFuncSGIS
+
+	GetPointervEXT
+
+	AreTexturesResidentEXT
+	DeleteTexturesEXT
+	GenTexturesEXT
+	PrioritizeTexturesEXT
+
+	ColorTableParameter[fi]vSGI
+	GetColorTableSGI
+	GetColorTableParameter[fi]vSGI
+
+	GetTexFilterFuncSGIS
+	TexFilterFuncSGIS
+
+	PointParameterfvSGIS
+	FogFuncSGIS
+
+	InstrumentsBufferSGIX
+	PollInstrumentsSGIX
+
+	DeformationMap3dSGIX
+
+	GetListParameter[fi]vSGIX
+	ListParameter[fi]vSGIX
+
+    The list of classes are specified as a bitmask parameter <mask>.  All
+    commands in a class must be supported. Only the classes specified in
+    the <mask> parameter receive special interpretation, the remaining
+    commands continue to use client memory.  All commands may be switched
+    back to client memory operation using MEMORY as the <space> parameter.
+
+    The current address space and class mask may be queried using GetIntegerv
+    with the <pname> parameter set to ADDRESS_SPACE.
+
+    The list of supported classes for a given address space can be determined
+    using GetIntegerv with the <pname> parameter set to the address space
+    to be queried.
+
+    Per-Address Space Client State
+
+    A separate instance of client state is maintained for each address
+    space for the following state:
+
+	VERTEX_ARRAY_POINTER_EXT
+	NORMAL_ARRAY_POINTER_EXT
+	COLOR_ARRAY_POINTER_EXT
+	INDEX_ARRAY_POINTER_EXT
+	TEXTURE_COORD_ARRAY_POINTER_EXT
+	EDGE_FLAG_ARRAY_POINTER_EXT
+
+
+    Datapipes
+
+    An OpenGL context can participate in a datapipe connection by
+    binding the OpenGL datapipe head to a datapipe connection. Each
+    OpenGL context supports one or more datapipe heads.  A handle to
+    a datapipe head can be obtained using the command Datapipe with
+    the <space> parameter set to one of DATAPIPE_0 through DATAPIPE_3.
+
+    Datapipe client transfer parameters are specified using OpenGL commands 
+    such as PixelStore or glVertexPointerEXT.  The OpenGL side of the
+    transfer is completely specified by issuing the OpenGL command
+    which normal causes data transfer, i.e., TexImage2D, but in the
+    case of datapipes the actual data transfer is not initiated until 
+    the datapipe transfer command has been issued.
+
+    If the address space corresponding to the datapipe head is not
+    currently active, then any data transfers using the datapipe head
+    are ignored.  When a rendering context is not active, datapipe
+    transfers using that context are ignored.
+
+    Once a datapipe transfer has been initiated, it will immediately
+    follow all OpenGL commands which preceeded it and it will
+    be followed by OpenGL commands which are issued after the
+    datapipe transfer has been initiated.  Said another way, the
+    act of initiating the datapipe transfer is the point at which
+    the OpenGL command is introduced in the OpenGL command stream.
+    One the datapipe transfer has been initiated, the Finish command
+    will block until all OpenGL rendering including the results of
+    the datapipe transfer have completed.  If Finish is called before
+    the datapipe transfer is initiated then it as if Finish has been
+    issued but the OpenGL command had not been issued before it.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+
+Errors
+
+    XXX - not complete yet
+    INVALID_OPERATION if the <space> parameter of AddressSpace is not one of
+    MEMORY, DATAPIPE_0, DATAPIPE_1, DATAPIPE_2, or DATAPIPE_3.
+
+    INVALID_OPERATION if the <mask> parameter of AddressSpace includes a
+    class which is not supported for the specified <space>
+
+    INVALID_VALUE if any bit other than GEOMETRY_BIT or IMAGE_BIT
+    are set in the <mask> parameter of AddressSpace.
+
+New State
+
+    XXX - not complete yet
+    None.
+
+New Implementation Dependent State
+
+    XXX - not complete yet
+    None.

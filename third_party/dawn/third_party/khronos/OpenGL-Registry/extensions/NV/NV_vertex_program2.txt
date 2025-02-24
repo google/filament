@@ -1,0 +1,3501 @@
+Name
+
+    NV_vertex_program2
+
+Name Strings
+
+    GL_NV_vertex_program2
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+    Mark Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2000-2002.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Implemented in CineFX (NV30) Emulation driver, August 2002.
+    Shipping in Release 40 NVIDIA driver for CineFX hardware, January 2003.
+
+Version
+
+    Last Modified Date:  03/18/2008
+    NVIDIA Revision:     33
+
+Number
+
+    287
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.3 Specification and requires
+    OpenGL 1.3.
+
+    Written based on the wording of the NV_vertex_program extension
+    specification, version 1.0.
+
+    NV_vertex_program is required.
+
+Overview
+
+    This extension further enhances the concept of vertex programmability
+    introduced by the NV_vertex_program extension, and extended by
+    NV_vertex_program1_1.  These extensions create a separate vertex program
+    mode where the configurable vertex transformation operations in unextended
+    OpenGL are replaced by a user-defined program.
+
+    This extension introduces the VP2 execution environment, which extends the
+    VP1 execution environment introduced in NV_vertex_program.  The VP2
+    environment provides several language features not present in previous
+    vertex programming execution environments:
+
+      * Branch instructions allow a program to jump to another instruction
+        specified in the program.
+
+      * Branching support allows for up to four levels of subroutine
+        calls/returns.
+
+      * A four-component condition code register allows an application to
+        compute a component-wise write mask at run time and apply that mask to
+        register writes.  
+
+      * Conditional branches are supported, where the condition code register
+        is used to determine if a branch should be taken.
+
+      * Programmable user clipping is supported support (via the CLP0-CLP5
+        clip distance registers).  Primitives are clipped to the area where
+        the interpolated clip distances are greater than or equal to zero.
+
+      * Instructions can perform a component-wise absolute value operation on
+        any operand load.
+
+    The VP2 execution environment provides a number of new instructions, and
+    extends the semantics of several instructions already defined in
+    NV_vertex_program.
+
+      * ARR:  Operates like ARL, except that float-to-int conversion is done
+        by rounding.  Equivalent results could be achieved (less efficiently)
+        in NV_vertex program using an ADD/ARL sequence and a program parameter
+        holding the value 0.5.
+
+      * BRA, CAL, RET:  Branch, subroutine call, and subroutine return
+        instructions.
+
+      * COS, SIN:  Adds support for high-precision sine and cosine
+        computations.
+
+      * FLR, FRC:  Adds support for computing the floor and fractional portion
+        of floating-point vector components.  Equivalent results could be
+        achieved (less efficiently) in NV_vertex_program using the EXP
+        instruction to compute the fractional portion of one component at a
+        time.
+
+      * EX2, LG2:  Adds support for high-precision exponentiation and
+        logarithm computations.
+
+      * ARA:  Adds pairs of components of an address register; useful for
+        looping and other operations.
+
+      * SEQ, SFL, SGT, SLE, SNE, STR:  Add six new "set on" instructions,
+        similar to the SLT and SGE instructions defined in NV_vertex_program.
+        Equivalent results could be achieved (less efficiently) in
+        NV_vertex_program with multiple SLT, SGE, and arithmetic instructions.
+
+      * SSG:  Adds a new "set sign" operation, which produces a vector holding
+        negative one for negative components, zero for components with a value
+        of zero, and positive one for positive components.  Equivalent results
+        could be achieved (less efficiently) in NV_vertex_program with
+        multiple SLT, SGE, and arithmetic instructions.
+
+      * The ARL instruction is extended to operate on four components instead
+        of a single component.
+
+      * All instructions that produce integer or floating-point result vectors
+        have variants that update the condition code register based on the
+        result vector.
+
+    This extension also raises some of the resource limitations in the
+    NV_vertex_program extension.
+
+      * 256 program parameter registers (versus 96 in NV_vertex_program).
+
+      * 16 temporary registers (versus 12 in NV_vertex_program).
+
+      * Two four-component integer address registers (versus one
+        single-component register in NV_vertex_program).
+
+      * 256 total vertex program instructions (versus 128 in
+        NV_vertex_program).
+      
+      * Including loops, programs can execute up to 64K instructions.
+
+
+Issues
+
+    This extension builds upon the NV_vertex_program extension.  Should this
+    specification contain selected edits to the NV_vertex_program
+    specification or should the specs be unified?
+
+      RESOLVED:  Since NV_vertex_program and NV_vertex_program2 programs share
+      many features, the main section of this specification is unified and
+      describes both types of programs.  Other sections containing
+      NV_vertex_program features that are unchanged by this extension will not
+      be edited.
+
+    How can a program use condition codes to avoid extra computations?
+
+      Consider the example of evaluating the OpenGL lighting model for a
+      given light.  If the diffuse dot product is negative (roughly 1/2 the
+      time for random geometry), the only contribution to the light is
+      ambient.  In this case, condition codes and branching can skip over a
+      number of unneeded instructions.
+      
+          # R0 holds accumulated light color
+          # R2 holds normal
+          # R3 holds computed light vector
+          # R4 holds computed half vector
+          # c[0] holds ambient light/material product
+          # c[1] holds diffuse light/material product
+          # c[2].xyz holds specular light/material product
+          # c[2].w   holds specular exponent
+          DP3C R1.x, R2, R3;            # diffuse dot product
+          ADD  R0, R0, c[0];            # accumulate ambient
+          BRA  pointsAway (LT.x)        # skip rest if diffuse dot < 0
+          MOV  R1.w, c[2].w;
+          DP3  R1.y, R2, R4;            # specular dot product
+          LIT  R1, R1;                  # compute expontiated specular
+          MAD  R4, c[1], R0.y;          # accumulate diffuse
+          MAD  R4, c[2], R0.z;          # accumulate specular
+        pointsAway:
+          ...                           # continue execution
+
+    How can a program use subroutines?
+
+      With subroutines, a program can encapsulate a small piece of
+      functionality into a subroutine and call it multiple times, as in CPU
+      code.  Applications will need to identify the registers used to pass
+      data to and from the subroutine.  
+
+      Subroutines could be used for applications like evaluating lighting
+      equations for a single light.  With conditional branching and
+      subroutines, a variable number of lights (which could even vary
+      per-vertex) can be easily supported.
+    
+        accumulate:
+          # R0 holds the accumulated result
+          # R1 holds the value to add
+          ADD R0, R1;
+          RET;
+
+          # Compute floor(A)*B by repeated addition using a subroutine.  Yes,
+          # this is a stupid example. 
+          #
+          # c[0] holds (A,B,0,1).
+          # R0 holds the accumulated result
+          # R1 holds B, the value to accumulate.
+          # R2 holds the number of iterations remaining.
+          MOV R0, c[0].z;               # start with zero
+          MOV R1, c[0].y;
+          FLRC R2.x, c[0].x;
+          BRA done (LE.x);
+        top:
+          CAL accumulate;
+          ADDC R2.x, R2.x, -c[0].w;     # decrement count
+          BRA top (GT.x);
+        done:
+          ...
+
+    How can conventional OpenGL clip planes be supported in vertex programs?
+
+      The clip distance in the OpenGL specification can be evaluated with a
+      simple DP4 instruction that writes to one of the six clip distance
+      registers.  Primitives will automatically be clipped to the half-space
+      where o[CLPx] >= 0, which matches the definition in the spec.
+
+          # R0 holds eye coordinates
+          # c[0] holds eye-space clip plane coefficients
+          DP4 o[CLP0].x, R0, c[0];
+
+      Note that the clip plane or clip distance volume corresponding to the
+      o[CLPn] register used must be enabled, or no clipping will be performed.
+
+      The clip distance registers allow for clip distance volumes to be
+      computed more-or-less arbitrarily.  To approximate clipping to a sphere
+      of radius <n>, the following code can be used.
+
+          # R0 holds eye coordinates
+          # c[0].xyz holds sphere center
+          # c[0].w holds the square of the sphere radius
+          SUB R1.xyz, R0, c[0];            # distance vector
+          DP3 R1.w, R1, R1;                # compute distance squared
+          SUB o[CLP0].x, c[0].w, R1.w;     # compute r^2 - d^2
+
+      Since the clip distance is interpolated linearly over a primitive, the
+      clip distance evaluated at a point will represent a piecewise-linear
+      approximation of the true distance.  The approximation will become
+      increasingly more accurate as the primitive is tesselated more finely.
+
+    How can looping be achieved in vertex programs?
+
+      Simple loops can be achieved using a general purpose floating-point
+      register component as a counter.  The following code calls a function
+      named "function" <n> times, where <n> is specified in a program
+      parameter register component.
+
+          # c[0].x holds the number of iterations to execute.
+          # c[1].x holds the constant 1.0.
+          MOVC R15.x, c[0].x;
+        startLoop:
+          CAL  function (GT.x);             # if (counter > 0) function();
+          SUBC R15.x, R15.x, c[1].x;        # counter = counter - 1;
+          BRA  startLoop (GT.x);            # if (counter > 0) goto start;
+        endLoop:
+          ...
+
+      More complex loops (where a separate index may be needed for indexed
+      addressing into the program parameter array) can be achieved using the
+      ARA instruction, which will add the x/z and y/w components of an address
+      register.
+
+          # c[0].x holds the number of iterations to execute
+          # c[0].y holds the initial index value
+          # c[0].z holds the constant -1.0 (used for the iteration count)
+          # c[0].w holds the index step value
+          ARLC A1, c[0];
+        startLoop:
+          CAL  function (GT.x);             # if (counter > 0) function();
+                                            # Note: A1.y can be used for
+                                            # indexing in function().
+          ARAC A1.xy, A1;                   # counter = counter - 1;
+                                            # index += loopStep;
+          BRA  startLoop (GT.x);            # if (counter > 0) goto start;
+        endLoop:
+          ...
+          
+    Should this specification add support for vertex state programs beyond the
+    VP1 execution environment?
+
+      No.  Vertex state programs are a little-used feature of
+      NV_vertex_program and don't perform particularly well.  They are still
+      supported for compatibility with the original NV_vertex_program spec,
+      but they will not be extended to support new features.
+
+    How are NaN's be handled in the "set on" instructions (SEQ, SGE, SGT, SLE,
+    SLT, SNE)?  What about MIN, MAX?  SSG?  When doing condition code tests?
+
+      Any of these instructions involving a NaN operand will produce a NaN
+      result.  This behavior differs from the NV_fragment_program extension.
+      There, SEQ, SGE, SGT, SLE, and SLT will produce 0.0 if either operand is
+      a NaN, and SNE will produce 1.0 if either operand is a NaN.
+
+      For condition code updates, NaN values will result in "UN" condition
+      codes.  All conditionals using a "UN" condition code, except "TR" and
+      "NE" will evaluate to false.  This behavior is identical to the
+      functionality in NV_fragment_program.
+
+    How can the various features of this extension be used to provide skinning
+    functionality similar to that in ARB_vertex_blend and ARB_matrix_palette?
+    And how can that functionality be extended?
+
+      Assume an implementation that allows application of up to 8 matrices at
+      once.  Further assume that v[12].xyzw and v[13].xyzw hold the set of 8
+      weights, and v[14].xyzw and v[15].xyzw hold the set of 8 matrix indices.
+      Furthermore, assume that the palette of matrices are stored/tracked at
+      c[0], c[4], c[8], and so on.  As an additional optimization, an
+      application can specify that fewer than 8 matrices should be applied by
+      storing a negative palette index immediately after the last index is
+      applied.
+
+      Skinning support in this example can be provided by the following code:
+
+          ARLC A0, v[14];                 # load 4 palette indices at once
+          DP4 R1.x, c[A0.x+0], v[0];      # 1st matrix transform
+          DP4 R1.y, c[A0.x+1], v[0];
+          DP4 R1.z, c[A0.x+2], v[0];
+          DP4 R1.w, c[A0.x+3], v[0];
+          MUL R0, R1, v[12].x;            # accumulate weighted sum in R0
+          BRA end (LT.y);                 # stop on a negative matrix index
+          DP4 R1.x, c[A0.y+0], v[0];      # 2nd matrix transform
+          DP4 R1.y, c[A0.y+1], v[0];
+          DP4 R1.z, c[A0.y+2], v[0];
+          DP4 R1.w, c[A0.y+3], v[0];
+          MAD R0, R1, v[12].y, R0;        # accumulate weighted sum in R0
+          BRA end (LT.z);                 # stop on a negative matrix index
+
+          ...                             # 3rd and 4th matrix transform
+
+          ARLC A0, v[15];                 # load next four palette indices
+          BRA end (LT.x);
+          DP4 R1.x, c[A0.x+0], v[0];      # 5th matrix transform
+          DP4 R1.y, c[A0.x+1], v[0];
+          DP4 R1.z, c[A0.x+2], v[0];
+          DP4 R1.w, c[A0.x+3], v[0];
+          MAD R0, R1, v[13].x, R0;        # accumulate weighted sum in R0
+          BRA end (LT.y);                 # stop on a negative matrix index
+
+          ...                             # 6th, 7th, and 8th matrix transform
+        
+        end:
+          ...                             # any additional instructions
+
+      The amount of code used by this example could further be reduced using a
+      subroutine performing four transformations at a time:
+
+          ARLC A0, v[14];  # load first four indices
+          CAL  skin4;      # do first four transformations
+          BRA  end (LT);   # end if any of the first 4 indices was < 0
+          ARLC A0, v[15];  # load second four indices
+          CAL  skin4;      # do second four transformations
+        end:
+          ...              # any additional instructions
+
+    Why does the RCC instruction exist?
+
+      RESOLVED:  To perform numeric operations that will avoid overflow and
+      underflow issues.
+
+    Should the specification provide more examples?
+
+      RESOLVED:  It would be nice.
+
+
+New Procedures and Functions
+
+    None.
+
+
+New Tokens
+
+    None.
+
+
+Additions to Chapter 2 of the OpenGL 1.3 Specification (OpenGL Operation)
+
+    Modify Section 2.11, Clipping (p. 39)
+
+    (modify last paragraph, p. 39) When the GL is not in vertex program mode
+
+    (section 2.14), this view volume may be further restricted by as many as n
+    client-defined clip planes to generate the clip volume. ...
+
+    (add before next-to-last paragraph, p. 40) When the GL is in vertex
+    program mode, the view volume may be restricted to the individual clip
+    distance volumes derived from the per-vertex clip distances (o[CLP0] -
+    o[CLP5]).  Clip distance volumes are applied if and only if per-vertex
+    clip distances are not supported in the vertex program execution
+    environment.  A point P belonging to the primitive under consideration is
+    in the clip distance volume numbered n if and only if
+
+      c_n(P) >= 0,
+
+    where c_n(P) is the interpolated value of the clip distance CLPn at the
+    point P.  For point primitives, c_n(P) is simply the clip distance for the
+    vertex in question.  For line and triangle primitives, per-vertex clip
+    distances are interpolated using a weighted mean, with weights derived
+    according to the algorithms described in sections 3.4 and 3.5.
+
+    (modify next-to-last paragraph, p.40) Client-defined clip planes or clip
+    distance volumes are enabled with the generic Enable command and disabled
+    with the Disable command. The value of the argument to either command is
+    CLIP PLANEi where i is an integer between 0 and n; specifying a value of i
+    enables or disables the plane equation with index i. The constants obey
+    CLIP PLANEi = CLIP PLANE0 + i.
+
+
+    Add Section 2.14,  Vertex Programs (p. 57).  This section supersedes the
+    similar section added in the NV_vertex_program extension and extended in
+    the NV_vertex_program1_1 extension.
+
+    The conventional GL vertex transformation model described in sections 2.10
+    through 2.13 is a configurable, but essentially hard-wired, sequence of
+    per-vertex computations based on a canonical set of per-vertex parameters
+    and vertex transformation related state such as transformation matrices,
+    lighting parameters, and texture coordinate generation parameters.
+
+    The general success and utility of the conventional GL vertex
+    transformation model reflects its basic correspondence to the typical
+    vertex transformation requirements of 3D applications.
+
+    However when the conventional GL vertex transformation model is not
+    sufficient, the vertex program mode provides a substantially more flexible
+    model for vertex transformation.  The vertex program mode permits
+    applications to define their own vertex programs.
+
+
+    Section 2.14.1, Vertex Program Execution Environment
+
+    The vertex program execution environment is an operational model that
+    defines how a program is executed.  The execution environment includes a
+    set of instructions, a set of registers, and semantic rules defining how
+    operations are performed.  There are three vertex program execution
+    environments, VP1, VP1.1, and VP2.  The environment names are taken from
+    the mandatory program prefix strings found at the beginning of all vertex
+    programs.  The VP1.1 execution environment is a minor addition to the VP1
+    execution environment, so references to the VP1 execution environment
+    below apply to both VP1 and VP1.1 execution environments except where
+    otherwise noted.
+
+    The vertex program instruction set consists primarily of floating-point
+    4-component vector operations operating on per-vertex attributes and
+    program parameters.  Vertex programs execute on a per-vertex basis and
+    operate on each vertex completely independently from the processing of
+    other vertices.  Vertex programs execute without data hazards so results
+    computed in one operation can be used immediately afterwards.  Vertex
+    programs produce a set of vertex result vectors that becomes the set of
+    transformed vertex parameters used by primitive assembly.
+
+    In the VP1 environment, vertex programs execute a finite fixed sequence of
+    instructions with no branching or looping.  In the VP2 environment, vertex
+    programs support conditional and unconditional branches and four levels of
+    subroutine calls.
+
+    The vertex program register set consists of six types of registers
+    described in the following sections.
+
+
+    Section 2.14.1.1, Vertex Attribute Registers
+
+    The Vertex Attribute Registers are sixteen 4-component vector
+    floating-point registers containing the current vertex's per-vertex
+    attributes.  These registers are numbered 0 through 15.  These registers
+    are private to each vertex program invocation and are initialized at each
+    vertex program invocation by the current vertex attribute state specified
+    with VertexAttribNV commands.  These registers are read-only during vertex
+    program execution.  The VertexAttribNV commands used to update the vertex
+    attribute registers can be issued both outside and inside of Begin/End
+    pairs.  Vertex program execution is provoked by updating vertex attribute
+    zero.  Updating vertex attribute zero outside of a Begin/End pair is
+    ignored without generating any error (identical to the Vertex command
+    operation).
+
+    The commands
+
+      void VertexAttrib{1234}{sfd}NV(uint index, T coords);
+      void VertexAttrib{1234}{sfd}vNV(uint index, T coords);
+      void VertexAttrib4ubNV(uint index, T coords);
+      void VertexAttrib4ubvNV(uint index, T coords);
+
+    specify the particular current vertex attribute indicated by index.
+    The coordinates for each vertex attribute are named x, y, z, and w.
+    The VertexAttrib1NV family of commands sets the x coordinate to the
+    provided single argument while setting y and z to 0 and w to 1.
+    Similarly, VertexAttrib2NV sets x and y to the specified values,
+    z to 0 and w to 1; VertexAttrib3NV sets x, y, and z, with w set
+    to 1, and VertexAttrib4NV sets all four coordinates.  The error
+    INVALID_VALUE is generated if index is greater than 15.
+
+    No conversions are applied to the vertex attributes specified as
+    type short, float, or double.  However, vertex attributes specified
+    as type ubyte are converted as described by Table 2.6.
+
+    The commands
+
+      void VertexAttribs{1234}{sfd}vNV(uint index, sizei n, T coords[]);
+      void VertexAttribs4ubvNV(uint index, sizei n, GLubyte coords[]);
+
+    specify a contiguous set of n vertex attributes.  The effect of
+
+      VertexAttribs{1234}{sfd}vNV(index, n, coords)
+
+    is the same (assuming no errors) as the command sequence
+
+      #define NUM k  /* where k is 1, 2, 3, or 4 components */
+      int i;
+      for (i=n-1; i>=0; i--) {
+        VertexAttrib{NUM}{sfd}vNV(i+index, &coords[i*NUM]);
+      }
+
+    VertexAttribs4ubvNV behaves similarly.
+
+    The VertexAttribNV calls equivalent to VertexAttribsNV are issued in
+    reverse order so that vertex program execution is provoked when index
+    is zero only after all the other vertex attributes have first been
+    specified.
+
+    The set and operation of vertex attribute registers are identical for both
+    VP1 and VP2 execution environment.
+
+
+    Section 2.14.1.2, Program Parameter Registers
+
+    The Program Parameter Registers are a set of 4-component floating-point
+    vector registers containing the vertex program parameters.  In the VP1
+    execution environment, there are 96 registers, numbered 0 through 95.  In
+    the VP2 execution environment, there are 256 registers, numbered 0 through
+    255.  This relatively large set of registers is intended to hold
+    parameters such as matrices, lighting parameters, and constants required
+    by vertex programs.  Vertex program parameter registers can be updated in
+    one of two ways:  by the ProgramParameterNV commands outside of a
+    Begin/End pair or by a vertex state program executed outside of a
+    Begin/End pair (vertex state programs are discussed in section 2.14.3).
+
+    The commands
+     
+      void ProgramParameter4fNV(enum target, uint index,
+                                float x, float y, float z, float w)
+      void ProgramParameter4dNV(enum target, uint index,
+                                double x, double y, double z, double w)
+
+    specify the particular program parameter indicated by index.
+    The coordinates values x, y, z, and w are assigned to the respective
+    components of the particular program parameter.  target must be
+    VERTEX_PROGRAM_NV.
+
+    The commands
+
+      void ProgramParameter4dvNV(enum target, uint index, double *params);
+      void ProgramParameter4fvNV(enum target, uint index, float *params);
+
+    operate identically to ProgramParameter4fNV and ProgramParameter4dNV
+    respectively except that the program parameters are passed as an
+    array of four components.
+
+    The error INVALID_VALUE is generated if the specified index is greater
+    than or equal to the number of program parameters in the execution
+    environment (96 for VP1, 256 for VP2).
+
+    The commands
+
+      void ProgramParameters4dvNV(enum target, uint index,
+                                  uint num, double *params);
+      void ProgramParameters4fvNV(enum target, uint index,
+                                  uint num, float *params);
+
+    specify a contiguous set of num program parameters.  The effect is
+    the same (assuming no errors) as
+
+      for (i=index; i<index+num; i++) {
+        ProgramParameter4{fd}vNV(target, i, &params[i*4]);
+      }
+
+    The error INVALID_VALUE is generated if sum of <index> and <num> is
+    greater than the number of program parameters in the execution environment
+    (96 for VP1, 256 for VP2).
+
+    The program parameter registers are shared to all vertex program
+    invocations within a rendering context.  ProgramParameterNV command
+    updates and vertex state program executions are serialized with respect to
+    vertex program invocations and other vertex state program executions.
+
+    Writes to the program parameter registers during vertex state program
+    execution can be maskable on a per-component basis.
+
+    The initial value of all 96 (VP1) or 256 (VP2) program parameter registers
+    is (0,0,0,0).
+
+
+    Section 2.14.1.3, Address Registers
+
+    The Address Registers are 4-component vector registers with signed 10-bit
+    integer components.  In the VP1 execution environment, there is only a
+    single address register (A0) and only the x component of the register is
+    accessible.  In the VP2 execution environment, there are two address
+    registers (A0 and A1), of which all four components are accessible.  The
+    address registers are private to each vertex program invocation and are
+    initialized to (0,0,0,0) at every vertex program invocation.  These
+    registers can be written during vertex program execution (but not read)
+    and their values can be used for as a relative offset for reading vertex
+    program parameter registers.  Only the vertex program parameter registers
+    can be read using relative addressing (writes using relative addressing
+    are not supported).
+
+    See the discussion of relative addressing of program parameters in section
+    2.14.2.1 and the discussion of the ARL instruction in section 2.14.3.4.
+
+
+    Section 2.14.1.4, Temporary Registers
+
+    The Temporary Registers are 4-component floating-point vector registers
+    used to hold temporary results during vertex program execution.  In the
+    VP1 execution environment, there are 12 temporary registers, numbered 0
+    through 11.  In the VP2 execution environment, there are 16 temporary
+    registers, numbered 0 through 15.  These registers are private to each
+    vertex program invocation and initialized to (0,0,0,0) at every vertex
+    program invocation.  These registers can be read and written during vertex
+    program execution.  Writes to these registers can be maskable on a
+    per-component basis.
+
+    In the VP2 execution environment, there is one additional temporary
+    pseudo-register, "CC".  CC is treated as unnumbered, write-only temporary
+    register, whose sole purpose is to allow instructions to modify the
+    condition code register (section 2.14.1.6) without overwriting the
+    contents of any temporary register.
+
+
+    Section 2.14.1.5, Vertex Result Registers
+
+    The Vertex Result Registers are 4-component floating-point vector
+    registers used to write the results of a vertex program.  There are 15
+    result registers in the VP1 execution environment, and 21 in the VP2
+    execution environment.  Each register value is initialized to (0,0,0,1) at
+    the invocation of each vertex program.  Writes to the vertex result
+    registers can be maskable on a per-component basis.  These registers are
+    named in Table X.1 and further discussed below.
+
+
+    Vertex Result                                      Component
+    Register Name   Description                        Interpretation
+    --------------  ---------------------------------  --------------
+     HPOS            Homogeneous clip space position    (x,y,z,w)
+     COL0            Primary color (front-facing)       (r,g,b,a)
+     COL1            Secondary color (front-facing)     (r,g,b,a)
+     BFC0            Back-facing primary color          (r,g,b,a)
+     BFC1            Back-facing secondary color        (r,g,b,a)
+     FOGC            Fog coordinate                     (f,*,*,*)
+     PSIZ            Point size                         (p,*,*,*)
+     TEX0            Texture coordinate set 0           (s,t,r,q)
+     TEX1            Texture coordinate set 1           (s,t,r,q)
+     TEX2            Texture coordinate set 2           (s,t,r,q)
+     TEX3            Texture coordinate set 3           (s,t,r,q)
+     TEX4            Texture coordinate set 4           (s,t,r,q)
+     TEX5            Texture coordinate set 5           (s,t,r,q)
+     TEX6            Texture coordinate set 6           (s,t,r,q)
+     TEX7            Texture coordinate set 7           (s,t,r,q)
+     CLP0(*)         Clip distance 0                    (d,*,*,*)
+     CLP1(*)         Clip distance 1                    (d,*,*,*)
+     CLP2(*)         Clip distance 2                    (d,*,*,*)
+     CLP3(*)         Clip distance 3                    (d,*,*,*)
+     CLP4(*)         Clip distance 4                    (d,*,*,*)
+     CLP5(*)         Clip distance 5                    (d,*,*,*)
+
+    Table X.1:  Vertex Result Registers.  (*) Registers CLP0 through CLP5, are
+    available only in the VP2 execution environment.
+
+    HPOS is the transformed vertex's homogeneous clip space position.  The
+    vertex's homogeneous clip space position is converted to normalized device
+    coordinates and transformed to window coordinates as described at the end
+    of section 2.10 and in section 2.11.  Further processing (subsequent to
+    vertex program termination) is responsible for clipping primitives
+    assembled from vertex program-generated vertices as described in section
+    2.10 but all client-defined clip planes are treated as if they are
+    disabled when vertex program mode is enabled.
+
+    Four distinct color results can be generated for each vertex.  COL0 is the
+    transformed vertex's front-facing primary color.  COL1 is the transformed
+    vertex's front-facing secondary color.  BFC0 is the transformed vertex's
+    back-facing primary color.  BFC1 is the transformed vertex's back-facing
+    secondary color.
+
+    Primitive coloring may operate in two-sided color mode.  This behavior is
+    enabled and disabled by calling Enable or Disable with the symbolic value
+    VERTEX_PROGRAM_TWO_SIDE_NV.  The selection between the back-facing colors
+    and the front-facing colors depends on the primitive of which the vertex
+    is a part.  If the primitive is a point or a line segment, the
+    front-facing colors are always selected.  If the primitive is a polygon
+    and two-sided color mode is disabled, the front-facing colors are
+    selected.  If it is a polygon and two-sided color mode is enabled, then
+    the selection is based on the sign of the (clipped or unclipped) polygon's
+    signed area computed in window coordinates.  This facingness determination
+    is identical to the two-sided lighting facingness determination described
+    in section 2.13.1.
+
+    The selected primary and secondary colors for each primitive are clamped
+    to the range [0,1] and then interpolated across the assembled primitive
+    during rasterization with at least 8-bit accuracy for each color
+    component.
+
+    FOGC is the transformed vertex's fog coordinate.  The register's first
+    floating-point component is interpolated across the assembled primitive
+    during rasterization and used as the fog distance to compute per-fragment
+    the fog factor when fog is enabled.  However, if both fog and vertex
+    program mode are enabled, but the FOGC vertex result register is not
+    written, the fog factor is overridden to 1.0.  The register's other three
+    components are ignored.
+
+    Point size determination may operate in program-specified point size mode.
+    This behavior is enabled and disabled by calling Enable or Disable with
+    the symbolic value VERTEX_PROGRAM_POINT_SIZE_NV.  If the vertex is for a
+    point primitive and the mode is enabled and the PSIZ vertex result is
+    written, the point primitive's size is determined by the clamped x
+    component of the PSIZ register.  Otherwise (because vertex program mode is
+    disabled, program-specified point size mode is disabled, or because the
+    vertex program did not write PSIZ), the point primitive's size is
+    determined by the point size state (the state specified using the
+    PointSize command).
+
+    The PSIZ register's x component is clamped to the range zero through
+    either the hi value of ALIASED_POINT_SIZE_RANGE if point smoothing is
+    disabled or the hi value of the SMOOTH_POINT_SIZE_RANGE if point smoothing
+    is enabled.  The register's other three components are ignored.
+
+    If the vertex is not for a point primitive, the value of the PSIZ vertex
+    result register is ignored.
+
+    TEX0 through TEX7 are the transformed vertex's texture coordinate sets for
+    texture units 0 through 7.  These floating-point coordinates are
+    interpolated across the assembled primitive during rasterization and used
+    for accessing textures.  If the number of texture units supported is less
+    than eight, the values of vertex result registers that do not correspond
+    to existent texture units are ignored.
+
+    CLP0 through CLP5, available only in the VP2 execution environment, are
+    the transformed vertex's clip distances.  These floating-point coordinates
+    are used by post-vertex program clipping process (see section 2.11).
+
+
+    Section 2.14.1.6,  The Condition Code Register
+
+    The VP2 execution environment provides a single four-component vector
+    called the condition code register.  Each component of this register is
+    one of four enumerated values:  GT (greater than), EQ (equal), LT (less
+    than), or UN (unordered).  The condition code register can be used to mask
+    writes to registers and to evaluate conditional branches.
+
+    Most vertex program instructions can optionally update the condition code
+    register.  When a vertex program instruction updates the condition code
+    register, a condition code component is set to LT if the corresponding
+    component of the result is less than zero, EQ if it is equal to zero, GT
+    if it is greater than zero, and UN if it is NaN (not a number).
+
+    The condition code register is initialized to a vector of EQ values each
+    time a vertex program executes.
+
+    There is no condition code register available in the VP1 execution
+    environment.
+
+
+    Section 2.14.1.7,  Semantic Meaning for Vertex Attributes and Program
+                       Parameters 
+
+    One important distinction between the conventional GL vertex
+    transformation mode and the vertex program mode is that per-vertex
+    parameters and other state parameters in vertex program mode do not have
+    dedicated semantic interpretations the way that they do with the
+    conventional GL vertex transformation mode.
+
+    For example, in the conventional GL vertex transformation mode, the Normal
+    command specifies a per-vertex normal.  The semantic that the Normal
+    command supplies a normal for lighting is established because that is how
+    the per-vertex attribute supplied by the Normal command is used by the
+    conventional GL vertex transformation mode.  Similarly, other state
+    parameters such as a light source position have semantic interpretations
+    based on how the conventional GL vertex transformation model uses each
+    particular parameter.
+
+    In contrast, vertex attributes and program parameters for vertex programs
+    have no pre-defined semantic meanings.  The meaning of a vertex attribute
+    or program parameter in vertex program mode is defined by how the vertex
+    attribute or program parameter is used by the current vertex program to
+    compute and write values to the Vertex Result Registers.  This is the
+    reason that per-vertex attributes and program parameters for vertex
+    programs are numbered instead of named.
+
+    For convenience however, the existing per-vertex parameters for the
+    conventional GL vertex transformation mode (vertices, normals,
+    colors, fog coordinates, vertex weights, and texture coordinates) are
+    aliased to numbered vertex attributes.  This aliasing is specified in
+    Table X.2.  The table includes how the various conventional components
+    map to the 4-component vertex attribute components.
+
+Vertex
+Attribute  Conventional                                           Conventional
+Register   Per-vertex        Conventional                         Component
+Number     Parameter         Per-vertex Parameter Command         Mapping
+---------  ---------------   -----------------------------------  ------------
+ 0         vertex position   Vertex                               x,y,z,w
+ 1         vertex weights    VertexWeightEXT                      w,0,0,1
+ 2         normal            Normal                               x,y,z,1
+ 3         primary color     Color                                r,g,b,a
+ 4         secondary color   SecondaryColorEXT                    r,g,b,1
+ 5         fog coordinate    FogCoordEXT                          fc,0,0,1
+ 6         -                 -                                    -
+ 7         -                 -                                    -
+ 8         texture coord 0   MultiTexCoord(GL_TEXTURE0_ARB, ...)  s,t,r,q
+ 9         texture coord 1   MultiTexCoord(GL_TEXTURE1_ARB, ...)  s,t,r,q
+ 10        texture coord 2   MultiTexCoord(GL_TEXTURE2_ARB, ...)  s,t,r,q
+ 11        texture coord 3   MultiTexCoord(GL_TEXTURE3_ARB, ...)  s,t,r,q
+ 12        texture coord 4   MultiTexCoord(GL_TEXTURE4_ARB, ...)  s,t,r,q
+ 13        texture coord 5   MultiTexCoord(GL_TEXTURE5_ARB, ...)  s,t,r,q
+ 14        texture coord 6   MultiTexCoord(GL_TEXTURE6_ARB, ...)  s,t,r,q
+ 15        texture coord 7   MultiTexCoord(GL_TEXTURE7_ARB, ...)  s,t,r,q
+
+Table X.2:  Aliasing of vertex attributes with conventional per-vertex
+parameters.
+
+    Only vertex attribute zero is treated specially because it is
+    the attribute that provokes the execution of the vertex program;
+    this is the attribute that aliases to the Vertex command's vertex
+    coordinates.
+
+    The result of a vertex program is the set of post-transformation
+    vertex parameters written to the Vertex Result Registers.
+    All vertex programs must write a homogeneous clip space position, but
+    the other Vertex Result Registers can be optionally written.
+
+    Clipping and culling are not the responsibility of vertex programs because
+    these operations assume the assembly of multiple vertices into a
+    primitive.  View frustum clipping is performed subsequent to vertex
+    program execution.  Clip planes are not supported in the VP1 execution
+    environment.  Clip planes are supported indirectly via the clip distance
+    (o[CLPx]) registers in the VP2 execution environment.
+
+
+    Section 2.14.1.8,  Vertex Program Specification
+
+    Vertex programs are specified as an array of ubytes.  The array is a
+    string of ASCII characters encoding the program.
+
+    The command
+
+      LoadProgramNV(enum target, uint id, sizei len,
+                    const ubyte *program);
+
+    loads a vertex program when the target parameter is VERTEX_PROGRAM_NV.
+    Multiple programs can be loaded with different names.  id names the
+    program to load.  The name space for programs is the positive integers
+    (zero is reserved).  The error INVALID_VALUE occurs if a program is loaded
+    with an id of zero.  The error INVALID_OPERATION is generated if a program
+    is loaded for an id that is currently loaded with a program of a different
+    program target.  Managing the program name space and binding to vertex
+    programs is discussed later in section 2.14.1.8.
+
+    program is a pointer to an array of ubytes that represents the program
+    being loaded.  The length of the array is indicated by len.
+
+    A second program target type known as vertex state programs is discussed
+    in 2.14.4.
+
+    At program load time, the program is parsed into a set of tokens possibly
+    separated by white space.  Spaces, tabs, newlines, carriage returns, and
+    comments are considered whitespace.  Comments begin with the character "#"
+    and are terminated by a newline, a carriage return, or the end of the
+    program array.
+
+    The Backus-Naur Form (BNF) grammar below specifies the syntactically valid
+    sequences for several types of vertex programs.  The set of valid tokens
+    can be inferred from the grammar.  The token "" represents an empty string
+    and is used to indicate optional rules.  A program is invalid if it
+    contains any undefined tokens or characters.
+
+    The grammar provides for three different vertex program types,
+    corresponding to the three vertex program execution environments.  VP1,
+    VP1.1, and VP2 programs match the grammar rules <vp1-program>,
+    <vp11-program>, and <vp2-program>, respectively.  Some grammar rules
+    correspond to features or instruction forms available only in certain
+    execution environments.  Rules beginning with the prefix "vp1-" are
+    available only to VP1 and VP1.1 programs.  Rules beginning with the
+    prefixes "vp11-" and "vp2-" are available only to VP1.1 and VP2 programs,
+    respectively.
+
+
+    <program>              ::= <vp1-program>
+                             | <vp11-program>
+                             | <vp2-program>
+
+    <vp1-program>          ::= "!!VP1.0" <programBody> "END"
+
+    <vp11-program>         ::= "!!VP1.1" <programBody> "END"
+
+    <vp2-program>          ::= "!!VP2.0" <programBody> "END"
+
+    <programBody>          ::= <optionSequence> <programText>
+
+    <optionSequence>       ::= <option> <optionSequence>
+                             | ""
+
+    <option>               ::= "OPTION" <vp11-option> ";"
+                             | "OPTION" <vp2-option> ";"
+
+    <vp11-option>          ::= "NV_position_invariant"
+
+    <vp2-option>           ::= "NV_position_invariant"
+
+    <programText>          ::= <programTextItem> <programText>
+                             | ""
+
+    <programTextItem>      ::= <instruction> ";"
+                             | <vp2-instructionLabel>
+
+    <instruction>          ::= <ARL-instruction>
+                             | <VECTORop-instruction>
+                             | <SCALARop-instruction>
+                             | <BINop-instruction>
+                             | <TRIop-instruction>
+                             | <vp2-BRA-instruction>
+                             | <vp2-RET-instruction>
+                             | <vp2-ARA-instruction>
+
+    <ARL-instruction>      ::= <vp1-ARL-instruction>
+                             | <vp2-ARL-instruction>
+
+    <vp1-ARL-instruction>  ::= "ARL" <maskedAddrReg> "," <scalarSrc>
+
+    <vp2-ARL-instruction>  ::= <vp2-ARLop> <maskedAddrReg> "," <vectorSrc>
+
+    <vp2-ARLop>            ::= "ARL" | "ARLC"
+                             | "ARR" | "ARRC"
+
+    <VECTORop-instruction> ::= <VECTORop> <maskedDstReg> "," <vectorSrc>
+
+    <VECTORop>             ::= "LIT"
+                             | "MOV"
+                             | <vp11-VECTORop>
+                             | <vp2-VECTORop>
+
+    <vp11-VECTORop>        ::= "ABS"
+
+    <vp2-VECTORop>         ::=         "ABSC"
+                             | "FLR" | "FLRC"
+                             | "FRC" | "FRCC"
+                             |         "LITC"
+                             |         "MOVC"
+                             | "SSG" | "SSGC"
+
+    <SCALARop-instruction> ::= <SCALARop> <maskedDstReg> "," <scalarSrc>
+
+    <SCALARop>             ::= "EXP"
+                             | "LOG"
+                             | "RCP"
+                             | "RSQ"
+                             | <vp11-SCALARop>
+                             | <vp2-SCALARop>
+
+    <vp11-SCALARop>        ::= "RCC"
+
+    <vp2-SCALARop>         ::= "COS"  | "COSC"
+                             | "EX2"  | "EX2C"
+                             | "LG2"  | "LG2C"
+                             |          "EXPC"
+                             |          "LOGC"
+                             |          "RCCC"
+                             |          "RCPC"
+                             |          "RSQC"
+                             | "SIN"  | "SINC"
+
+    <BINop-instruction>    ::= <BINop> <maskedDstReg> "," <vectorSrc> ","
+                               <vectorSrc>
+
+    <BINop>                ::= "ADD"
+                             | "DP3"
+                             | "DP4"
+                             | "DST"
+                             | "MAX"
+                             | "MIN"
+                             | "MUL"
+                             | "SGE"
+                             | "SLT"
+                             | <vp11-BINop>
+                             | <vp2-BINop>
+
+    <vp11-BINop>           ::= "DPH"
+                             | "SUB"
+
+    <vp2-BINop>            ::=         "ADDC"
+                             |         "DP3C"
+                             |         "DP4C"
+                             |         "DPHC"
+                             |         "DSTC"
+                             |         "MAXC"
+                             |         "MINC"
+                             |         "MULC"
+                             | "SEQ" | "SEQC"
+                             | "SFL" | "SFLC"
+                             |         "SGEC"
+                             | "SGT" | "SGTC"
+                             |         "SLTC"
+                             | "SLE" | "SLEC"
+                             | "SNE" | "SNEC"
+                             | "STR" | "STRC"
+                             |         "SUBC"
+
+    <TRIop-instruction>    ::= <TRIop> <maskedDstReg> "," <vectorSrc> "," 
+                               <vectorSrc> "," <vectorSrc>
+
+    <TRIop>                ::= "MAD"
+                             | <vp2-TRIop>
+
+    <vp2-TRIop>            ::= "MADC"
+
+    <vp2-BRA-instruction>  ::= <vp2-BRANCHop> <vp2-branchLabel>
+                                 <vp2-branchCondition>
+
+    <vp2-BRANCHop>         ::= "BRA"
+                             | "CAL"
+
+    <vp2-RET-instruction>  ::= "RET" <vp2-branchCondition>
+
+    <vp2-ARA-instruction>  ::= <vp2-ARAop> <maskedAddrReg> "," <addrRegister>
+
+    <vp2-ARAop>            ::= "ARA" | "ARAC"
+
+    <scalarSrc>            ::= <baseScalarSrc>
+                             | <vp2-absScalarSrc>
+
+    <vp2-absScalarSrc>     ::= <optionalSign> "|" <baseScalarSrc> "|"
+
+    <baseScalarSrc>        ::= <optionalSign> <srcRegister> <scalarSuffix>
+
+    <vectorSrc>            ::= <baseVectorSrc>
+                             | <vp2-absVectorSrc>
+
+    <vp2-absVectorSrc>     ::= <optionalSign> "|" <baseVectorSrc> "|"
+
+    <baseVectorSrc>        ::= <optionalSign> <srcRegister> <swizzleSuffix>
+
+    <srcRegister>          ::= <vtxAttribRegister>
+                             | <progParamRegister>
+                             | <tempRegister>
+
+    <maskedDstReg>         ::= <dstRegister> <optionalWriteMask> 
+                                   <optionalCCMask> 
+
+    <dstRegister>          ::= <vtxResultRegister>
+                             | <tempRegister>
+                             | <vp2-nullRegister>
+
+    <vp2-nullRegister>     ::= "CC"
+
+    <vp2-branchCondition>  ::= <optionalCCMask>
+
+    <vtxAttribRegister>    ::= "v" "[" vtxAttribRegNum "]"
+
+    <vtxAttribRegNum>      ::= decimal integer from 0 to 15 inclusive
+                             | "OPOS"
+                             | "WGHT"
+                             | "NRML"
+                             | "COL0"
+                             | "COL1"
+                             | "FOGC"
+                             | "TEX0"
+                             | "TEX1"
+                             | "TEX2"
+                             | "TEX3"
+                             | "TEX4"
+                             | "TEX5"
+                             | "TEX6"
+                             | "TEX7"
+
+    <progParamRegister>    ::= <absProgParamReg>
+                             | <relProgParamReg>
+
+    <absProgParamReg>      ::= "c" "[" <progParamRegNum> "]"
+
+    <progParamRegNum>      ::= <vp1-progParamRegNum>
+                             | <vp2-progParamRegNum>
+
+    <vp1-progParamRegNum>  ::= decimal integer from 0 to 95 inclusive
+
+    <vp2-progParamRegNum>  ::= decimal integer from 0 to 255 inclusive
+
+    <relProgParamReg>      ::= "c" "[" <scalarAddr> <relProgParamOffset> "]"
+
+    <relProgParamOffset>   ::= ""
+                             | "+" <progParamPosOffset>
+                             | "-" <progParamNegOffset>
+
+    <progParamPosOffset>   ::= <vp1-progParamPosOff>
+                             | <vp2-progParamPosOff>
+
+    <vp1-progParamPosOff>  ::= decimal integer from 0 to 63 inclusive
+
+    <vp2-progParamPosOff>  ::= decimal integer from 0 to 255 inclusive
+
+    <progParamNegOffset>   ::= <vp1-progParamNegOff>
+                             | <vp2-progParamNegOff>
+
+    <vp1-progParamNegOff>  ::= decimal integer from 0 to 64 inclusive
+
+    <vp2-progParamNegOff>  ::= decimal integer from 0 to 256 inclusive
+
+    <tempRegister>         ::= "R0"  | "R1"  | "R2"  | "R3"
+                             | "R4"  | "R5"  | "R6"  | "R7"
+                             | "R8"  | "R9"  | "R10" | "R11"
+
+    <vp2-tempRegister>     ::= "R12" | "R13" | "R14" | "R15" 
+
+    <vtxResultRegister>    ::= "o" "[" <vtxResultRegName> "]"
+
+    <vtxResultRegName>     ::= "HPOS"
+                             | "COL0"
+                             | "COL1"
+                             | "BFC0"
+                             | "BFC1"
+                             | "FOGC"
+                             | "PSIZ"
+                             | "TEX0"
+                             | "TEX1"
+                             | "TEX2"
+                             | "TEX3"
+                             | "TEX4"
+                             | "TEX5"
+                             | "TEX6"
+                             | "TEX7"
+                             | <vp2-resultRegName>
+
+    <vp2-resultRegName>    ::= "CLP0"
+                             | "CLP1"
+                             | "CLP2"
+                             | "CLP3"
+                             | "CLP4"
+                             | "CLP5"
+
+    <scalarAddr>           ::= <addrRegister> "." <addrRegisterComp>
+
+    <maskedAddrReg>        ::= <addrRegister> <addrWriteMask>
+
+    <addrRegister>         ::= "A0"
+                             | <vp2-addrRegister>
+
+    <vp2-addrRegister>     ::= "A1"
+
+    <addrRegisterComp>     ::= "x"
+                             | <vp2-addrRegisterComp>
+
+    <vp2-addrRegisterComp> ::= "y"
+                             | "z"
+                             | "w"
+
+    <addrWriteMask>        ::= "." "x"
+                             | <vp2-addrWriteMask>
+
+    <vp2-addrWriteMask>     ::= ""
+                             | "."     "y"
+                             | "." "x" "y"
+                             | "."         "z"
+                             | "." "x"     "z"
+                             | "."     "y" "z"
+                             | "." "x" "y" "z"
+                             | "."             "w"
+                             | "." "x"         "w"
+                             | "."     "y"     "w"
+                             | "." "x" "y"     "w"
+                             | "."         "z" "w"
+                             | "." "x"     "z" "w"
+                             | "."     "y" "z" "w"
+                             | "." "x" "y" "z" "w"
+
+    
+    <optionalSign>         ::= ""
+                             | "-" 
+                             | <vp2-optionalSign>
+
+    <vp2-optionalSign>     ::= "+"
+
+    <vp2-instructionLabel> ::= <vp2-branchLabel> ":"
+
+    <vp2-branchLabel>      ::= <identifier>
+
+    <optionalWriteMask>    ::= ""
+                             | "." "x"
+                             | "."     "y"
+                             | "." "x" "y"
+                             | "."         "z"
+                             | "." "x"     "z"
+                             | "."     "y" "z"
+                             | "." "x" "y" "z"
+                             | "."             "w"
+                             | "." "x"         "w"
+                             | "."     "y"     "w"
+                             | "." "x" "y"     "w"
+                             | "."         "z" "w"
+                             | "." "x"     "z" "w"
+                             | "."     "y" "z" "w"
+                             | "." "x" "y" "z" "w"
+
+    <optionalCCMask>       ::= ""
+                             | <vp2-ccMask>
+
+    <vp2-ccMask>           ::= "(" <vp2-ccMaskRule> <swizzleSuffix> ")"
+
+    <vp2-ccMaskRule>       ::= "EQ" | "GE" | "GT" | "LE" | "LT" | "NE" 
+                             | "TR" | "FL"
+
+    <scalarSuffix>         ::= "." <component>
+
+    <swizzleSuffix>        ::= ""
+                             | "." <component>
+                             | "." <component> <component>
+                                   <component> <component>
+
+    <component>            ::= "x" 
+                             | "y" 
+                             | "z" 
+                             | "w"
+
+    The <identifier> rule matches a sequence of one or more letters ("A"
+    through "Z", "a" through "z", and "_") and digits ("0" through "9); the
+    first character must be a letter.  The underscore ("_") counts as a
+    letter.  Upper and lower case letters are different (names are
+    case-sensitive).
+
+    The <vertexAttribRegNum> rule matches both register numbers 0 through 15
+    and a set of mnemonics that abbreviate the aliasing of conventional
+    per-vertex parameters to vertex attribute register numbers.  Table X.3
+    shows the mapping from mnemonic to vertex attribute register number and
+    what the mnemonic abbreviates.
+
+                   Vertex Attribute
+        Mnemonic   Register Number     Meaning
+        --------   ----------------    --------------------
+         "OPOS"     0                  object position
+         "WGHT"     1                  vertex weight
+         "NRML"     2                  normal
+         "COL0"     3                  primary color
+         "COL1"     4                  secondary color
+         "FOGC"     5                  fog coordinate
+         "TEX0"     8                  texture coordinate 0
+         "TEX1"     9                  texture coordinate 1
+         "TEX2"     10                 texture coordinate 2
+         "TEX3"     11                 texture coordinate 3
+         "TEX4"     12                 texture coordinate 4
+         "TEX5"     13                 texture coordinate 5
+         "TEX6"     14                 texture coordinate 6
+         "TEX7"     15                 texture coordinate 7
+
+        Table X.3:  The mapping between vertex attribute register numbers,
+        mnemonics, and meanings.
+
+    A vertex program fails to load if it does not write at least one component
+    of the HPOS register.
+
+    A vertex program fails to load in the VP1 execution environment if it
+    contains more than 128 instructions.  A vertex program fails to load in
+    the VP2 execution environment if it contains more than 256 instructions.
+    Each block of text matching the <instruction> rule counts as an
+    instruction.
+
+    A vertex program fails to load if any instruction sources more than one
+    unique program parameter register.  An instruction can match the
+    <progParamRegister> rule more than once only if all such matches are
+    identical.
+
+    A vertex program fails to load if any instruction sources more than one
+    unique vertex attribute register.  An instruction can match the
+    <vtxAttribRegister> rule more than once only if all such matches refer to
+    the same register.
+
+    The error INVALID_OPERATION is generated if a vertex program fails to load
+    because it is not syntactically correct or for one of the semantic
+    restrictions listed above.
+
+    The error INVALID_OPERATION is generated if a program is loaded for id
+    when id is currently loaded with a program of a different target.
+
+    A successfully loaded vertex program is parsed into a sequence of
+    instructions.  Each instruction is identified by its tokenized name.  The
+    operation of these instructions when executed is defined in section
+    2.14.1.10.
+
+    A successfully loaded program replaces the program previously assigned to
+    the name specified by id.  If the OUT_OF_MEMORY error is generated by
+    LoadProgramNV, no change is made to the previous contents of the named
+    program.
+
+    Querying the value of PROGRAM_ERROR_POSITION_NV returns a ubyte offset
+    into the last loaded program string indicating where the first error in
+    the program.  If the program fails to load because of a semantic
+    restriction that cannot be determined until the program is fully scanned,
+    the error position will be len, the length of the program.  If the program
+    loads successfully, the value of PROGRAM_ERROR_POSITION_NV is assigned the
+    value negative one.
+
+
+    Section 2.14.1.9,  Vertex Program Binding and Program Management
+
+    The current vertex program is invoked whenever vertex attribute zero is
+    updated (whether by a VertexAttributeNV or Vertex command).  The current
+    vertex program is updated by
+
+      BindProgramNV(enum target, uint id);
+
+    where target must be VERTEX_PROGRAM_NV.  This binds the vertex program
+    named by id as the current vertex program. The error INVALID_OPERATION
+    is generated if id names a program that is not a vertex program
+    (for example, if id names a vertex state program as described in
+    section 2.14.4).  
+
+    Binding to a nonexistent program id does not generate an error.
+    In particular, binding to program id zero does not generate an error.
+    However, because program zero cannot be loaded, program zero is
+    always nonexistent.  If a program id is successfully loaded with a
+    new vertex program and id is also the currently bound vertex program,
+    the new program is considered the currently bound vertex program.
+
+    The INVALID_OPERATION error is generated when both vertex program
+    mode is enabled and Begin is called (or when a command that performs
+    an implicit Begin is called) if the current vertex program is
+    nonexistent or not valid.  A vertex program may not be valid for
+    reasons explained in section 2.14.5.
+
+    Programs are deleted by calling
+
+      void DeleteProgramsNV(sizei n, const uint *ids);
+
+    ids contains n names of programs to be deleted.  After a program
+    is deleted, it becomes nonexistent, and its name is again unused.
+    If a program that is currently bound is deleted, it is as though
+    BindProgramNV has been executed with the same target as the deleted
+    program and program zero.  Unused names in ids are silently ignored,
+    as is the value zero.
+
+    The command
+
+      void GenProgramsNV(sizei n, uint *ids);
+
+    returns n previously unused program names in ids.  These names
+    are marked as used, for the purposes of GenProgramsNV only,
+    but they become existent programs only when the are first loaded
+    using LoadProgramNV.  The error INVALID_VALUE is generated if n
+    is negative.
+
+    An implementation may choose to establish a working set of programs on
+    which binding and ExecuteProgramNV operations (execute programs are
+    explained in section 2.14.4) are performed with higher performance.
+    A program that is currently part of this working set is said to
+    be resident.
+
+    The command
+      
+      boolean AreProgramsResidentNV(sizei n, const uint *ids,
+                                    boolean *residences);
+
+    returns TRUE if all of the n programs named in ids are resident,
+    or if the implementation does not distinguish a working set.  If at
+    least one of the programs named in ids is not resident, then FALSE is
+    returned, and the residence of each program is returned in residences.
+    Otherwise the contents of residences are not changed.  If any of
+    the names in ids are nonexistent or zero, FALSE is returned, the
+    error INVALID_VALUE is generated, and the contents of residences
+    are indeterminate.  The residence status of a single named program
+    can also be queried by calling GetProgramivNV with id set to the
+    name of the program and pname set to PROGRAM_RESIDENT_NV.
+
+    AreProgramsResidentNV indicates only whether a program is
+    currently resident, not whether it could not be made resident.
+    An implementation may choose to make a program resident only on
+    first use, for example.  The client may guide the GL implementation
+    in determining which programs should be resident by requesting a
+    set of programs to make resident.
+
+    The command
+
+      void RequestResidentProgramsNV(sizei n, const uint *ids);
+
+    requests that the n programs named in ids should be made resident.
+    While all the programs are not guaranteed to become resident,
+    the implementation should make a best effort to make as many of
+    the programs resident as possible.  As a result of making the
+    requested programs resident, program names not among the requested
+    programs may become non-resident.  Higher priority for residency
+    should be given to programs listed earlier in the ids array.
+    RequestResidentProgramsNV silently ignores attempts to make resident
+    nonexistent program names or zero.  AreProgramsResidentNV can be
+    called after RequestResidentProgramsNV to determine which programs
+    actually became resident.
+
+
+    Section 2.14.2,  Vertex Program Operation
+
+    In the VP1 execution environment, there are twenty-one vertex program
+    instructions.  Four instructions (ABS, DPH, RCC, and SUB) are available
+    only in the VP1.1 execution environment.  The instructions and their
+    respective input and output parameters are summarized in Table X.4.
+
+      Instruction    Inputs  Output   Description
+      -----------    ------  ------   --------------------------------
+      ABS(*)         v       v        absolute value
+      ADD            v,v     v        add
+      ARL            v       as       address register load
+      DP3            v,v     ssss     3-component dot product
+      DP4            v,v     ssss     4-component dot product
+      DPH(*)         v,v     ssss     homogeneous dot product
+      DST            v,v     v        distance vector
+      EXP            s       v        exponential base 2 (approximate)
+      LIT            v       v        compute light coefficients
+      LOG            s       v        logarithm base 2 (approximate)
+      MAD            v,v,v   v        multiply and add
+      MAX            v,v     v        maximum
+      MIN            v,v     v        minimum
+      MOV            v       v        move
+      MUL            v,v     v        multiply
+      RCC(*)         s       ssss     reciprocal (clamped)
+      RCP            s       ssss     reciprocal
+      RSQ            s       ssss     reciprocal square root
+      SGE            v,v     v        set on greater than or equal
+      SLT            v,v     v        set on less than
+      SUB(*)         v,v     v        subtract
+
+    Table X.4:  Summary of vertex program instructions in the VP1 execution
+    environment.  "v" indicates a floating-point vector input or output, "s"
+    indicates a floating-point scalar input, "ssss" indicates a scalar output
+    replicated across a 4-component vector, "as" indicates a single component
+    of an address register.
+
+
+    In the VP2 execution environment, are thirty-nine vertex program
+    instructions.  Vertex program instructions may have an optional suffix of
+    "C" to allow an update of the condition code register (section 2.14.1.6).
+    For example, there are two instructions to perform vector addition, "ADD"
+    and "ADDC".  The vertex program instructions available in the VP2
+    execution environment and their respective input and output parameters are
+    summarized in Table X.5.
+
+      Instruction    Inputs  Output   Description
+      -----------    ------  ------   --------------------------------
+      ABS[C]         v       v        absolute value
+      ADD[C]         v,v     v        add
+      ARA[C]         av      av       address register add
+      ARL[C]         v       av       address register load
+      ARR[C]         v       av       address register load (with round)
+      BRA            as      none     branch
+      CAL            as      none     subroutine call
+      COS[C]         s       ssss     cosine
+      DP3[C]         v,v     ssss     3-component dot product
+      DP4[C]         v,v     ssss     4-component dot product
+      DPH[C]         v,v     ssss     homogeneous dot product
+      DST[C]         v,v     v        distance vector
+      EX2[C]         s       ssss     exponential base 2
+      EXP[C]         s       v        exponential base 2 (approximate)
+      FLR[C]         v       v        floor
+      FRC[C]         v       v        fraction
+      LG2[C]         s       ssss     logarithm base 2
+      LIT[C]         v       v        compute light coefficients
+      LOG[C]         s       v        logarithm base 2 (approximate)
+      MAD[C]         v,v,v   v        multiply and add
+      MAX[C]         v,v     v        maximum
+      MIN[C]         v,v     v        minimum
+      MOV[C]         v       v        move
+      MUL[C]         v,v     v        multiply
+      RCC[C]         s       ssss     reciprocal (clamped)
+      RCP[C]         s       ssss     reciprocal
+      RET            none    none     subroutine call return
+      RSQ[C]         s       ssss     reciprocal square root
+      SEQ[C]         v,v     v        set on equal
+      SFL[C]         v,v     v        set on false
+      SGE[C]         v,v     v        set on greater than or equal
+      SGT[C]         v,v     v        set on greater than
+      SIN[C]         s       ssss     sine
+      SLE[C]         v,v     v        set on less than or equal
+      SLT[C]         v,v     v        set on less than
+      SNE[C]         v,v     v        set on not equal
+      SSG[C]         v       v        set sign
+      STR[C]         v,v     v        set on true
+      SUB[C]         v,v     v        subtract
+
+    Table X.5:  Summary of vertex program instructions in the VP2 execution
+    environment.  "v" indicates a floating-point vector input or output, "s"
+    indicates a floating-point scalar input, "ssss" indicates a scalar output
+    replicated across a 4-component vector, "av" indicates a full address
+    register, "as" indicates a single component of an address register.
+
+
+    Section 2.14.2.1,  Vertex Program Operands
+
+    Most vertex program instructions operate on floating-point vectors,
+    floating-point scalars, or integer scalars as, indicated in the grammar
+    (see section 2.14.1.8) by the rules <vectorSrc>, <scalarSrc>, and
+    <scalarAddr>, respectively.
+
+    The basic set of floating-point scalar operands is defined by the grammar
+    rule <baseScalarSrc>.  Scalar operands are single components of vertex
+    attribute, program parameter, or temporary registers, as allowed by the
+    <srcRegister> rule.  A vector component is selected by the <scalarSuffix>
+    rule, where the characters "x", "y", "z", and "w" select the x, y, z, and
+    w components, respectively, of the vector.
+
+    The basic set of floating-point vector operands is defined by the grammar
+    rule <baseVectorSrc>.  Vector operands can be obtained from vertex
+    attribute, program parameter, or temporary registers as allowed by the
+    <srcRegister> rule.
+
+    Basic vector operands can be swizzled according to the <swizzleSuffix>
+    rule.  In its most general form, the <swizzleSuffix> rule matches the
+    pattern ".????" where each question mark is replaced with one of "x", "y",
+    "z", or "w".  For such patterns, the x, y, z, and w components of the
+    operand are taken from the vector components named by the first, second,
+    third, and fourth character of the pattern, respectively.  For example, if
+    the swizzle suffix is ".yzzx" and the specified source contains {2,8,9,0},
+    the swizzled operand used by the instruction is {8,9,9,2}.  
+
+    If the <swizzleSuffix> rule matches "", it is treated as though it were
+    ".xyzw".  If the <swizzleSuffix> rule matches (ignoring whitespace) ".x",
+    ".y", ".z", or ".w", these are treated the same as ".xxxx", ".yyyy",
+    ".zzzz", and ".wwww" respectively.
+
+    Floating-point scalar or vector operands can optionally be negated
+    according to the <negate> rules in <baseScalarSrc> and <baseVectorSrc>.
+    If the <negate> matches "-", each operand or operand component is negated.
+
+    In the VP2 execution environment, a component-wise absolute value
+    operation is performed on an operand if the <scalarSrc> or <vectorSrc>
+    rules match <vp2-absScalarSrc> or <vp2-absVectorSrc>.  In this case, the
+    absolute value of each component of the operand is taken.  In addition, if
+    the <negate> rule in <vp2-absScalarSrc> or <vp2-absVectorSrc> matches "-",
+    each component is subsequently negated.
+
+    Integer scalar operands are single components of one of the address
+    register vectors, as identified by the <addrRegister> rule.  A vector
+    component is selected by the <scalarSuffix> rule in the same manner as
+    floating-point scalar operands.  Negation and absolute value operations
+    are not available for integer scalar operands.
+
+    The following pseudo-code spells out the operand generation process.  In
+    the pseudo-code, "float" and "int" are floating-point and integer scalar
+    types, while "floatVec" and "intVec" are four-component vectors.  "source"
+    is the register used for the operand, matching the <srcRegister> or
+    <addrRegister> rules.  "absolute" is TRUE if the operand matches the
+    <vp2-absScalarSrc> or <vp2-absVectorSrc> rules, and FALSE otherwise.
+    "negateBase" is TRUE if the <negate> rule in <baseScalarSrc> or
+    <baseVectorSrc> matches "-" and FALSE otherwise.  "negateAbs" is TRUE if
+    the <negate> rule in <vp2-absScalarSrc> or <vp2-absVectorSrc> matches "-"
+    and FALSE otherwise.  The ".c***", ".*c**", ".**c*", ".***c" modifiers
+    refer to the x, y, z, and w components obtained by the swizzle operation.
+
+      floatVec VectorLoad(floatVec source)
+      {
+          floatVec operand;
+
+          operand.x = source.c***;
+          operand.y = source.*c**;
+          operand.z = source.**c*;
+          operand.w = source.***c;
+          if (negateBase) {
+             operand.x = -operand.x;
+             operand.y = -operand.y;
+             operand.z = -operand.z;
+             operand.w = -operand.w;
+          }
+          if (absolute) {
+             operand.x = abs(operand.x);
+             operand.y = abs(operand.y);
+             operand.z = abs(operand.z);
+             operand.w = abs(operand.w);
+          }
+          if (negateAbs) {
+             operand.x = -operand.x;
+             operand.y = -operand.y;
+             operand.z = -operand.z;
+             operand.w = -operand.w;
+          }
+
+          return operand;
+      }
+
+      float ScalarLoad(floatVec source) 
+      {
+          float operand;
+
+          operand = source.c***;
+          if (negateBase) {
+            operand = -operand;
+          }
+          if (absolute) {
+             operand = abs(operand);
+          }
+          if (negateAbs) {
+            operand = -operand;
+          }
+
+          return operand;
+      }
+
+      intVec AddrVectorLoad(intVec addrReg)
+      {
+          intVec operand;
+
+          operand.x = source.c***;
+          operand.y = source.*c**;
+          operand.z = source.**c*;
+          operand.w = source.***c;
+
+          return operand;
+      }
+
+      int AddrScalarLoad(intVec addrReg)
+      {
+          return source.c***;
+      }
+
+    If an operand is obtained from a program parameter register, by matching
+    the <progParamRegister> rule, the register number can be obtained by
+    absolute or relative addressing.  
+
+    When absolute addressing is used, by matching the <absProgParamReg> rule,
+    the program parameter register number is the number matching the
+    <progParamRegNum>.
+
+    When relative addressing is used, by matching the <relProgParamReg> rule,
+    the program parameter register number is computed during program
+    execution.  An index is computed by adding the integer scalar operand
+    specified by the <scalarAddr> rule to the positive or negative offset
+    specified by the <progParamOffset> rule.  If <progParamOffset> matches "",
+    an offset of zero is used.
+
+    The following pseudo-code spells out the process of loading a program
+    parameter.  "addrReg" refers to the address register used for relative
+    addressing, "absolute" is TRUE if the operand uses absolute addressing and
+    FALSE otherwise.  "paramNumber" is the program parameter number for
+    absolute addressing; "paramOffset" is the program parameter offset for
+    relative addressing.  "paramRegiser" is an array holding the complete set
+    of program parameter registers.
+
+      floatVec ProgramParameterLoad(intVec addrReg)
+      {
+        int index;
+        
+        if (absolute) {
+          index = paramNumber;
+        } else {
+          index = AddrScalarLoad(addrReg) + paramOffset
+        }
+
+        return paramRegister[index];
+      }
+
+
+    Section 2.14.2.2,  Vertex Program Destination Register Update
+
+    Most vertex program instructions write a 4-component result vector to a
+    single temporary, vertex result, or address register.  Writes to
+    individual components of the destination register are controlled by
+    individual component write masks specified as part of the instruction.  In
+    the VP2 execution environment, writes are additionally controlled by the a
+    condition code write mask, which is computed at run time.
+
+    The component write mask is specified by the <optionalWriteMask> rule
+    found in the <maskedDstReg> or <maskedAddrReg> rule.  If the optional mask
+    is "", all components are enabled.  Otherwise, the optional mask names the
+    individual components to enable.  The characters "x", "y", "z", and "w"
+    match the x, y, z, and w components respectively.  For example, an
+    optional mask of ".xzw" indicates that the x, z, and w components should
+    be enabled for writing but the y component should not.  The grammar
+    requires that the destination register mask components must be listed in
+    "xyzw" order.
+
+    In the VP2 execution environment, the condition code write mask is
+    specified by the <optionalCCMask> rule found in the <maskedDstReg> and
+    <maskedAddrReg> rules.  If the condition code mask matches "", all
+    components are enabled.  Otherwise, the condition code register is loaded
+    and swizzled according to the swizzle codes specified by <swizzleSuffix>.
+    Each component of the swizzled condition code is tested according to the
+    rule given by <ccMaskRule>.  <ccMaskRule> may have the values "EQ", "NE",
+    "LT", "GE", LE", or "GT", which mean to enable writes if the corresponding
+    condition code field evaluates to equal, not equal, less than, greater
+    than or equal, less than or equal, or greater than, respectively.
+    Comparisons involving condition codes of "UN" (unordered) evaluate to true
+    for "NE" and false otherwise.  For example, if the condition code is
+    (GT,LT,EQ,GT) and the condition code mask is "(NE.zyxw)", the swizzle
+    operation will load (EQ,LT,GT,GT) and the mask will thus will enable
+    writes on the y, z, and w components.  In addition, "TR" always enables
+    writes and "FL" always disables writes, regardless of the condition code.
+
+    Each component of the destination register is updated with the result of
+    the vertex program instruction if and only if the component is enabled for
+    writes by the component write mask, and the optional condition code mask
+    (if applicable).  Otherwise, the component of the destination register
+    remains unchanged.
+
+    In the VP2 execution environment, a vertex program instruction can also
+    optionally update the condition code register.  The condition code is
+    updated if the condition code register update suffix "C" is present in the
+    instruction.  The instruction "ADDC" will update the condition code; the
+    otherwise equivalent instruction "ADD" will not.  If condition code
+    updates are enabled, each component of the destination register enabled
+    for writes is compared to zero.  The corresponding component of the
+    condition code is set to "LT", "EQ", or "GT", if the written component is
+    less than, equal to, or greater than zero, respectively.  Condition code
+    components are set to "UN" if the written component is NaN.  Values of
+    -0.0 and +0.0 both evaluate to "EQ".  If a component of the destination
+    register is not enabled for writes, the corresponding condition code
+    component is also unchanged.
+
+    In the following example code,
+
+        # R1=(-2, 0, 2, NaN)              R0                  CC
+        MOVC R0, R1;               # ( -2,  0,   2, NaN) (LT,EQ,GT,UN)
+        MOVC R0.xyz, R1.yzwx;      # (  0,  2, NaN, NaN) (EQ,GT,UN,UN)
+        MOVC R0 (NE), R1.zywx;     # (  0,  0, NaN,  -2) (EQ,EQ,UN,LT)
+
+    the first instruction writes (-2,0,2,NaN) to R0 and updates the condition
+    code to (LT,EQ,GT,UN).  The second instruction, only the "x", "y", and "z"
+    components of R0 and the condition code are updated, so R0 ends up with
+    (0,2,NaN,NaN) and the condition code ends up with (EQ,GT,UN,UN).  In the
+    third instruction, the condition code mask disables writes to the x
+    component (its condition code field is "EQ"), so R0 ends up with
+    (0,0,NaN,-2) and the condition code ends up with (EQ,EQ,UN,LT).
+
+    The following pseudocode illustrates the process of writing a result
+    vector to the destination register.  In the pseudocode, "instrmask" refers
+    to the component write mask given by the <optionalWriteMask> rule.  In the
+    VP1 execution environment, "ccMaskRule" is always "" and "updatecc" is
+    always FALSE.  In the VP2 execution environment, "ccMaskRule" refers to
+    the condition code mask rule given by <vp2-optionalCCMask> and "updatecc"
+    is TRUE if and only if condition code updates are enabled.  "result",
+    "destination", and "cc" refer to the result vector, the register selected
+    by <dstRegister> and the condition code, respectively.  Condition codes do
+    not exist in the VP1 execution environment.
+
+      boolean TestCC(CondCode field) {
+          switch (ccMaskRule) {
+          case "EQ":  return (field == "EQ");
+          case "NE":  return (field != "EQ");
+          case "LT":  return (field == "LT");
+          case "GE":  return (field == "GT" || field == "EQ");
+          case "LE":  return (field == "LT" || field == "EQ");
+          case "GT":  return (field == "GT");
+          case "TR":  return TRUE;
+          case "FL":  return FALSE;
+          case "":    return TRUE;
+          }
+      }
+
+      enum GenerateCC(float value) {
+        if (value == NaN) {
+          return UN;
+        } else if (value < 0) {
+          return LT;
+        } else if (value == 0) {
+          return EQ;
+        } else {
+          return GT;
+        }
+      }
+
+      void UpdateDestination(floatVec destination, floatVec result)
+      {
+          floatVec merged;
+          ccVec    mergedCC;
+
+          // Merge the converted result into the destination register, under
+          // control of the compile- and run-time write masks.
+          merged = destination;
+          mergedCC = cc;
+          if (instrMask.x && TestCC(cc.c***)) {
+              merged.x = result.x;
+              if (updatecc) mergedCC.x = GenerateCC(result.x);
+          }
+          if (instrMask.y && TestCC(cc.*c**)) {
+              merged.y = result.y;
+              if (updatecc) mergedCC.y = GenerateCC(result.y);
+          }
+          if (instrMask.z && TestCC(cc.**c*)) {
+              merged.z = result.z;
+              if (updatecc) mergedCC.z = GenerateCC(result.z);
+          }
+          if (instrMask.w && TestCC(cc.***c)) {
+              merged.w = result.w;
+              if (updatecc) mergedCC.w = GenerateCC(result.w);
+          }
+
+          // Write out the new destination register and condition code.
+          destination = merged;
+          cc = mergedCC;
+      }
+
+    Section 2.14.2.3, Vertex Program Execution
+
+    In the VP1 execution environment, vertex programs consist of a sequence of
+    instructions without no support for branching.  Vertex programs begin by
+    executing the first instruction in the program, and execute instructions
+    in the order specified in the program until the last instruction is
+    reached.
+
+    VP2 vertex programs can contain one or more instruction labels, matching
+    the grammar rule <vp2-instructionLabel>.  An instruction label can be
+    referred to explicitly in branch (BRA) or subroutine call (CAL)
+    instructions.  Instruction labels can be defined or used at any point in
+    the body of a program, and can be used in instructions before being
+    defined in the program string.
+
+    VP2 vertex program branching instructions can be conditional.  The branch
+    condition is specified by the <vp2-conditionMask> and may depend on the
+    contents of the condition code register.  Branch conditions are evaluated
+    by evaluating a condition code write mask in exactly the same manner as
+    done for register writes (section 2.14.2.2).  If any of the four
+    components of the condition code write mask are enabled, the branch is
+    taken and execution continues with the instruction following the label
+    specified in the instruction.  Otherwise, the instruction is ignored and
+    vertex program execution continues with the next instruction.  In the
+    following example code,
+
+        MOVC CC, c[0];         # c[0]=(-2, 0, 2, NaN), CC gets (LT,EQ,GT,UN)
+        BRA label1 (LT.xyzw);
+        MOV R0,R1;             # not executed
+      label1:
+        BRA label2 (LT.wyzw);
+        MOV R0,R2;             # executed
+      label2:
+
+    the first BRA instruction loads a condition code of (LT,EQ,GT,UN) while
+    the second BRA instruction loads a condition code of (UN,EQ,GT,UN).  The
+    first branch will be taken because the "x" component evaluates to LT; the
+    second branch will not be taken because no component evaluates to LT.
+
+    VP2 vertex programs can specify subroutine calls.  When a subroutine call
+    (CAL) instruction is executed, a reference to the instruction immediately
+    following the CAL instruction is pushed onto the call stack.  When a
+    subroutine return (RET) instruction is executed, an instruction reference
+    is popped off the call stack and program execution continues with the
+    popped instruction.  A vertex program will terminate if a CAL instruction
+    is executed with four entries already in the call stack or if a RET
+    instruction is executed with an empty call stack.    
+
+    If a VP2 vertex program has an instruction label "main", program execution
+    begins with the instruction immediately following the instruction label.
+    Otherwise, program execution begins with the first instruction of the
+    program.  Instructions will be executed sequentially in the order
+    specified in the program, although branch instructions will affect the
+    instruction execution order, as described above.  A vertex program will
+    terminate after executing a RET instruction with an empty call stack.  A
+    vertex program will also terminate after executing the last instruction in
+    the program, unless that instruction was a taken branch.
+
+    A vertex program will fail to load if an instruction refers to a label
+    that is not defined in the program string.
+
+    A vertex program will terminate abnormally if a subroutine call
+    instruction produces a call stack overflow.  Additionally, a vertex
+    program will terminate abnormally after executing 65536 instructions to
+    prevent hangs caused by infinite loops in the program.
+
+    When a vertex program terminates, normally or abnormally, it will emit a
+    vertex whose attributes are taken from the final values of the vertex
+    result registers (section 2.14.1.5).
+
+
+    Section 2.14.3,  Vertex Program Instruction Set
+
+    The following sections describe the set of supported vertex program
+    instructions.  Instructions available only in the VP1.1 or VP2 execution
+    environment will be noted in the instruction description.  
+
+    Each section will contain pseudocode describing the instruction.
+    Instructions will have up to three operands, referred to as "op0", "op1",
+    and "op2".  The operands are loaded using the mechanisms specified in
+    section 2.14.2.1.  Most instructions will generate a result vector called
+    "result".  The result vector is then written to the destination register
+    specified in the instruction using the mechanisms specified in section
+    2.14.2.2.
+
+    Operands and results are represented as 32-bit single-precision
+    floating-point numbers according to the IEEE 754 floating-point
+    specification.  IEEE denorm encodings, used to represent numbers smaller
+    than 2^-126, are not supported.  All such numbers are flushed to zero.
+    There are three special encodings referred to in this section:  +INF means
+    "positive infinity", -INF means "negative infinity", and NaN refers to
+    "not a number".
+
+    Arithmetic operations are typically carried out in single precision
+    according to the rules specified in the IEEE 754 specification.  Any
+    exceptions and special cases will be noted in the instruction description.
+
+
+    Section 2.14.3.1,  ABS:  Absolute Value
+
+    The ABS instruction performs a component-wise absolute value operation on
+    the single operand to yield a result vector.
+
+      tmp = VectorLoad(op0); 
+      result.x = abs(tmp.x);
+      result.y = abs(tmp.y);
+      result.z = abs(tmp.z);
+      result.w = abs(tmp.w);
+
+    The following special-case rules apply to absolute value operation:
+
+      1. abs(NaN) = NaN.
+      2. abs(-INF) = abs(+INF) = +INF.
+      3. abs(-0.0) = abs(+0.0) = +0.0.
+
+    The ABS instruction is available only in the VP1.1 and VP2 execution
+    environments.  
+
+    In the VP1.0 execution environment, the same functionality can be achieved
+    with "MAX result, src, -src".
+
+    In the VP2 execution environment, the ABS instruction is effectively
+    obsolete, since instructions can take the absolute value of each operand
+    at no cost.
+
+
+    Section 2.14.3.2,  ADD:  Add
+
+    The ADD instruction performs a component-wise add of the two operands to
+    yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = tmp0.x + tmp1.x;
+      result.y = tmp0.y + tmp1.y;
+      result.z = tmp0.z + tmp1.z;
+      result.w = tmp0.w + tmp1.w;
+
+    The following special-case rules apply to addition:
+
+      1. "A+B" is always equivalent to "B+A".
+      2. NaN + <x> = NaN, for all <x>.
+      3. +INF + <x> = +INF, for all <x> except NaN and -INF.
+      4. -INF + <x> = -INF, for all <x> except NaN and +INF.
+      5. +INF + -INF = NaN.
+      6. -0.0 + <x> = <x>, for all <x>.
+      7. +0.0 + <x> = <x>, for all <x> except -0.0.
+
+
+    Section 2.14.3.3,  ARA:  Address Register Add
+
+    The ARA instruction adds two pairs of components of a vector address
+    register operand to produce an integer result vector.  The "x" and "z"
+    components of the result vector contain the sum of the "x" and "z"
+    components of the operand; the "y" and "w" components of the result vector
+    contain the sum of the "y" and "w" components of the operand.  Each
+    component of the result vector is clamped to [-512, +511], the range of
+    representable address register components.
+
+      itmp = AddrVectorLoad(op0);
+      iresult.x = itmp.x + itmp.z;
+      iresult.y = itmp.y + itmp.w;
+      iresult.z = itmp.x + itmp.z;
+      iresult.w = itmp.y + itmp.w;
+      if (iresult.x < -512) iresult.x = -512;
+      if (iresult.x > 511)  iresult.x = 511;
+      if (iresult.y < -512) iresult.y = -512;
+      if (iresult.y > 511)  iresult.y = 511;
+      if (iresult.z < -512) iresult.z = -512;
+      if (iresult.z > 511)  iresult.z = 511;
+      if (iresult.w < -512) iresult.w = -512;
+      if (iresult.w > 511)  iresult.w = 511;
+
+    Component swizzling is not supported when the operand is loaded.
+
+    The ARA instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.4,  ARL:  Address Register Load
+
+    In the VP1 execution environment, the ARL instruction loads a single
+    scalar operand and performs a floor operation to generate an integer
+    scalar to be written to the address register.
+
+      tmp = ScalarLoad(op0);
+      iresult.x = floor(tmp);
+
+    In the VP2 execution environment, the ARL instruction loads a single
+    vector operand and performs a component-wise floor operation to generate
+    an integer result vector.  Each component of the result vector is clamped
+    to [-512, +511], the range of representable address register components.
+    The ARL instruction applies all masking operations to address register
+    writes as are described in section 2.14.2.2.
+
+      tmp = VectorLoad(op0);
+      iresult.x = floor(tmp.x);
+      iresult.y = floor(tmp.y);
+      iresult.z = floor(tmp.z);
+      iresult.w = floor(tmp.w);
+      if (iresult.x < -512) iresult.x = -512;
+      if (iresult.x > 511)  iresult.x = 511;
+      if (iresult.y < -512) iresult.y = -512;
+      if (iresult.y > 511)  iresult.y = 511;
+      if (iresult.z < -512) iresult.z = -512;
+      if (iresult.z > 511)  iresult.z = 511;
+      if (iresult.w < -512) iresult.w = -512;
+      if (iresult.w > 511)  iresult.w = 511;
+
+    The following special-case rules apply to floor computation:
+
+      1. floor(NaN) = NaN.
+      2. floor(<x>) = <x>, for -0.0, +0.0, -INF, and +INF.  In all cases, the
+         sign of the result is equal to the sign of the operand.
+
+
+    Section 2.14.3.5,  ARR:  Address Register Load (with round)
+
+    The ARR instruction loads a single vector operand and performs a
+    component-wise round operation to generate an integer result vector.  Each
+    component of the result vector is clamped to [-512, +511], the range of
+    representable address register components.  The ARR instruction applies
+    all masking operations to address register writes as described in section
+    2.14.2.2.
+
+      tmp = VectorLoad(op0);
+      iresult.x = round(tmp.x);
+      iresult.y = round(tmp.y);
+      iresult.z = round(tmp.z);
+      iresult.w = round(tmp.w);
+      if (iresult.x < -512) iresult.x = -512;
+      if (iresult.x > 511)  iresult.x = 511;
+      if (iresult.y < -512) iresult.y = -512;
+      if (iresult.y > 511)  iresult.y = 511;
+      if (iresult.z < -512) iresult.z = -512;
+      if (iresult.z > 511)  iresult.z = 511;
+      if (iresult.w < -512) iresult.w = -512;
+      if (iresult.w > 511)  iresult.w = 511;
+
+    The rounding function, round(x), returns the nearest integer to <x>.  If
+    the fractional portion of <x> is 0.5, round(x) selects the nearest even
+    integer.
+
+    The ARR instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.6,  BRA:  Branch
+
+    The BRA instruction conditionally transfers control to the instruction
+    following the label specified in the instruction.  The following
+    pseudocode describes the operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        // continue execution at instruction following <branchLabel>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <branchLabel> is the label specified in the instruction
+    matching the <vp2-branchLabel> grammar rule.
+
+    The BRA instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.7,  CAL:  Subroutine Call
+
+    The CAL instruction conditionally transfers control to the instruction
+    following the label specified in the instruction.  It also pushes a
+    reference to the instruction immediately following the CAL instruction
+    onto the call stack, where execution will continue after executing the
+    matching RET instruction.  The following pseudocode describes the
+    operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        if (callStackDepth >= 4) {
+          // terminate vertex program
+        } else {
+          callStack[callStackDepth] = nextInstruction;
+          callStackDepth++;
+        }
+        // continue execution at instruction following <branchLabel>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <branchLabel> is the label specified in the instruction
+    matching the <vp2-branchLabel> grammar rule, <callStackDepth> is the
+    current depth of the call stack, <callStack> is an array holding the call
+    stack, and <nextInstruction> is a reference to the instruction immediately
+    following the present one in the program string.
+    
+    The CAL instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.8,  COS:  Cosine
+
+    The COS instruction approximates the cosine of the angle specified by the
+    scalar operand and replicates the approximation to all four components of
+    the result vector.  The angle is specified in radians and does not have to
+    be in the range [0,2*PI].
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxCosine(tmp);
+      result.y = ApproxCosine(tmp);
+      result.z = ApproxCosine(tmp);
+      result.w = ApproxCosine(tmp);
+
+    The approximation function ApproxCosine is accurate to at least 22 bits
+    with an angle in the range [0,2*PI].
+
+      | ApproxCosine(x) - cos(x) | < 1.0 / 2^22, if 0.0 <= x < 2.0 * PI.
+
+    The error in the approximation will typically increase with the absolute
+    value of the angle when the angle falls outside the range [0,2*PI].
+
+    The following special-case rules apply to cosine approximation:
+
+      1. ApproxCosine(NaN) = NaN.
+      2. ApproxCosine(+/-INF) = NaN.
+      3. ApproxCosine(+/-0.0) = +1.0.
+
+    The COS instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.9,  DP3:  3-component Dot Product
+
+    The DP3 instruction computes a three component dot product of the two
+    operands (using the x, y, and z components) and replicates the dot product
+    to all four components of the result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1):
+      result.x = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z);
+      result.y = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z);
+      result.z = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z);
+      result.w = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z);
+
+
+    Section 2.14.3.10,  DP4:  4-component Dot Product
+
+    The DP4 instruction computes a four component dot product of the two
+    operands and replicates the dot product to all four components of the
+    result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1):
+      result.x = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + (tmp0.w * tmp1.w);
+      result.y = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + (tmp0.w * tmp1.w);
+      result.z = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + (tmp0.w * tmp1.w);
+      result.w = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + (tmp0.w * tmp1.w);
+
+
+    Section 2.14.3.11,  DPH:  Homogeneous Dot Product
+
+    The DPH instruction computes a four-component dot product of the two
+    operands, except that the W component of the first operand is assumed to
+    be 1.0.  The instruction replicates the dot product to all four components
+    of the result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1):
+      result.x = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + tmp1.w;
+      result.y = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + tmp1.w;
+      result.z = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + tmp1.w;
+      result.w = (tmp0.x * tmp1.x) + (tmp0.y * tmp1.y) + 
+                 (tmp0.z * tmp1.z) + tmp1.w;
+
+    The DPH instruction is available only in the VP1.1 and VP2 execution
+    environments.
+
+
+    Section 2.14.3.12,  DST:  Distance Vector
+
+    The DST instruction computes a distance vector from two specially-
+    formatted operands.  The first operand should be of the form [NA, d^2,
+    d^2, NA] and the second operand should be of the form [NA, 1/d, NA, 1/d],
+    where NA values are not relevant to the calculation and d is a vector
+    length.  If both vectors satisfy these conditions, the result vector will
+    be of the form [1.0, d, d^2, 1/d].
+
+    The exact behavior is specified in the following pseudo-code:
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = 1.0;
+      result.y = tmp0.y * tmp1.y;
+      result.z = tmp0.z;
+      result.w = tmp1.w;
+
+    Given an arbitrary vector, d^2 can be obtained using the DP3 instruction
+    (using the same vector for both operands) and 1/d can be obtained from d^2
+    using the RSQ instruction.
+
+    This distance vector is useful for per-vertex light attenuation
+    calculations:  a DP3 operation using the distance vector and an
+    attenuation constants vector as operands will yield the attenuation
+    factor.
+
+
+    Section 2.14.3.13,  EX2:  Exponential Base 2
+
+    The EX2 instruction approximates 2 raised to the power of the scalar
+    operand and replicates it to all four components of the result vector.
+
+      tmp = ScalarLoad(op0);
+      result.x = Approx2ToX(tmp);
+      result.y = Approx2ToX(tmp);
+      result.z = Approx2ToX(tmp);
+      result.w = Approx2ToX(tmp);
+
+    The approximation function is accurate to at least 22 bits:
+
+      | Approx2ToX(x) - 2^x | < 1.0 / 2^22, if 0.0 <= x < 1.0,
+
+    and, in general,
+   
+      | Approx2ToX(x) - 2^x | < (1.0 / 2^22) * (2^floor(x)).
+
+    The following special-case rules apply to exponential approximation:
+
+      1. Approx2ToX(NaN) = NaN.
+      2. Approx2ToX(-INF) = +0.0.
+      3. Approx2ToX(+INF) = +INF.
+      4. Approx2ToX(+/-0.0) = +1.0.
+
+    The EX2 instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.14,  EXP:  Exponential Base 2 (approximate)
+
+    The EXP instruction computes a rough approximation of 2 raised to the
+    power of the scalar operand.  The approximation is returned in the "z"
+    component of the result vector.  A vertex program can also use the "x" and
+    "y" components of the result vector to generate a more accurate
+    approximation by evaluating
+
+        result.x * f(result.y),
+    
+    where f(x) is a user-defined function that approximates 2^x over the
+    domain [0.0, 1.0).  The "w" component of the result vector is always 1.0.
+    
+    The exact behavior is specified in the following pseudo-code:
+
+      tmp = ScalarLoad(op0);
+      result.x = 2^floor(tmp);
+      result.y = tmp - floor(tmp);
+      result.z = RoughApprox2ToX(tmp);
+      result.w = 1.0;
+
+    The approximation function is accurate to at least 11 bits:
+
+      | RoughApprox2ToX(x) - 2^x | < 1.0 / 2^11, if 0.0 <= x < 1.0,
+
+    and, in general,
+   
+      | RoughApprox2ToX(x) - 2^x | < (1.0 / 2^11) * (2^floor(x)).
+
+    The following special cases apply to the EXP instruction:
+
+      1. RoughApprox2ToX(NaN) = NaN.
+      2. RoughApprox2ToX(-INF) = +0.0.
+      3. RoughApprox2ToX(+INF) = +INF.
+      4. RoughApprox2ToX(+/-0.0) = +1.0.
+
+    The EXP instruction is present for compatibility with the original
+    NV_vertex_program instruction set; it is recommended that applications
+    using NV_vertex_program2 use the EX2 instruction instead.
+
+
+    Section 2.14.3.15,  FLR:  Floor
+
+    The FLR instruction performs a component-wise floor operation on the
+    operand to generate a result vector.  The floor of a value is defined as
+    the largest integer less than or equal to the value.  The floor of 2.3 is
+    2.0; the floor of -3.6 is -4.0.
+
+      tmp = VectorLoad(op0);
+      result.x = floor(tmp.x);
+      result.y = floor(tmp.y);
+      result.z = floor(tmp.z);
+      result.w = floor(tmp.w);
+
+    The following special-case rules apply to floor computation:
+
+      1. floor(NaN) = NaN.
+      2. floor(<x>) = <x>, for -0.0, +0.0, -INF, and +INF.  In all cases, the
+         sign of the result is equal to the sign of the operand.
+
+    The FLR instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.16,  FRC:  Fraction
+
+    The FRC instruction extracts the fractional portion of each component of
+    the operand to generate a result vector.  The fractional portion of a
+    component is defined as the result after subtracting off the floor of the
+    component (see FLR), and is always in the range [0.00, 1.00).
+
+    For negative values, the fractional portion is NOT the number written to
+    the right of the decimal point -- the fractional portion of -1.7 is not
+    0.7 -- it is 0.3.  0.3 is produced by subtracting the floor of -1.7 (-2.0)
+    from -1.7.
+
+      tmp = VectorLoad(op0);
+      result.x = tmp.x - floor(tmp.x);
+      result.y = tmp.y - floor(tmp.y);
+      result.z = tmp.z - floor(tmp.z);
+      result.w = tmp.w - floor(tmp.w);
+
+    The following special-case rules, which can be derived from the rules for
+    FLR and ADD apply to fraction computation:
+
+      1. fraction(NaN) = NaN.
+      2. fraction(+/-INF) = NaN.
+      3. fraction(+/-0.0) = +0.0.
+
+    The FRC instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.17,  LG2:  Logarithm Base 2
+
+    The LG2 instruction approximates the base 2 logarithm of the scalar
+    operand and replicates it to all four components of the result vector.
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxLog2(tmp);
+      result.y = ApproxLog2(tmp);
+      result.z = ApproxLog2(tmp);
+      result.w = ApproxLog2(tmp);
+   
+    The approximation function is accurate to at least 22 bits:
+
+      | ApproxLog2(x) - log_2(x) | < 1.0 / 2^22.
+
+    Note that for large values of x, there are not enough bits in the
+    floating-point storage format to represent a result that precisely.
+
+    The following special-case rules apply to logarithm approximation:
+
+      1. ApproxLog2(NaN) = NaN.
+      2. ApproxLog2(+INF) = +INF.
+      3. ApproxLog2(+/-0.0) = -INF.
+      4. ApproxLog2(x) = NaN, -INF < x < -0.0.
+      5. ApproxLog2(-INF) = NaN.
+
+    The LG2 instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.18,  LIT:  Compute Light Coefficients
+
+    The LIT instruction accelerates per-vertex lighting by computing lighting
+    coefficients for ambient, diffuse, and specular light contributions.  The
+    "x" component of the operand is assumed to hold a diffuse dot product (n
+    dot VP_pli, as in the vertex lighting equations in Section 2.13.1).  The
+    "y" component of the operand is assumed to hold a specular dot product (n
+    dot h_i).  The "w" component of the operand is assumed to hold the
+    specular exponent of the material (s_rm), and is clamped to the range
+    (-128, +128) exclusive.
+
+    The "x" component of the result vector receives the value that should be
+    multiplied by the ambient light/material product (always 1.0).  The "y"
+    component of the result vector receives the value that should be
+    multiplied by the diffuse light/material product (n dot VP_pli).  The "z"
+    component of the result vector receives the value that should be
+    multiplied by the specular light/material product (f_i * (n dot h_i) ^
+    s_rm).  The "w" component of the result is the constant 1.0.
+
+    Negative diffuse and specular dot products are clamped to 0.0, as is done
+    in the standard per-vertex lighting operations.  In addition, if the
+    diffuse dot product is zero or negative, the specular coefficient is
+    forced to zero.
+
+      tmp = VectorLoad(op0);
+      if (t.x < 0) t.x = 0;
+      if (t.y < 0) t.y = 0;
+      if (t.w < -(128.0-epsilon)) t.w = -(128.0-epsilon);
+      else if (t.w > 128-epsilon) t.w = 128-epsilon;
+      result.x = 1.0;
+      result.y = t.x;
+      result.z = (t.x > 0) ? RoughApproxPower(t.y, t.w) : 0.0;
+      result.w = 1.0;
+
+    The exponentiation approximation function is defined in terms of the base
+    2 exponentiation and logarithm approximation operations in the EXP and LOG
+    instructions, including errors and the processing of any special cases.
+    In particular,
+
+      RoughApproxPower(a,b) = RoughApproxExp2(b * RoughApproxLog2(a)).
+
+    The following special-case rules, which can be derived from the rules in
+    the LOG, MUL, and EXP instructions, apply to exponentiation:
+
+      1. RoughApproxPower(NaN, <x>) = NaN,
+      2. RoughApproxPower(<x>, <y>) = NaN, if x <= -0.0,
+      3. RoughApproxPower(+/-0.0, <x>) = +0.0, if x > +0.0, or
+                                         +INF, if x < -0.0,
+      4. RoughApproxPower(+1.0, <x>) = +1.0, if x is not NaN,
+      5. RoughApproxPower(+INF, <x>) = +INF, if x > +0.0, or
+                                       +0.0, if x < -0.0,
+      6. RoughApproxPower(<x>, +/-0.0) = +1.0, if x >= -0.0
+      7. RoughApproxPower(<x>, +INF) = +0.0, if -0.0 <= x < +1.0,
+                                       +INF, if x > +1.0,
+      8. RoughApproxPower(<x>, +INF) = +INF, if -0.0 <= x < +1.0,
+                                       +0.0, if x > +1.0,
+      9. RoughApproxPower(<x>, +1.0) = <x>, if x >= +0.0, and
+      10. RoughApproxPower(<x>, NaN) = NaN.
+
+
+    Section 2.14.3.19,  LOG:  Logarithm Base 2 (Approximate)
+
+    The LOG instruction computes a rough approximation of the base 2 logarithm
+    of the absolute value of the scalar operand.  The approximation is
+    returned in the "z" component of the result vector.  A vertex program can
+    also use the "x" and "y" components of the result vector to generate a
+    more accurate approximation by evaluating
+
+        result.x + f(result.y),
+    
+    where f(x) is a user-defined function that approximates 2^x over the
+    domain [1.0, 2.0).  The "w" component of the result vector is always 1.0.
+
+    The exact behavior is specified in the following pseudo-code:
+
+      tmp = fabs(ScalarLoad(op0));
+      result.x = floor(log2(tmp));
+      result.y = tmp / (2^floor(log2(tmp)));
+      result.z = RoughApproxLog2(tmp);
+      result.w = 1.0;
+   
+    The approximation function is accurate to at least 11 bits:
+
+      | RoughApproxLog2(x) - log_2(x) | < 1.0 / 2^11.
+
+    The following special-case rules apply to the LOG instruction:
+
+      1. RoughApproxLog2(NaN) = NaN.
+      2. RoughApproxLog2(+INF) = +INF.
+      3. RoughApproxLog2(+0.0) = -INF.
+
+    The LOG instruction is present for compatibility with the original
+    NV_vertex_program instruction set; it is recommended that applications
+    using NV_vertex_program2 use the LG2 instruction instead.
+
+
+    Section 2.14.3.20,  MAD:  Multiply And Add
+
+    The MAD instruction performs a component-wise multiply of the first two
+    operands, and then does a component-wise add of the product to the third
+    operand to yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      tmp2 = VectorLoad(op2);
+      result.x = tmp0.x * tmp1.x + tmp2.x;
+      result.y = tmp0.y * tmp1.y + tmp2.y;
+      result.z = tmp0.z * tmp1.z + tmp2.z;
+      result.w = tmp0.w * tmp1.w + tmp2.w;
+
+    All special case rules applicable to the ADD and MUL instructions apply to
+    the individual components of the MAD operation as well.
+
+
+    Section 2.14.3.21,  MAX:  Maximum
+
+    The MAX instruction computes component-wise maximums of the values in the
+    two operands to yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = max(tmp0.x, tmp1.x);
+      result.y = max(tmp0.y, tmp1.y);
+      result.z = max(tmp0.z, tmp1.z);
+      result.w = max(tmp0.w, tmp1.w);
+
+    The following special cases apply to the maximum operation:
+
+      1. max(A,B) is always equivalent to max(B,A).
+      2. max(NaN, <x>) == NaN, for all <x>.
+
+
+    Section 2.14.3.22,  MIN:  Minimum
+
+    The MIN instruction computes component-wise minimums of the values in the
+    two operands to yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = min(tmp0.x, tmp1.x);
+      result.y = min(tmp0.y, tmp1.y);
+      result.z = min(tmp0.z, tmp1.z);
+      result.w = min(tmp0.w, tmp1.w);
+
+    The following special cases apply to the minimum operation:
+
+      1. min(A,B) is always equivalent to min(B,A).
+      2. min(NaN, <x>) == NaN, for all <x>.
+
+
+    Section 2.14.3.23,  MOV:  Move
+
+    The MOV instruction copies the value of the operand to yield a result
+    vector.
+
+      result = VectorLoad(op0);
+
+
+    Section 2.14.3.24,  MUL:  Multiply
+
+    The MUL instruction performs a component-wise multiply of the two operands
+    to yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = tmp0.x * tmp1.x;
+      result.y = tmp0.y * tmp1.y;
+      result.z = tmp0.z * tmp1.z;
+      result.w = tmp0.w * tmp1.w;
+
+    The following special-case rules apply to multiplication:
+
+      1. "A*B" is always equivalent to "B*A".
+      2. NaN * <x> = NaN, for all <x>.
+      3. +/-0.0 * +/-INF = NaN.
+      4. +/-0.0 * <x> = +/-0.0, for all <x> except -INF, +INF, and NaN.  The
+         sign of the result is positive if the signs of the two operands match
+         and negative otherwise.
+      5. +/-INF * <x> = +/-INF, for all <x> except -0.0, +0.0, and NaN.  The 
+         sign of the result is positive if the signs of the two operands match
+         and negative otherwise.
+      6. +1.0 * <x> = <x>, for all <x>.
+
+
+    Section 2.14.3.25,  RCC:  Reciprocal (Clamped)
+
+    The RCC instruction approximates the reciprocal of the scalar operand,
+    clamps the result to one of two ranges, and replicates the clamped result
+    to all four components of the result vector.
+
+    If the approximate reciprocal is greater than 0.0, the result is clamped
+    to the range [2^-64, 2^+64].  If the approximate reciprocal is not greater
+    than zero, the result is clamped to the range [-2^+64, -2^-64].
+
+      tmp = ScalarLoad(op0);
+      result.x = ClampApproxReciprocal(tmp);
+      result.y = ClampApproxReciprocal(tmp);
+      result.z = ClampApproxReciprocal(tmp);
+      result.w = ClampApproxReciprocal(tmp);
+
+    The approximation function is accurate to at least 22 bits:
+
+      | ClampApproxReciprocal(x) - (1/x) | < 1.0 / 2^22, if 1.0 <= x < 2.0.
+
+    The following special-case rules apply to reciprocation:
+
+      1. ClampApproxReciprocal(NaN) = NaN.
+      2. ClampApproxReciprocal(+INF) = +2^-64.
+      3. ClampApproxReciprocal(-INF) = -2^-64.
+      4. ClampApproxReciprocal(+0.0) = +2^64.
+      5. ClampApproxReciprocal(-0.0) = -2^64.
+      6. ClampApproxReciprocal(x) = +2^-64, if +2^64 < x < +INF.
+      7. ClampApproxReciprocal(x) = -2^-64, if -INF < x < -2^-64.
+      8. ClampApproxReciprocal(x) = +2^64, if +0.0 < x < +2^-64.
+      9. ClampApproxReciprocal(x) = -2^64, if -2^-64 < x < -0.0.
+
+    The RCC instruction is available only in the VP1.1 and VP2 execution
+    environments.
+
+
+    Section 2.14.3.26,  RCP:  Reciprocal
+
+    The RCP instruction approximates the reciprocal of the scalar operand and
+    replicates it to all four components of the result vector.
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxReciprocal(tmp);
+      result.y = ApproxReciprocal(tmp);
+      result.z = ApproxReciprocal(tmp);
+      result.w = ApproxReciprocal(tmp);
+
+    The approximation function is accurate to at least 22 bits:
+
+      | ApproxReciprocal(x) - (1/x) | < 1.0 / 2^22, if 1.0 <= x < 2.0.
+
+    The following special-case rules apply to reciprocation:
+
+      1. ApproxReciprocal(NaN) = NaN.
+      2. ApproxReciprocal(+INF) = +0.0.
+      3. ApproxReciprocal(-INF) = -0.0.
+      4. ApproxReciprocal(+0.0) = +INF.
+      5. ApproxReciprocal(-0.0) = -INF.
+
+
+    Section 2.14.3.27,  RET:  Subroutine Call Return
+
+    The RET instruction conditionally returns from a subroutine initiated by a
+    CAL instruction by popping an instruction reference off the top of the
+    call stack and transferring control to the referenced instruction.  The
+    following pseudocode describes the operation of the instruction:
+
+      if (TestCC(cc.c***) || TestCC(cc.*c**) || 
+          TestCC(cc.**c*) || TestCC(cc.***c)) {
+        if (callStackDepth <= 0) {
+          // terminate vertex program
+        } else {
+          callStackDepth--;
+          instruction = callStack[callStackDepth];
+        }
+
+        // continue execution at <instruction>
+      } else {
+        // do nothing
+      }
+
+    In the pseudocode, <callStackDepth> is the depth of the call stack,
+    <callStack> is an array holding the call stack, and <instruction> is a
+    reference to an instruction previously pushed onto the call stack.
+    
+    The RET instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.28,  RSQ:  Reciprocal Square Root
+
+    The RSQ instruction approximates the reciprocal of the square root of the
+    scalar operand and replicates it to all four components of the result
+    vector.
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxRSQRT(tmp);
+      result.y = ApproxRSQRT(tmp);
+      result.z = ApproxRSQRT(tmp);
+      result.w = ApproxRSQRT(tmp);
+
+    The approximation function is accurate to at least 22 bits:
+
+      | ApproxRSQRT(x) - (1/x) | < 1.0 / 2^22, if 1.0 <= x < 4.0.
+
+    The following special-case rules apply to reciprocal square roots:
+
+      1. ApproxRSQRT(NaN) = NaN.
+      2. ApproxRSQRT(+INF) = +0.0.
+      3. ApproxRSQRT(-INF) = NaN.
+      4. ApproxRSQRT(+0.0) = +INF.
+      5. ApproxRSQRT(-0.0) = -INF.
+      6. ApproxRSQRT(x) = NaN, if -INF < x < -0.0.
+
+
+    Section 2.14.3.29,  SEQ:  Set on Equal
+
+    The SEQ instruction performs a component-wise comparison of the two
+    operands.  Each component of the result vector is 1.0 if the corresponding
+    component of the first operand is equal to that of the second, and 0.0
+    otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x == tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y == tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z == tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w == tmp1.w) ? 1.0 : 0.0;
+      if (tmp0.x is NaN or tmp1.x is NaN) result.x = NaN;
+      if (tmp0.y is NaN or tmp1.y is NaN) result.y = NaN;
+      if (tmp0.z is NaN or tmp1.z is NaN) result.z = NaN;
+      if (tmp0.w is NaN or tmp1.w is NaN) result.w = NaN;
+
+    The following special-case rules apply to SEQ:
+
+      1. (<x> == <y>) and (<y> == <x>) always produce the same result.
+      1. (NaN == <x>) is FALSE for all <x>, including NaN.
+      2. (+INF == +INF) and (-INF == -INF) are TRUE.
+      3. (-0.0 == +0.0) and (+0.0 == -0.0) are TRUE.
+
+    The SEQ instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.30,  SFL:  Set on False
+
+    The SFL instruction is a degenerate case of the other "Set on"
+    instructions that sets all components of the result vector to
+    0.0.
+
+      result.x = 0.0;
+      result.y = 0.0;
+      result.z = 0.0;
+      result.w = 0.0;
+
+    The SFL instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.31,  SGE:  Set on Greater Than or Equal
+
+    The SGE instruction performs a component-wise comparison of the two
+    operands.  Each component of the result vector is 1.0 if the corresponding
+    component of the first operands is greater than or equal that of the
+    second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x >= tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y >= tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z >= tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w >= tmp1.w) ? 1.0 : 0.0;
+      if (tmp0.x is NaN or tmp1.x is NaN) result.x = NaN;
+      if (tmp0.y is NaN or tmp1.y is NaN) result.y = NaN;
+      if (tmp0.z is NaN or tmp1.z is NaN) result.z = NaN;
+      if (tmp0.w is NaN or tmp1.w is NaN) result.w = NaN;
+
+    The following special-case rules apply to SGE:
+
+      1. (NaN >= <x>) and (<x> >= NaN) are FALSE for all <x>.
+      2. (+INF >= +INF) and (-INF >= -INF) are TRUE.
+      3. (-0.0 >= +0.0) and (+0.0 >= -0.0) are TRUE.
+
+
+    Section 2.14.3.32,  SGT:  Set on Greater Than
+
+    The SGT instruction performs a component-wise comparison of the two
+    operands.  Each component of the result vector is 1.0 if the corresponding
+    component of the first operands is greater than that of the second, and
+    0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x > tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y > tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z > tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w > tmp1.w) ? 1.0 : 0.0;
+      if (tmp0.x is NaN or tmp1.x is NaN) result.x = NaN;
+      if (tmp0.y is NaN or tmp1.y is NaN) result.y = NaN;
+      if (tmp0.z is NaN or tmp1.z is NaN) result.z = NaN;
+      if (tmp0.w is NaN or tmp1.w is NaN) result.w = NaN;
+
+    The following special-case rules apply to SGT:
+
+      1. (NaN > <x>) and (<x> > NaN) are FALSE for all <x>.
+      2. (-0.0 > +0.0) and (+0.0 > -0.0) are FALSE.
+
+    The SGT instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.33,  SIN:  Sine
+
+    The SIN instruction approximates the sine of the angle specified by the
+    scalar operand and replicates it to all four components of the result
+    vector.  The angle is specified in radians and does not have to be in the
+    range [0,2*PI].
+
+      tmp = ScalarLoad(op0);
+      result.x = ApproxSine(tmp);
+      result.y = ApproxSine(tmp);
+      result.z = ApproxSine(tmp);
+      result.w = ApproxSine(tmp);
+
+    The approximation function is accurate to at least 22 bits with an angle
+    in the range [0,2*PI].
+
+      | ApproxSine(x) - sin(x) | < 1.0 / 2^22, if 0.0 <= x < 2.0 * PI.
+
+    The error in the approximation will typically increase with the absolute
+    value of the angle when the angle falls outside the range [0,2*PI].
+
+    The following special-case rules apply to cosine approximation:
+
+      1. ApproxSine(NaN) = NaN.
+      2. ApproxSine(+/-INF) = NaN.
+      3. ApproxSine(+/-0.0) = +/-0.0.  The sign of the result is equal to the
+         sign of the single operand.
+
+    The SIN instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.34,  SLE:  Set on Less Than or Equal
+
+    The SLE instruction performs a component-wise comparison of the two
+    operands.  Each component of the result vector is 1.0 if the corresponding
+    component of the first operand is less than or equal to that of the
+    second, and 0.0 otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x <= tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y <= tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z <= tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w <= tmp1.w) ? 1.0 : 0.0;
+      if (tmp0.x is NaN or tmp1.x is NaN) result.x = NaN;
+      if (tmp0.y is NaN or tmp1.y is NaN) result.y = NaN;
+      if (tmp0.z is NaN or tmp1.z is NaN) result.z = NaN;
+      if (tmp0.w is NaN or tmp1.w is NaN) result.w = NaN;
+
+    The following special-case rules apply to SLE:
+
+      1. (NaN <= <x>) and (<x> <= NaN) are FALSE for all <x>.
+      2. (+INF <= +INF) and (-INF <= -INF) are TRUE.
+      3. (-0.0 <= +0.0) and (+0.0 <= -0.0) are TRUE.
+
+    The SLE instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.35,  SLT:  Set on Less Than
+
+    The SLT instruction performs a component-wise comparison of the two
+    operands.  Each component of the result vector is 1.0 if the corresponding
+    component of the first operand is less than that of the second, and 0.0
+    otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x < tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y < tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z < tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w < tmp1.w) ? 1.0 : 0.0;
+      if (tmp0.x is NaN or tmp1.x is NaN) result.x = NaN;
+      if (tmp0.y is NaN or tmp1.y is NaN) result.y = NaN;
+      if (tmp0.z is NaN or tmp1.z is NaN) result.z = NaN;
+      if (tmp0.w is NaN or tmp1.w is NaN) result.w = NaN;
+
+    The following special-case rules apply to SLT:
+
+      1. (NaN < <x>) and (<x> < NaN) are FALSE for all <x>.
+      2. (-0.0 < +0.0) and (+0.0 < -0.0) are FALSE.
+
+
+    Section 2.14.3.36,  SNE:  Set on Not Equal
+
+    The SNE instruction performs a component-wise comparison of the two
+    operands.  Each component of the result vector is 1.0 if the corresponding
+    component of the first operand is not equal to that of the second, and 0.0
+    otherwise.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = (tmp0.x != tmp1.x) ? 1.0 : 0.0;
+      result.y = (tmp0.y != tmp1.y) ? 1.0 : 0.0;
+      result.z = (tmp0.z != tmp1.z) ? 1.0 : 0.0;
+      result.w = (tmp0.w != tmp1.w) ? 1.0 : 0.0;
+      if (tmp0.x is NaN or tmp1.x is NaN) result.x = NaN;
+      if (tmp0.y is NaN or tmp1.y is NaN) result.y = NaN;
+      if (tmp0.z is NaN or tmp1.z is NaN) result.z = NaN;
+      if (tmp0.w is NaN or tmp1.w is NaN) result.w = NaN;
+
+    The following special-case rules apply to SNE:
+
+      1. (<x> != <y>) and (<y> != <x>) always produce the same result.
+      2. (NaN != <x>) is TRUE for all <x>, including NaN.
+      3. (+INF != +INF) and (-INF != -INF) are FALSE.
+      4. (-0.0 != +0.0) and (+0.0 != -0.0) are TRUE.
+
+    The SNE instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.37,  SSG:  Set Sign
+
+    The SSG instruction generates a result vector containing the signs of each
+    component of the single operand.  Each component of the result vector is
+    1.0 if the corresponding component of the operand is greater than zero,
+    0.0 if the corresponding component of the operand is equal to zero, and
+    -1.0 if the corresponding component of the operand is less than zero.
+
+      tmp = VectorLoad(op0);
+      result.x = SetSign(tmp.x);
+      result.y = SetSign(tmp.y);
+      result.z = SetSign(tmp.z);
+      result.w = SetSign(tmp.w);
+
+    The following special-case rules apply to SSG:
+
+      1. SetSign(NaN) = NaN.
+      2. SetSign(-0.0) = SetSign(+0.0) = 0.0.
+      3. SetSign(-INF) = -1.0.
+      4. SetSign(+INF) = +1.0.
+      5. SetSign(x) = -1.0, if -INF < x < -0.0.
+      6. SetSign(x) = +1.0, if +0.0 < x < +INF.
+
+    The SSG instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.38,  STR:  Set on True
+
+    The STR instruction is a degenerate case of the other "Set on"
+    instructions that sets all components of the result vector to 1.0.
+
+      result.x = 1.0;
+      result.y = 1.0;
+      result.z = 1.0;
+      result.w = 1.0;
+
+    The STR instruction is available only in the VP2 execution environment.
+
+
+    Section 2.14.3.39,  SUB:  Subtract
+
+    The SUB instruction performs a component-wise subtraction of the second
+    operand from the first to yield a result vector.
+
+      tmp0 = VectorLoad(op0);
+      tmp1 = VectorLoad(op1);
+      result.x = tmp0.x - tmp1.x;
+      result.y = tmp0.y - tmp1.y;
+      result.z = tmp0.z - tmp1.z;
+      result.w = tmp0.w - tmp1.w;
+
+    The SUB instruction is completely equivalent to an identical ADD
+    instruction in which the negate operator on the second operand is
+    reversed:
+
+      1. "SUB R0, R1, R2" is equivalent to "ADD R0, R1, -R2".
+      2. "SUB R0, R1, -R2" is equivalent to "ADD R0, R1, R2".
+      3. "SUB R0, R1, |R2|" is equivalent to "ADD R0, R1, -|R2|".
+      4. "SUB R0, R1, -|R2|" is equivalent to "ADD R0, R1, |R2|".
+
+    The SUB instruction is available only in the VP1.1 and VP2 execution
+    environments.
+
+
+    2.14.4  Vertex Arrays for Vertex Attributes
+
+    Data for vertex attributes in vertex program mode may be specified
+    using vertex array commands.  The client may specify and enable any
+    of sixteen vertex attribute arrays.
+
+    The vertex attribute arrays are ignored when vertex program mode
+    is disabled.  When vertex program mode is enabled, vertex attribute
+    arrays are used.
+
+    The command
+
+      void VertexAttribPointerNV(uint index, int size, enum type,
+                                 sizei stride, const void *pointer);
+
+    describes the locations and organizations of the sixteen vertex
+    attribute arrays.  index specifies the particular vertex attribute
+    to be described.  size indicates the number of values per vertex
+    that are stored in the array; size must be one of 1, 2, 3, or 4.
+    type specifies the data type of the values stored in the array.
+    type must be one of SHORT, FLOAT, DOUBLE, or UNSIGNED_BYTE and these
+    values correspond to the array types short, int, float, double, and
+    ubyte respectively.  The INVALID_OPERATION error is generated if
+    type is UNSIGNED_BYTE and size is not 4.  The INVALID_VALUE error
+    is generated if index is greater than 15.  The INVALID_VALUE error
+    is generated if stride is negative.
+
+    The one, two, three, or four values in an array that correspond to a
+    single vertex attribute comprise an array element.  The values within
+    each array element at stored sequentially in memory.  If the stride
+    is specified as zero, then array elements are stored sequentially
+    as well.  Otherwise points to the ith and (i+1)st elements of an array
+    differ by stride basic machine units (typically unsigned bytes),
+    the pointer to the (i+1)st element being greater.  pointer specifies
+    the location in memory of the first value of the first element of
+    the array being specified.
+
+    Vertex attribute arrays are enabled with the EnableClientState command
+    and disabled with the DisableClientState command.  The value of the
+    argument to either command is VERTEX_ATTRIB_ARRAYi_NV where i is an
+    integer between 0 and 15; specifying a value of i enables or
+    disables the vertex attribute array with index i.  The constants
+    obey VERTEX_ATTRIB_ARRAYi_NV = VERTEX_ATTRIB_ARRAY0_NV + i.
+
+    When vertex program mode is enabled, the ArrayElement command operates
+    as described in this section in contrast to the behavior described
+    in section 2.8.  Likewise, any vertex array transfer commands that
+    are defined in terms of ArrayElement (DrawArrays, DrawElements, and
+    DrawRangeElements) assume the operation of ArrayElement described
+    in this section when vertex program mode is enabled.
+
+    When vertex program mode is enabled, the ArrayElement command
+    transfers the ith element of particular enabled vertex arrays as
+    described below.  For each enabled vertex attribute array, it is
+    as though the corresponding command from section 2.14.1.1 were
+    called with a pointer to element i.  For each vertex attribute,
+    the corresponding command is VertexAttrib[size][type]v, where size
+    is one of [1,2,3,4], and type is one of [s,f,d,ub], corresponding
+    to the array types short, int, float, double, and ubyte respectively.
+
+    However, if a given vertex attribute array is disabled, but its
+    corresponding aliased conventional per-vertex parameter's vertex
+    array (as described in section 2.14.1.6) is enabled, then it is
+    as though the corresponding command from section 2.7 or section
+    2.6.2 were called with a pointer to element i.  In this case, the
+    corresponding command is determined as described in section 2.8's
+    description of ArrayElement.
+
+    If the vertex attribute array 0 is enabled, it is as though
+    VertexAttrib[size][type]v(0, ...) is executed last, after the
+    executions of other corresponding commands.  If the vertex attribute
+    array 0 is disabled but the vertex array is enabled, it is as though
+    Vertex[size][type]v is executed last, after the executions of other
+    corresponding commands.
+
+    2.14.5  Vertex State Programs
+
+    Vertex state programs share the same instruction set as and a similar
+    execution model to vertex programs.  While vertex programs are executed
+    implicitly when a vertex transformation is provoked, vertex state programs
+    are executed explicitly, independently of any vertices.  Vertex state
+    programs can write program parameter registers, but may not write vertex
+    result registers.  Vertex state programs have not been extended beyond the
+    the VP1.0 execution environment, and are offered solely for compatibility
+    with that execution environment.
+
+    The purpose of a vertex state program is to update program parameter
+    registers by means of an application-defined program.  Typically, an
+    application will load a set of program parameters and then execute a
+    vertex state program that reads and updates the program parameter
+    registers.  For example, a vertex state program might normalize a set of
+    unnormalized vectors previously loaded as program parameters.  The
+    expectation is that subsequently executed vertex programs would use the
+    normalized program parameters.
+
+    Vertex state programs are loaded with the same LoadProgramNV command (see
+    section 2.14.1.8) used to load vertex programs except that the target must
+    be VERTEX_STATE_PROGRAM_NV when loading a vertex state program.
+
+    Vertex state programs must conform to a more limited grammar than the
+    grammar for vertex programs.  The vertex state program grammar for
+    syntactically valid sequences is the same as the grammar defined in
+    section 2.14.1.8 with the following modified rules:
+
+    <program>              ::= <vp1-program>
+
+    <vp1-program>          ::= "!!VSP1.0" <programBody> "END"
+
+    <dstReg>               ::= <absProgParamReg>
+                             | <temporaryReg>
+
+    <vertexAttribReg>      ::= "v" "[" "0" "]"
+
+    A vertex state program fails to load if it does not write at least
+    one program parameter register.
+
+    A vertex state program fails to load if it contains more than 128
+    instructions.
+
+    A vertex state program fails to load if any instruction sources more
+    than one unique program parameter register.
+
+    A vertex state program fails to load if any instruction sources
+    more than one unique vertex attribute register (this is necessarily
+    true because only vertex attribute 0 is available in vertex state
+    programs).
+
+    The error INVALID_OPERATION is generated if a vertex state program
+    fails to load because it is not syntactically correct or for one
+    of the other reasons listed above.
+
+    A successfully loaded vertex state program is parsed into a sequence
+    of instructions.  Each instruction is identified by its tokenized
+    name.  The operation of these instructions when executed is defined
+    in section 2.14.1.10.
+
+    Executing vertex state programs is legal only outside a Begin/End
+    pair.  A vertex state program may not read any vertex attribute
+    register other than register zero.  A vertex state program may not
+    write any vertex result register.
+
+    The command
+
+      ExecuteProgramNV(enum target, uint id, const float *params);
+
+    executes the vertex state program named by id.  The target must be
+    VERTEX_STATE_PROGRAM_NV and the id must be the name of program loaded
+    with a target type of VERTEX_STATE_PROGRAM_NV.  params points to
+    an array of four floating-point values that are loaded into vertex
+    attribute register zero (the only vertex attribute readable from a
+    vertex state program).
+
+    The INVALID_OPERATION error is generated if the named program is
+    nonexistent, is invalid, or the program is not a vertex state
+    program.  A vertex state program may not be valid for reasons
+    explained in section 2.14.5.
+
+
+    2.14.6,  Program Options
+
+    In the VP1.1 and VP2.0 execution environment, vertex programs may specify
+    one or more program options that modify the execution environment,
+    according to the <option> grammar rule.  The set of options available to
+    the program is described below.
+
+    Section 2.14.6.1, Position-Invariant Vertex Program Option
+
+    If <vp11-option> or <vp2-option> matches "NV_position_invariant", the
+    vertex program is presumed to be position-invariant.  By default, vertex
+    programs are not position-invariant.  Even if programs emulate the
+    conventional OpenGL transformation model, they may still not produce the
+    exact same transform results, due to rounding errors or different
+    operation orders.  Such programs may not work well for multi-pass
+    rendering algorithms where the second and subsequent passes use an EQUAL
+    depth test.
+
+    Position-invariant vertex programs do not compute a final vertex position;
+    instead, the GL computes vertex coordinates as described in section 2.10.
+    This computation should produce exactly the same results as the
+    conventional OpenGL transformation model, assuming vertex weighting and
+    vertex blending are disabled.
+
+    A vertex program that specifies the position-invariant option will fail to
+    load if it writes to the HPOS result register.
+
+    Additionally, in the VP1.1 execution environment, position-invariant
+    programs can not use relative addressing for program parameters.  Any
+    position-invariant VP1.1 program matches the grammar rule
+    <relProgParamReg>, will fail to load.  No such restriction exists for
+    VP2.0 programs.
+
+    For position-invariant programs, the limit on the number of instructions
+    allowed in a program is reduced by four:  position-invariant VP1.1 and
+    VP2.0 programs may have no more than 124 or 252 instructions,
+    respectively.
+
+
+    2.14.7  Tracking Matrices 
+
+    As a convenience to applications, standard GL matrix state can be
+    tracked into program parameter vectors.  This permits vertex programs
+    to access matrices specified through GL matrix commands.
+
+    In addition to GL's conventional matrices, several additional matrices
+    are available for tracking.  These matrices have names of the form
+    MATRIXi_NV where i is between zero and n-1 where n is the value
+    of the MAX_TRACK_MATRICES_NV implementation dependent constant.
+    The MATRIXi_NV constants obey MATRIXi_NV = MATRIX0_NV + i.  The value
+    of MAX_TRACK_MATRICES_NV must be at least eight.  The maximum
+    stack depth for tracking matrices is defined by the
+    MAX_TRACK_MATRIX_STACK_DEPTH_NV and must be at least 1.
+
+    The command
+
+      TrackMatrixNV(enum target, uint address, enum matrix, enum transform);
+
+    tracks a given transformed version of a particular matrix into
+    a contiguous sequence of four vertex program parameter registers
+    beginning at address.  target must be VERTEX_PROGRAM_NV (though
+    tracked matrices apply to vertex state programs as well because both
+    vertex state programs and vertex programs shared the same program
+    parameter registers).  matrix must be one of NONE, MODELVIEW,
+    PROJECTION, TEXTURE, TEXTUREi_ARB (where i is between 0 and n-1
+    where n is the number of texture units supported), COLOR (if
+    the ARB_imaging subset is supported), MODELVIEW_PROJECTION_NV,
+    or MATRIXi_NV.  transform must be one of IDENTITY_NV, INVERSE_NV,
+    TRANSPOSE_NV, or INVERSE_TRANSPOSE_NV.  The INVALID_VALUE error is
+    generated if address is not a multiple of four.
+
+    The MODELVIEW_PROJECTION_NV matrix represents the concatenation of
+    the current modelview and projection matrices.  If M is the current
+    modelview matrix and P is the current projection matrix, then the
+    MODELVIEW_PROJECTION_NV matrix is C and computed as
+
+        C = P M
+
+    Matrix tracking for the specified program parameter register and the
+    next consecutive three registers is disabled when NONE is supplied
+    for matrix.  When tracking is disabled the previously tracked program
+    parameter registers retain the state of their last tracked values.
+    Otherwise, the specified transformed version of matrix is tracked into
+    the specified program parameter register and the next three registers.
+    Whenever the matrix changes, the transformed version of the matrix
+    is updated in the specified range of program parameter registers.
+    If TEXTURE is specified for matrix, the texture matrix for the current
+    active texture unit is tracked.  If TEXTUREi_ARB is specified for
+    matrix, the <i>th texture matrix is tracked.
+
+    Matrices are tracked row-wise meaning that the top row of the
+    transformed matrix is loaded into the program parameter address,
+    the second from the top row of the transformed matrix is loaded into
+    the program parameter address+1, the third from the top row of the
+    transformed matrix is loaded into the program parameter address+2,
+    and the bottom row of the transformed matrix is loaded into the
+    program parameter address+3.  The transformed matrix may be identical
+    to the specified matrix, the inverse of the specified matrix, the
+    transpose of the specified matrix, or the inverse transpose of the
+    specified matrix, depending on the value of transform.
+
+    When matrix tracking is enabled for a particular program parameter
+    register sequence, updates to the program parameter using
+    ProgramParameterNV commands, a vertex program, or a vertex state
+    program are not possible.  The INVALID_OPERATION error is generated
+    if a ProgramParameterNV command is used to update a program parameter
+    register currently tracking a matrix.
+
+    The INVALID_OPERATION error is generated by ExecuteProgramNV when
+    the vertex state program requested for execution writes to a program
+    parameter register that is currently tracking a matrix because the
+    program is considered invalid.
+
+    2.14.8  Required Vertex Program State 
+
+    The state required for vertex programs consists of:
+
+      a bit indicating whether or not program mode is enabled;
+
+      a bit indicating whether or not two-sided color mode is enabled;
+
+      a bit indicating whether or not program-specified point size mode
+      is enabled;
+
+      256 4-component floating-point program parameter registers;
+
+      16 4-component vertex attribute registers (though this state is
+      aliased with the current normal, primary color, secondary color,
+      fog coordinate, weights, and texture coordinate sets);
+
+      24 sets of matrix tracking state for each set of four sequential
+      program parameter registers, consisting of a n-valued integer
+      indicated the tracked matrix or GL_NONE (where n is 5 + the number
+      of texture units supported + the number of tracking matrices
+      supported) and a four-valued integer indicating the transformation
+      of the tracked matrix;
+
+      an unsigned integer naming the currently bound vertex program
+
+      and the state must be maintained to indicate which integers
+      are currently in use as program names.
+
+   Each existent program object consists of a target, a boolean indicating
+   whether the program is resident, an array of type ubyte containing the
+   program string, and the length of the program string array.  Initially,
+   no program objects exist.
+
+   Program mode, two-sided color mode, and program-specified point size
+   mode are all initially disabled.
+
+   The initial state of all 256 program parameter registers is (0,0,0,0).
+
+   The initial state of the 16 vertex attribute registers is (0,0,0,1)
+   except in cases where a vertex attribute register aliases to a
+   conventional GL transform mode vertex parameter in which case
+   the initial state is the initial state of the respective aliased
+   conventional vertex parameter.
+
+   The initial state of the 24 sets of matrix tracking state is NONE
+   for the tracked matrix and IDENTITY_NV for the transformation of the
+   tracked matrix.
+
+   The initial currently bound program is zero.
+
+   The client state required to implement the 16 vertex attribute
+   arrays consists of 16 boolean values, 16 memory pointers, 16 integer
+   stride values, 16 symbolic constants representing array types,
+   and 16 integers representing values per element.  Initially, the
+   boolean values are each disabled, the memory pointers are each null,
+   the strides are each zero, the array types are each FLOAT, and the
+   integers representing values per element are each four."
+
+
+Additions to Chapter 3 of the OpenGL 1.3 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.3 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 1.3 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 1.3 Specification (State and
+State Requests)
+
+    None.
+
+Additions to Appendix A of the OpenGL 1.3 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    All relevant protocol is defined in the NV_vertex_program extension.
+
+Errors
+
+    This list includes the errors specified in the NV_vertex_program
+    extension, modified as appropriate.
+
+    The error INVALID_VALUE is generated if VertexAttribNV is called where
+    index is greater than 15.
+
+    The error INVALID_VALUE is generated if any ProgramParameterNV has an
+    index is greater than 255 (was 95 in NV_vertex_program).
+
+    The error INVALID_VALUE is generated if VertexAttribPointerNV is called
+    where index is greater than 15.
+
+    The error INVALID_VALUE is generated if VertexAttribPointerNV is called
+    where size is not one of 1, 2, 3, or 4.
+
+    The error INVALID_VALUE is generated if VertexAttribPointerNV is called
+    where stride is negative.
+
+    The error INVALID_OPERATION is generated if VertexAttribPointerNV is
+    called where type is UNSIGNED_BYTE and size is not 4.
+
+    The error INVALID_VALUE is generated if LoadProgramNV is used to load a
+    program with an id of zero.
+
+    The error INVALID_OPERATION is generated if LoadProgramNV is used to load
+    an id that is currently loaded with a program of a different program
+    target.
+
+    The error INVALID_OPERATION is generated if the program passed to
+    LoadProgramNV fails to load because it is not syntactically correct based
+    on the specified target.  The value of PROGRAM_ERROR_POSITION_NV is still
+    updated when this error is generated.
+
+    The error INVALID_OPERATION is generated if LoadProgramNV has a target of
+    VERTEX_PROGRAM_NV and the specified program fails to load because it does
+    not write the HPOS register at least once.  The value of
+    PROGRAM_ERROR_POSITION_NV is still updated when this error is generated.
+
+    The error INVALID_OPERATION is generated if LoadProgramNV has a target of
+    VERTEX_STATE_PROGRAM_NV and the specified program fails to load because it
+    does not write at least one program parameter register.  The value of
+    PROGRAM_ERROR_POSITION_NV is still updated when this error is generated.
+
+    The error INVALID_OPERATION is generated if the vertex program or vertex
+    state program passed to LoadProgramNV fails to load because it contains
+    more than 128 instructions (VP1 programs) or 256 instructions (VP2
+    programs).  The value of PROGRAM_ERROR_POSITION_NV is still updated when
+    this error is generated.
+
+    The error INVALID_OPERATION is generated if a program is loaded with
+    LoadProgramNV for id when id is currently loaded with a program of a
+    different target.
+
+    The error INVALID_OPERATION is generated if BindProgramNV attempts to bind
+    to a program name that is not a vertex program (for example, if the
+    program is a vertex state program).
+
+    The error INVALID_VALUE is generated if GenProgramsNV is called where n is
+    negative.
+
+    The error INVALID_VALUE is generated if AreProgramsResidentNV is called
+    and any of the queried programs are zero or do not exist.
+
+    The error INVALID_OPERATION is generated if ExecuteProgramNV executes a
+    program that does not exist.
+
+    The error INVALID_OPERATION is generated if ExecuteProgramNV executes a
+    program that is not a vertex state program.
+
+    The error INVALID_OPERATION is generated if Begin, RasterPos, or a command
+    that performs an explicit Begin is called when vertex program mode is
+    enabled and the currently bound vertex program writes program parameters
+    that are currently being tracked.
+
+    The error INVALID_OPERATION is generated if ExecuteProgramNV is called and
+    the vertex state program to execute writes program parameters that are
+    currently being tracked.
+
+    The error INVALID_VALUE is generated if TrackMatrixNV has a target of
+    VERTEX_PROGRAM_NV and attempts to track an address is not a multiple of
+    four.
+
+    The error INVALID_VALUE is generated if GetProgramParameterNV is called to
+    query an index greater than 255 (was 95 in NV_vertex_program).
+
+    The error INVALID_VALUE is generated if GetVertexAttribNV is called to
+    query an <index> greater than 15, or if <index> is zero and <pname> is
+    CURRENT_ATTRIB_NV.
+
+    The error INVALID_VALUE is generated if GetVertexAttribPointervNV is
+    called to query an index greater than 15.
+
+    The error INVALID_OPERATION is generated if GetProgramivNV is called and
+    the program named id does not exist.
+
+    The error INVALID_OPERATION is generated if GetProgramStringNV is called
+    and the program named <program> does not exist.
+
+    The error INVALID_VALUE is generated if GetTrackMatrixivNV is called with
+    an <address> that is not divisible by four or greater than or equal to 256
+    (was 96 in NV_vertex_program).
+
+    The error INVALID_VALUE is generated if AreProgramsResidentNV,
+    DeleteProgramsNV, GenProgramsNV, or RequestResidentProgramsNV are called
+    where <n> is negative.
+
+    The error INVALID_VALUE is generated if LoadProgramNV is called where
+    <len> is negative.
+
+    The error INVALID_VALUE is generated if ProgramParameters4dvNV or
+    ProgramParameters4fvNV are called where <count> is negative.
+
+    The error INVALID_VALUE is generated if VertexAttribs{1,2,3,4}{d,f,s}vNV
+    is called where <count> is negative.
+
+    The error INVALID_ENUM is generated if BindProgramNV,
+    GetProgramParameterfvNV, GetProgramParameterdvNV, GetTrackMatrixivNV,
+    ProgramParameter4fNV, ProgramParameter4dNV, ProgramParameter4fvNV,
+    ProgramParameter4dvNV, ProgramParameters4fvNV, ProgramParameters4dvNV,
+    or TrackMatrixNV are called where <target> is not VERTEX_PROGRAM_NV.
+
+    The error INVALID_ENUM is generated if LoadProgramNV or
+    ExecuteProgramNV are called where <target> is not either
+    VERTEX_PROGRAM_NV or VERTEX_STATE_PROGRAM_NV.
+
+New State
+
+(Modify Table X.5, New State Introduced by NV_vertex_program from the
+ NV_vertex_program specification.)
+
+Get Value             Type    Get Command              Initial Value  Description         Sec       Attribute
+--------------------- ------  -----------------------  -------------  ------------------  --------  ------------
+PROGRAM_PARAMETER_NV  256xR4  GetProgramParameterNV    (0,0,0,0)      program parameters  2.14.1.2  -
+
+
+(Modify Table X.7.  Vertex Program Per-vertex Execution State.  "VP1" and
+"VP2" refer to the VP1 and VP2 execution environments, respectively.)
+
+Get Value    Type    Get Command   Initial Value  Description              Sec       Attribute
+---------    ------  -----------   -------------  -----------------------  --------  ---------
+-            12xR4   -             (0,0,0,0)      VP1 temporary registers  2.14.1.4  -
+-            16xR4   -             (0,0,0,0)      VP2 temporary registers  2.14.1.4  -
+-            15xR4   -             (0,0,0,1)      vertex result registers  2.14.1.4  -
+             Z4      -             (0,0,0,0)      VP1 address register     2.14.1.3  -
+             2xZ4    -             (0,0,0,0)      VP2 address registers    2.14.1.3  -
+
+
+Revision History
+
+    Rev.  Date      Author   Changes
+    ----  --------  -------  --------------------------------------------
+    33    03/18/08  pbrown   Fixed incorrectly documented clamp in the RCC
+                             instruction.
+
+    32    05/16/04  pbrown   Documented that it's not possible to results from
+                             LG2 that are any more precise than what is
+                             available in the fp32 storage format.
+
+    31    08/17/03  pbrown   Added several overlooked opcodes (RCC, SUB, SIN)
+                             to the grammar.  They are documented in the spec
+                             body, however.
+
+    30    02/28/03  pbrown   Fixed incorrect condition code example.
+
+    29    12/08/02  pbrown   Fixed minor bug where "ABS" and "DPH" were listed
+                             twice in the grammar. 
+    
+    28    10/29/02  pbrown   Remove support for indirect branching.  Added
+                             missing o[CLPx] outputs to the grammar.  Minor
+                             typo fixes.
+
+    25    07/19/02  pbrown   Fixed several miscellaneous errors in the spec.
+
+    24    06/28/02  pbrown   Fixed several erroneous resource limitations.
+
+    23    06/07/02  pbrown   Removed stray and erroneous abs() from the
+                             documentation of the LG2 instruction.
+
+    22    06/06/02  pbrown   Added missing items from NV_vertex_program1_1, in
+                             particular, program options.  Documented the
+                             VP2.0 position-invariant programs have no
+                             restrictions on indirect addressing.  
+
+    21    06/19/02  pbrown   Cleaned up miscellaneous errors and issues
+                             in the spec.
+
+    20    05/17/02  pbrown   Documented LOG instruction as taking the 
+                             absolute value of the operand, as in VP1.0.  
+                             Fixed special-case rules for MUL.  Added clamps
+                             to special-case clamping rules for RCC.
+
+    18    05/09/02  pbrown   Clarified the handling of NaN/UN in certain
+                             instructions and conditional operations.
+
+    17    04/26/02  pbrown   Fix incorrectly specified algorithm for computing
+                             the y result in the LOG instruction.
+
+    16    04/21/02  pbrown   Added example for "paletted skinning".
+                             Documented size limitation (10 bits) on the
+                             address register and ARA, ARL, and ARR
+                             instructions.  The limits needs to be exposed
+                             because of the ARA instruction.  Cleaned up
+                             documentation on absolute value on input
+                             operations.  Added examples for masked writes and
+                             CC updates, and for branching.  Fixed
+                             out-of-range indexed branch language and
+                             pseudocode to clamp to the actual table size
+                             (rather than the theoretical maximum).
+                             Documented ABS as semi-deprecated in VP2.  Fixed
+                             special cases for MIN, MAX, SEQ, SGE, SGT, SLE,
+                             SLT, and SNE.  Fix completely botched description
+                             of RET.
+ 
+    15    04/05/02  pbrown   Updated introduction to indicate that
+                             ARL/ARR/ARA all can update condition code.
+                             Minor fixes and optimizations to the looping
+                             examples.  Add missing "set on" opcodes to the
+                             grammar.  Fixed spec to clamp branch table
+                             indices to [0,15].  Added a couple caveats to
+                             the "ABS" pseudo-instruction.   Documented
+                             "ARR" as using IEEE round to nearest even
+                             mode.  Documented special cases for "SSG".

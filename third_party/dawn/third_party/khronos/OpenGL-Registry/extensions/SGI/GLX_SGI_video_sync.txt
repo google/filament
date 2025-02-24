@@ -1,0 +1,136 @@
+Name
+
+    SGI_video_sync
+
+Name Strings
+
+    GLX_SGI_video_sync
+
+Number
+
+    41
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a means for synchronization with the video 
+    frame rate of a monitor.  (In the case of an interlaced monitor, 
+    this is typically the rate of displaying both the even and odd 
+    fields of a frame.) The kernel maintains a video sync counter for 
+    each physical hardware pipe in a system; the counter is incremented 
+    upon the completion of the display of each full frame of video data. An
+    OpenGL context always corresponds to a pipe.  When an OpenGL process
+    has a current context, it can put itself to sleep until the counter of
+    that pipe reaches a desired value.  The process can also query the
+    value of the counter.
+
+    The counter runs as long as the graphics subsystem is running; it is
+    initialized via the /usr/gfx/gfxinit command.  However, a process can
+    query or sleep on the counter only when a direct context is current.
+    Each of the procedures described below will fail and return an error
+    code if the current context is not a direct one.
+
+    The counter is an unsigned 32-bit integer.
+
+Interaction with {ARB,OES}_framebuffer_object
+
+    If the current context does not have a default framebuffer there may be
+    no "frame rate" to refer to, since there is no Window or GLXWindow to map
+    to an output device. If the client API context is in this state, all
+    interaction with this extension is undefined.
+
+Issues
+
+    Should glXWaitVideoSyncSGI return GLX_BAD_VALUE if <remainder> is
+    greater than or equal to <divisor>? (No.)
+
+New Procedures and Functions
+
+    int glXGetVideoSyncSGI(uint *count);
+
+    int glXWaitVideoSyncSGI(int divisor, 
+			    int remainder, 
+			    unsigned int *count);
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations and
+the Framebuffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+	
+    [Add to Section 3.2.5 of the 1.0 GLX Specification (Synchronization
+     Primititives)]
+
+    In addition to its current functions, /usr/gfx/gfxinit also initializes
+    the video sync counter to zero.  After that time the video sync counter
+    is incremented by one at the completion of the display of each full
+    frame of video data.  The counter value wraps to zero after it reaches
+    its maximum value.  The single video sync counter is shared by all
+    GLXContexts.
+
+    glXGetVideoSyncSGI returns the value of the video sync counter in
+    <count>.  Zero is returned if the call is successful.
+
+    glXWaitVideoSyncSGI puts the calling process to sleep until
+
+	(C mod D) = R
+
+    where C is the video sync counter, D is specified by the <divisor>
+    parameter of glXWaitVideoSyncSGI, and R is specified by the <remainder>
+    parameter of glXWaitVideoSyncSGI.  glXWaitVideoSyncSGI returns the
+    current video sync counter value in <count>.  Zero is returned by
+    glXWaitVideoSyncSGI if it is successful.
+
+    glXWaitVideoSyncSGI is supported only by direct GLXContexts.
+
+Errors
+
+    glXGetVideoSyncSGI returns GLX_BAD_CONTEXT if there is no current
+    GLXContext.
+
+    glXWaitVideoSyncSGI returns GLX_BAD_CONTEXT if the current context is
+    not direct, or if there is no current context.
+
+    glXWaitVideoSyncSGI returns GLX_BAD_VALUE if parameter <divisor> is less
+    than or equal to zero, or if parameter <remainder> is less than zero.
+
+New State
+
+    Get Value			Get Command		Type	Initial Value
+    ---------			-----------		----	-------------
+    [video sync counter]	glXGetVideoSyncSGI	Z+	unknown
+
+New Implementation Dependent State
+
+    None
+
+Version
+
+    $Date: 1995/09/15 01:22:58 $ $Revision: 1.8 $
+
+    Khronos revision 2:
+    - Note ARB_framebuffer_object interaction (ajax)

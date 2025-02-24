@@ -1,0 +1,974 @@
+Name
+
+    ARB_occlusion_query
+
+Name Strings
+
+    GL_ARB_occlusion_query
+
+Contributors
+
+    Ross Cunniff
+    Matt Craighead
+    Daniel Ginsburg
+    Kevin Lefebvre
+    Bill Licea-Kane
+    Nick Triantos
+
+Contact
+
+    Matt Craighead, NVIDIA Corporation (mcraighead 'at' nvidia.com)
+    Daniel Ginsburg, AMD (dan.ginsburg 'at' amd.com)
+
+Notice
+
+    Copyright (c) 2003-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    HP has claimed that they hold IP around use of this extension.  HP
+    has committed to releasing rights to this IP to the ARB if the
+    functionality is included in OpenGL (April 10, 2003).
+
+Status
+
+    Approved by the ARB (version 1.0), June 10, 2003, pending further minor
+    revisions
+
+Version
+
+    Date: April 21, 2007
+    Revision: 7
+    $Id$
+
+Number
+
+    ARB Extension #29
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.4 specification.
+
+    HP_occlusion_test affects the definition of this extension.
+
+Overview
+
+    This extension defines a mechanism whereby an application can query
+    the number of pixels (or, more precisely, samples) drawn by a
+    primitive or group of primitives.
+
+    The primary purpose of such a query (hereafter referred to as an
+    "occlusion query") is to determine the visibility of an object.
+    Typically, the application will render the major occluders in the
+    scene, then perform an occlusion query for the bounding box of each
+    detail object in the scene.  Only if said bounding box is visible,
+    i.e., if at least one sample is drawn, should the corresponding object
+    be drawn.
+
+    The earlier HP_occlusion_test extension defined a similar mechanism,
+    but it had two major shortcomings.
+
+    - It returned the result as a simple GL_TRUE/GL_FALSE result, when in
+      fact it is often useful to know exactly how many samples were
+      drawn.
+    - It provided only a simple "stop-and-wait" model for using multiple
+      queries.  The application begins an occlusion test and ends it;
+      then, at some later point, it asks for the result, at which point
+      the driver must stop and wait until the result from the previous
+      test is back before the application can even begin the next one.
+      This is a very simple model, but its performance is mediocre when
+      an application wishes to perform many queries, and it eliminates
+      most of the opportunities for parallelism between the CPU and GPU.
+
+    This extension solves both of those problems.  It returns as its
+    result the number of samples that pass the depth and stencil tests,
+    and it encapsulates occlusion queries in "query objects" that allow
+    applications to issue many queries before asking for the result of
+    any one.  As a result, they can overlap the time it takes for the
+    occlusion query results to be returned with other, more useful work,
+    such as rendering other parts of the scene or performing other
+    computations on the CPU.
+
+    There are many situations where a pixel/sample count, rather than a
+    boolean result, is useful.
+
+    - Objects that are visible but cover only a very small number of
+      pixels can be skipped at a minimal reduction of image quality.
+    - Knowing exactly how many pixels an object might cover may help the
+      application decide which level-of-detail model should be used.  If
+      only a few pixels are visible, a low-detail model may be
+      acceptable.
+    - "Depth peeling" techniques, such as order-independent transparency,
+      need to know when to stop rendering more layers; it is difficult to
+      determine a priori how many layers are needed.  A boolean result
+      allows applications to stop when more layers will not affect the
+      image at all, but this will likely result in unacceptable
+      performance.  Instead, it makes more sense to stop rendering when
+      the number of pixels in each layer falls below a given threshold.
+    - Occlusion queries can replace glReadPixels of the depth buffer to
+      determine whether (for example) a light source is visible for the
+      purposes of a lens flare effect or a halo to simulate glare.  Pixel
+      counts allow you to compute the percentage of the light source that
+      is visible, and the brightness of these effects can be modulated
+      accordingly.
+
+Issues
+
+    How is this extension different from NV_occlusion_query?
+
+        The following changes have been made.
+        - A "target" parameter has been added.  Only one target exists at
+          present, SAMPLES_PASSED_ARB, but future extensions could add
+          additional types of queries.
+        - Terminology changed slightly.  "Pixel" was being used
+          incorrectly, where "fragment" or "sample" would be more
+          accurate.
+        - Various NVIDIA-specific references have been removed.
+        - Interactions with multisample have been changed slightly to
+          allow implementations based on either a sample count or a
+          fragment count.  The result is returned in units of samples.
+        - Clarified that using an id of zero is illegal.
+        - Added missing spec language for IsQuery entry point.
+        - General language, issues, etc. cleanup.
+        - HP_occlusion_test is no longer required.
+        - Modified the minimum required counter bits to be dependent on
+          the implementation's maximum viewport or the value 0
+        - Clarified that active query state is per target server state.
+          This implies that a loop of QUERY_RESULT_AVAILABLE_ARB will
+          return TRUE in finite time.  NV_occlusion_query asked
+          that the application flush to prevent an infinite loop.
+        - Clarified the behavior of the async QUERY_RESULT_AVAILABLE_ARB
+          command.
+        - When the count of samples that pass the occlusion query overflows,
+          the value should saturate.
+
+    Should we use an object-based interface?
+
+        RESOLVED: Yes, this makes the interface much simpler, and it is
+        friendly for indirect rendering.
+
+    What is the difference between a "query object" and an "occlusion
+    query"?
+
+        "Occlusion query" is a synonym for "query object used with target
+        SAMPLES_PASSED".
+
+    Should we offer a way to poll whether an occlusion query has
+    completed and its result is available?
+
+        RESOLVED.  Yes, this allows applications to use CPU time that might
+        have been spent spinning more usefully.  However, the polling 
+        method introduced in the NV_occlusion_query spec allowed for a
+        potential infinite loop if the application does not do a flush.
+        This version of the spec clarifies the behavior which now makes such
+        a flush unnecessary.
+
+    Is GetQueryObjectuivARB necessary?
+
+        RESOLVED: Yes, it makes using a 32-bit count less painful.
+
+    Should there be a limit on how many queries can be outstanding?
+
+        RESOLVED: No.  This would make the extension much more
+        difficult to spec and use.  Allowing this does not add any
+        significant implementation burden; and even if drivers have some
+        internal limit on the number of outstanding queries, it is not
+        expected that applications will need to know this to achieve
+        optimal or near-optimal performance.
+
+    What happens if BeginQueryARB is called when a query is already
+    outstanding for a different object on the same target?
+
+        RESOLVED: This is an INVALID_OPERATION error.
+
+    What happens if BeginQueryARB is called with an ID of a query that is
+    already in progress?
+
+        RESOLVED: This is also an INVALID_OPERATION error.
+
+    What parameters should EndQueryARB have?
+
+        RESOLVED: Just a target.  It doesn't need to take an "id"
+        argument, since this would be redundant -- only one query can be
+        active for any given target at a given time.
+
+    How many bits should we require the samples-passed count to be, at
+    minimum?
+
+        RESOLVED. The largest minimum that can be required of a GL
+        implementation is 32, the minimum bit width of an int or uint.
+
+        The minimum number of bits required for the samples-passed
+        count will be dependent on the implementation's maximum viewport size.
+        In order to allow for two overdraws in the case of only one sample
+        buffer, the minimum counter precision (n) will be determined by:
+
+        n = min (32 , ceil (log2 (maxViewportWidth x maxViewportHeight x 
+                        1 sample x 2 overdraws) ) )
+
+        An implementation can either set QUERY_COUNTER_BITS_ARB to the
+        value 0, or to some number greater than or equal to n.  If an
+        implementation returns 0 for QUERY_COUNTER_BITS_ARB, then the
+        occlusion queries will always return that zero samples passed the
+        occlusion test, and so an application should not use occlusion queries
+        on that implementation.
+
+        Note that other targets may come along in the future that require more
+        or fewer bits.
+
+    What should we do about overflows?
+
+        RESOLVED: Overflows are required to saturate, though it is expected
+        that several current implementations will not conform to this
+        requirement.
+
+        The ideal behavior is to saturate.  This ensures that you always
+        get a "large" result when you render many samples.  It also
+        ensures that apps which want a boolean test can do this without
+        worrying about the rare case where the result ends up exactly at
+        zero after wrapping.
+
+        Either way, it's unlikely that this matters much as long as a
+        sufficient number of bits are required.
+
+    What is the interaction with multisample?
+
+        RESOLVED: We count samples, not pixels -- even if MULTISAMPLE is
+        disabled but SAMPLE_BUFFERS is 1.
+
+        A given fragment may have anywhere between zero and SAMPLES of
+        its samples covered.  Ideally, the samples-passed count would be
+        incremented by the precise number of samples, but we permit
+        implementations to instead increment the samples-passed count by
+        SAMPLES if at least one sample in a given fragment is covered.
+
+        Note that the depth/stencil test optimization whereby
+        implementations may choose to depth test at only one of the
+        samples when MULTISAMPLE is disabled does not cause this to
+        become ill-specified, because we are counting the number of
+        samples that are still alive _after_ the  depth test stage.  The
+        particular mechanism used to decide whether to kill or keep those
+        samples is not relevant.
+
+    Exactly what stage in the pipeline are we counting samples at?
+
+        RESOLVED: We are counting immediately after _both_ the depth and
+        stencil tests, i.e., samples that pass both.  Note that the depth
+        test comes after the stencil test, so to say that it is the
+        number that pass the depth test is sufficient; though it is often
+        conceptually helpful to think of the depth and stencil tests as
+        being combined, because the depth test's result impacts the
+        stencil operation used.
+
+    Is it guaranteed that occlusion queries return in order?
+
+        RESOLVED: Yes.  It makes sense to do this.  If occlusion test X
+        occurred before occlusion query Y, and the driver informs the app
+        that occlusion query Y is done, the app can infer that occlusion
+        query X is also done.  For applications that do poll, this allows
+        them to do so with less effort.
+
+    Will polling a query without a Flush possibly cause an infinite loop?
+
+        RESOLVED: No.  An infinite loop was possible in the original 
+        NV_occlusion_query spec if an application did not perform a 
+        flush prior to polling.  This behavior was removed in this version
+        of the spec as it violated language in the core GL spec.  
+
+        Instead of allowing for an infinite loop, performing a 
+        QUERY_RESULT_AVAILABLE_ARB will perform a flush if the result
+        is not ready yet on the first time it is queried.  This ensures
+        that the async query will return true in finite time.
+        
+        This behavior is not a significant performance loss over the original
+        version of the spec.  A flush would need to be performed at some
+        point anyway and the flush performed when QUERY_RESULT_AVAILABLE_ARB
+        is requested will only occur *if the result is not back yet*.
+      
+    What should be the interaction between this spec and
+    HP_occlusion_test?
+
+        RESOLVED: Whereas NV_occlusion_query required that you implement
+        HP_occlusion_test, and even went so far as to specify the precise
+        behavior of HP_occlusion_test (since the HP_occlusion_test spec
+        did not contain those details), this spec does not.  This spec
+        explains the interaction with HP_occlusion_test, but does not
+        attempt to double as a spec for that extension.
+
+    What happens if HP_occlusion_test and ARB_occlusion_query usage is
+    overlapped?
+
+        RESOLVED: The two can be overlapped safely.  Counting is enabled
+        if either an occlusion query is active *or* OCCLUSION_TEST_HP is
+        enabled.  The alternative (producing an error) does not work --
+        it would require that PopAttrib be capable of producing an error,
+        which would be rather problematic.
+
+        Note that BeginQueryARB, not EndQueryARB, resets the sample
+        count (and therefore the occlusion test result).  This can avoid
+        certain types of strange behavior where an occlusion query's
+        samples-passed count does not always correspond to the samples
+        rendered during the occlusion query.  The spec would make sense
+        the other way, but the behavior would be strange.
+
+    Should there be a "target" parameter to BeginQueryARB?
+
+        RESOLVED: Yes.  Whereas NV_occlusion_query wasn't trying to solve
+        a problem beyond simple occlusion queries, this extension creates
+        a framework useful for future queries.
+
+    Does GenQueriesARB need a "target" parameter?
+
+        RESOLVED: No.  A query can be reused any number of times with any
+        targets.
+
+    How can one ask for the currently active query?
+
+        RESOLVED: A new entry point has been added to query information
+        about a given query target.  This makes it unnecessary to add two
+        new enumerants (# of bits and current query ID) for each new
+        target that is introduced.
+
+    Are query objects shareable between multiple contexts?
+
+        RESOLVED: No.  Query objects are lightweight and we normally share 
+        large data across contexts.  Also, being able to share query objects
+        across contexts is not particularly useful.  In order to do the async 
+        query across contexts, a query on one context would have to be finished 
+        before the other context could query it.  
+
+    What happens when an app begins a query on a target, ends it, begins
+    a query on the same target with the same id, ends it, and then tries
+    to retrieve data about the query using GetQueryObjecti[u]vARB?  Which
+    query does the GetQueryObjecti[u]vARB return results for?
+
+        RESOLVED.  In this case, the result retrieved from
+        GetQueryObjecti[u]vARB  will be from the last query on that target and 
+        id.  The result returned from GetQueryObjecti[u]vARB will always be from 
+        the last BeginQueryARB/EndQueryARB pair on that target and id.
+
+    Is this extension useful for saving geometry, fill rate, or both?
+
+        The answer to this question is to some extent implementation-
+        dependent, but it is expected that it is most useful for reducing
+        geometry workload, and less so for fill rate.
+
+        For the cost of rendering a bounding box, you can potentially
+        save rendering a normal object.  A bounding box consists of only
+        12 triangles, whereas the original object might have contained
+        thousands or even millions of triangles.
+
+        Using bounding box occlusion queries may either help or hurt in
+        fill-limited situations, because rendering the pixels of a
+        bounding box is not free.  In most situations, a bounding box
+        will probably have more pixels than the original object.  Those
+        pixels can probably be rendered more quickly, though, since they
+        involve only Z reads (no Z writes or color traffic), and they
+        need not be textured or otherwise shaded.
+
+        In multipass rendering situations, however, occlusion queries can
+        almost always save fill rate, because wrapping an object with an
+        occlusion query is generally cheap.  See "Usage Examples" for an
+        illustration.
+
+    What can be said about guaranteeing correctness when using
+    occlusion queries, especially as it relates to invariance?
+
+        Invariance is critical to guarantee the correctness of occlusion
+        queries.  If occlusion queries go through a different code path
+        than standard rendering, the fragments rendered may be different.
+
+        However, the invariance issues are difficult at best to solve.
+        Because of the vagaries of floating-point precision, it is
+        difficult to guarantee that rendering a bounding box will render
+        at least as many pixels with equal or smaller Z values than the
+        object itself would have rendered.
+
+        Likewise, many other aspects of rendering state tend to be
+        different when performing an occlusion query.  Color and depth
+        writes are typically disabled, as are texturing, vertex programs,
+        and any fancy per-fragment math.  So unless all these features
+        have guarantees of invariance themselves (unlikely at best),
+        requiring invariance for ARB_occlusion_query would be futile.
+
+        In general, implementations are recommended to be fully invariant
+        with respect to whether any given type of query is active,
+        insofar as it is possible.  That is, having an occlusion query
+        active should not affect the operation of any other stage of the
+        pipeline.  Following this rule is essential to numerous occlusion
+        query algorithms working correctly.  However, to permit
+        implementations where this feature is implemented in software,
+        this rule is only a recommendation, not a requirement.
+
+        Another unrelated problem that can threaten correctness is near
+        and far clipping.  The bounding box of an object may penetrate
+        the near clip plane, even though the original object may not
+        have.  In such a circumstance, a bounding box occlusion query may
+        produce an incorrect result.  Whenever you design an algorithm
+        using occlusion queries, it is best to be careful about the near
+        and far clip planes.
+
+    How can frame-to-frame coherency help applications using this
+    extension get even higher performance?
+
+        Usually, if an object is visible one frame, it will be visible
+        the next frame, and if it is not visible, it will not be visible
+        the next frame.
+
+        Of course, for most applications, "usually" isn't good enough.
+        It is undesirable, but acceptable, to render an object that
+        *isn't* visible, because that only costs performance.  It is
+        generally unacceptable to *not* render an object that *is*
+        visible.
+
+        The simplest approach is that visible objects should be checked
+        every N frames (where, say, N=5) to see if they have become
+        occluded, while objects that were occluded last frame must be
+        rechecked again in the current frame to guarantee that they are
+        still occluded.  This will reduce the number of wasteful
+        occlusion queries by almost a factor of N.
+
+        Other, more complicated techniques exist but are beyond the scope
+        of this extension document.
+
+    Do occlusion queries make other visibility algorithms obsolete?
+
+        No.
+
+        Occlusion queries are helpful, but they are not a cure-all.  They
+        should be only one of many items in your bag of tricks to decide
+        whether objects are visible or invisible.  They are not an excuse
+        to skip frustum culling, or precomputing visibility using portals
+        for static environments, or other standard visibility techniques.
+
+New Procedures and Functions
+
+    void GenQueriesARB(sizei n, uint *ids);
+    void DeleteQueriesARB(sizei n, const uint *ids);
+    boolean IsQueryARB(uint id);
+    void BeginQueryARB(enum target, uint id);
+    void EndQueryARB(enum target);
+    void GetQueryivARB(enum target, enum pname, int *params);
+    void GetQueryObjectivARB(uint id, enum pname, int *params);
+    void GetQueryObjectuivARB(uint id, enum pname, uint *params);
+
+New Tokens
+
+    Accepted by the <target> parameter of BeginQueryARB, EndQueryARB,
+    and GetQueryivARB:
+
+        SAMPLES_PASSED_ARB                             0x8914
+
+    Accepted by the <pname> parameter of GetQueryivARB:
+
+        QUERY_COUNTER_BITS_ARB                         0x8864
+        CURRENT_QUERY_ARB                              0x8865
+
+    Accepted by the <pname> parameter of GetQueryObjectivARB and
+    GetQueryObjectuivARB:
+
+        QUERY_RESULT_ARB                               0x8866
+        QUERY_RESULT_AVAILABLE_ARB                     0x8867
+
+Additions to Chapter 2 of the OpenGL 1.4 Specification (OpenGL Operation)
+
+    Modify Section 2.1, OpenGL Fundamentals (p. 4)
+
+    (modify fourth paragraph, p. 4)  It also means that queries and
+    pixel read operations return state consistent with complete 
+    execution of all previously invoked GL commands, except where
+    explicitly specified otherwise
+
+Additions to Chapter 3 of the OpenGL 1.4 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 1.4 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    Add a new section "Occlusion Queries" between sections 4.1.6 and
+    4.1.7:
+
+    "4.1.6A  Occlusion Queries
+
+    Occlusion queries can be used to track the number of fragments or
+    samples that pass the depth test.
+
+    Occlusion queries are associated with query objects.  The command
+
+      void GenQueriesARB(sizei n, uint *ids);
+
+    returns <n> previously unused query object names in <ids>.  These
+    names are marked as used, but no object is associated with them until
+    the first time they are used by BeginQueryARB.  Query objects contain
+    one piece of state, an integer result value.  This result value is
+    initialized to zero when the object is created.  Any positive integer
+    except for zero (which is reserved for the GL) is a valid query
+    object name.
+
+    Query objects are deleted by calling
+
+      void DeleteQueriesARB(sizei n, const uint *ids);
+
+    <ids> contains <n> names of query objects to be deleted.  After a
+    query object is deleted, its name is again unused.  Unused names in
+    <ids> are silently ignored.
+
+    An occlusion query can be started and finished by calling
+
+      void BeginQueryARB(enum target, uint id);
+      void EndQueryARB(enum target);
+
+    where <target> is SAMPLES_PASSED_ARB.  If BeginQueryARB is called
+    with an unused <id>, that name is marked as used and associated with
+    a new query object.  If BeginQueryARB is called while another query
+    is already in progress with the same target, an INVALID_OPERATION
+    error is generated.  If EndQueryARB is called while no query with the
+    same target is in progress, an INVALID_OPERATION error is generated.
+    Calling either GenQueriesARB or DeleteQueriesARB while any query of
+    any target is active causes an INVALID_OPERATION error to be
+    generated.
+
+    BeginQueryARB with a <target> of SAMPLES_PASSED_ARB resets the
+    current samples-passed count to zero and sets the query active 
+    state to TRUE and the active query id to <id>.  EndQueryARB with 
+    a target of SAMPLES_PASSED_ARB initializes a copy of the current 
+    samples-passed count into the active occlusion query object's results 
+    value, sets the active occlusion query object's result available to 
+    FALSE, sets the query active state to FALSE, and the active query 
+    id to 0.
+
+    If BeginQueryARB is called with an <id> of zero, or where <id> is the
+    name of a query currently in progress, an INVALID_OPERATION error is
+    generated.
+
+    When an occlusion query is active, the samples-passed count increases
+    by a certain quantity for each fragment that passes the depth test.
+    If the value of SAMPLE_BUFFERS is 0, then the samples-passed count
+    increases by 1 for each fragment.  If the value of SAMPLE_BUFFERS is
+    1, then the samples-passed count increases by the number of samples
+    whose coverage bit is set.  However, implementations, at their
+    discretion, are allowed to instead increase the samples-passed count
+    by the value of SAMPLES if any sample in the fragment is covered.
+
+    If the samples-passed count overflows, i.e., exceeds the value 2^n-1
+    (where n is the number of bits in the samples-passed count), its 
+    value becomes undefined.  It is recommended, but not required, that 
+    implementations handle this overflow case by saturating at 2^n-1 and 
+    incrementing no further.
+
+    The necessary state is a single bit indicating whether an occlusion
+    query is active, the identifier of the currently active occlusion
+    query, and a counter keeping track of the number of samples that 
+    have passed."
+
+Additions to Chapter 5 of the OpenGL 1.4 Specification (Special Functions)
+
+    Add to the end of Section 5.4 "Display Lists":
+
+    "DeleteQueriesARB, GenQueriesARB, IsQueryARB, GetQueryivARB,
+    GetQueryObjectivARB, and GetQueryObjectuivARB are not compiled into
+    display lists but are executed immediately."
+
+Additions to Chapter 6 of the OpenGL 1.4 Specification (State and
+State Requests)
+
+    Add a new section 6.1.13 "Occlusion Queries":
+
+    "The command
+
+      boolean IsQueryARB(uint id);
+
+    returns TRUE if <id> is the name of a query object.  If <id> is zero,
+    or if <id> is a non-zero value that is not the name of a query
+    object, IsQueryARB returns FALSE.
+
+    Information about a query target can be queried with the command
+
+      void GetQueryivARB(enum target, enum pname, int *params);
+
+    If <pname> is CURRENT_QUERY_ARB, the name of the currently active
+    query for <target>, or zero if no query is active, will be placed in
+    <params>.
+
+    If <pname> is QUERY_COUNTER_BITS_ARB, the number of bits in the counter for
+    <target> will be placed in <params>.  The minimum number of query counter 
+    bits allowed is a function of the implementation's maximum viewport 
+    dimensions (MAX_VIEWPORT_DIMS).  If the counter is non-zero, then the
+    counter must be able to represent at least two overdraws for every pixel
+    in the viewport using only one sample buffer.  The formula to compute the
+    allowable minimum value is below (where n is the minimum number of bits):
+
+      n = (min (32, ceil (log2 (maxViewportWidth x maxViewportHeight x 2) ) ) ) or
+          0
+
+    If the value of n is 0, then the result from GetQueryiv(SAMPLES_PASSED_ARB)
+    will always return 0,  
+
+    The state of a query object can be queried with the commands
+
+      void GetQueryObjectivARB(uint id, enum pname, int *params);
+      void GetQueryObjectuivARB(uint id, enum pname, uint *params);
+
+    If <id> is not the name of a query object, or if the query object
+    named by <id> is currently active, then an INVALID_OPERATION error is
+    generated.
+
+    If <pname> is QUERY_RESULT_ARB, then the query object's result value
+    is placed in <params>.
+
+    Often, query object results will be returned asynchronously with
+    respect to the host processor's operation.  As a result, sometimes,
+    if a result is queried, the host must wait until the result is back.
+    If <pname> is QUERY_RESULT_AVAILABLE_ARB, the value placed in
+    <params> indicates whether or not such a wait would occur if the
+    result of that query object were to be queried presently.  A result
+    of TRUE means no wait would be required; a result of FALSE means that
+    some wait would occur.  It must always be true that if the result for one 
+    query is available, the result for all previous queries must also be
+    available at that point in time.
+
+    Querying the state for a given occlusion query forces that occlusion
+    query to complete within a finite amount of time.
+
+    If multiple queries are issued on the same target and id prior to 
+    calling GetQueryObject[u]iVARB, the result returned will always be
+    from the last query issued.  The results from any queries before the
+    last one will be lost if the results are not retrieved before starting
+    a new query on the same target and id."
+
+Dependencies on HP_occlusion_test
+
+    When GetIntegerv is called with <pname> of OCCLUSION_TEST_RESULT_HP,
+    the current samples-passed count is reset to zero.  The occlusion
+    test result is TRUE when the samples-passed count is nonzero, and
+    FALSE when it is zero.  Sample counting is active (i.e. the samples-
+    passed count increases as fragments are drawn) whenever either an
+    occlusion query is active *or* OCCLUSION_TEST_HP is enabled.
+
+GLX Protocol
+
+    Seven new GL commands are added.
+
+    The following two rendering commands are sent to the server as part
+    of a glXRender request:
+
+        BeginQueryARB
+            2           12              rendering command length
+            2           231             rendering command opcode
+            4           ENUM            target
+            4           CARD32          id
+
+        EndQueryARB
+            2           8               rendering command length
+            2           232             rendering command opcode
+            4           ENUM            target
+
+    The remaining fivecommands are non-rendering commands.  These
+    commands are sent separately (i.e., not as part of a glXRender or
+    glXRenderLarge request), using glx single requests:
+
+        DeleteQueriesARB
+            1           CARD8           opcode (X assigned)
+            1           161             GLX opcode
+            2           3+n             request length
+            4           GLX_CONTEXT_TAG context tag
+            4           INT32           n
+            n*4         LISTofCARD32    ids
+
+        GenQueriesARB
+            1           CARD8           opcode (X assigned)
+            1           162             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           INT32           n
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           n               reply length
+            24                          unused
+            n*4         LISTofCARD32    queries
+
+        IsQueryARB
+            1           CARD8           opcode (X assigned)
+            1           163             GLX opcode
+            2           3               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          id
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           0               reply length
+            4           BOOL32          return value
+            20                          unused
+
+        GetQueryivARB
+            1           CARD8           opcode (X assigned)
+            1           164             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            target
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        GetQueryObjectivARB
+            1           CARD8           opcode (X assigned)
+            1           165             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          id
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        GetQueryObjectuivARB
+            1           CARD8           opcode (X assigned)
+            1           166             GLX opcode
+            2           4               request length
+            4           GLX_CONTEXT_TAG context tag
+            4           CARD32          id
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m=(n==1?0:n)
+            4                           unused
+            4           CARD32          n
+
+            if (n=1) this follows:
+
+            4           CARD32          params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofCARD32    params
+
+Errors
+
+    The error INVALID_VALUE is generated if GenQueriesARB is called where
+    <n> is negative.
+
+    The error INVALID_VALUE is generated if DeleteQueriesARB is called
+    where <n> is negative.
+
+    The error INVALID_OPERATION is generated if GenQueriesARB or
+    DeleteQueriesARB is called when a query of any target is active.
+
+    The error INVALID_ENUM is generated if BeginQueryARB, EndQueryARB, or
+    GetQueryivARB is called where <target> is not SAMPLES_PASSED_ARB.
+
+    The error INVALID_OPERATION is generated if BeginQueryARB is called
+    when a query of the given <target> is already active.
+
+    The error INVALID_OPERATION is generated if EndQueryARB is called
+    when a query of the given <target> is not active.
+
+    The error INVALID_OPERATION is generated if BeginQueryARB is called
+    where <id> is zero.
+
+    The error INVALID_OPERATION is generated if BeginQueryARB is called
+    where <id> is is the name of a query currently in progress.
+
+    The error INVALID_ENUM is generated if GetQueryivARB is called where
+    <pname> is not QUERY_COUNTER_BITS_ARB or CURRENT_QUERY_ARB.
+
+    The error INVALID_OPERATION is generated if GetQueryObjectivARB or
+    GetQueryObjectuivARB is called where <id> is not the name of a query
+    object.
+
+    The error INVALID_OPERATION is generated if GetQueryObjectivARB or
+    GetQueryObjectuivARB is called where <id> is the name of a currently
+    active query object.
+
+    The error INVALID_ENUM is generated if GetQueryObjectivARB or
+    GetQueryObjectuivARB is called where <pname> is not QUERY_RESULT_ARB
+    or QUERY_RESULT_AVAILABLE_ARB.
+
+    The error INVALID_OPERATION is generated if any of the commands
+    defined in this extension is executed between the execution of Begin
+    and the corresponding execution of End.
+
+New State
+
+(table 6.18, p. 233)
+
+    Get Value                      Type    Get Command     Initial Value   Description              Sec     Attribute
+    ---------                      ----    -----------     -------------   -----------              ------  ---------
+    -                              B       -               FALSE           query active             4.1.6A  -
+    CURRENT_QUERY_ARB              Z+      GetQueryiv      0               active query ID          4.1.6A  -
+    QUERY_RESULT_ARB               Z+      GetQueryObjectuivARB 0               samples-passed count     4.1.6A  -
+    QUERY_RESULT_AVAILABLE_ARB     B       GetQueryObjectivARB  FALSE           query result available   4.1.6A  -
+
+New Implementation Dependent State
+
+(table 6.29, p. 224) Add the following entry:
+
+    Get Value                      Type    Get Command   Minimum Value      Description           Sec     Attribute
+    --------------------------     ----    -----------   -------------      ----------------      ------  --------------
+    QUERY_COUNTER_BITS_ARB         Z+      GetQueryiv    see 6.1.13         Number of bits in     6.1.13  -
+                                                                            query counter
+
+Revision History
+
+   Date: 4/21/2007
+   Revision: 7 (Jon Leech)
+      - Added QUERY_RESULT_ARB and QUERY_RESULT_AVAILABLE to state table
+        6.18 (also fixed in OpenGL 2.1 spec).
+
+   Date: 11/4/2006
+   Revision: 6 (Benj Lipchak, AMD)
+      - Updated contact info after ATI/AMD merger.
+
+   Date: 10/27/2004
+   Revision: 5? (James Jones, NVIDIA)
+      - Added GLX protocol.
+
+Usage Examples
+
+    Here is some rough sample code that illustrates how this extension
+    can be used.
+
+        GLuint queries[N];
+        GLuint sampleCount;
+        GLint available;
+        GLuint bitsSupported;
+
+        // check to make sure functionality is supported
+        glGetQueryiv(GL_QUERY_COUNTER_BITS_ARB, &bitsSupported);
+        if (bitsSupported == 0) {
+            // render scene without using occlusion queries
+        }
+
+        glGenQueriesARB(N, queries);
+        ...
+        // before this point, render major occluders
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthMask(GL_FALSE);
+        // also disable texturing and any fancy shaders
+        for (i = 0; i < N; i++) {
+            glBeginQueryARB(GL_SAMPLES_PASSED_ARB, queries[i]);
+            // render bounding box for object i
+            glEndQueryARB(GL_SAMPLES_PASSED_ARB);
+        }
+
+        glFlush();
+
+        // Do other work until "most" of the queries are back, to avoid
+        // wasting time spinning
+        i = N*3/4; // instead of N-1, to prevent the GPU from going idle
+        do {
+            DoSomeStuff();
+            glGetQueryObjectivARB(queries[i],
+                                  GL_QUERY_RESULT_AVAILABLE_ARB,
+                                  &available);
+        } while (!available);
+
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDepthMask(GL_TRUE);
+        // reenable other state, such as texturing
+        for (i = 0; i < N; i++) {
+            glGetQueryObjectuivARB(queries[i], GL_QUERY_RESULT_ARB,
+                                   &sampleCount);
+            if (sampleCount > 0) {
+                // render object i
+            }
+        }
+
+    Here is some rough sample code for a simple multipass rendering
+    application that does not use occlusion queries.
+
+        for (i = 0; i < N; i++) {
+            // First rendering pass
+            glDisable(GL_BLEND);
+            glDepthFunc(GL_LESS);
+            glDepthMask(GL_TRUE);
+            // configure shader 0
+            // render object i
+
+            // Second rendering pass
+            glEnable(GL_BLEND);
+            glBlendFunc(...);
+            glDepthFunc(GL_EQUAL);
+            glDepthMask(GL_FALSE);
+            // configure shader 1
+            // render object i
+        }
+
+    Here is the previous example, enhanced using occlusion queries.
+
+        GLuint queries[N];
+        GLuint sampleCount;
+
+        glGenQueriesARB(N, queries);
+        ...
+        // First rendering pass plus almost-free visibility checks
+        glDisable(GL_BLEND);
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
+        // configure shader 0
+        for (i = 0; i < N; i++) {
+            glBeginQueryARB(GL_SAMPLES_PASSED_ARB, queries[i]);
+            // render object i
+            glEndQueryARB(GL_SAMPLES_PASSED_ARB);
+        }
+
+        // Second pass only on objects that were visible
+        glEnable(GL_BLEND);
+        glBlendFunc(...);
+        glDepthFunc(GL_EQUAL);
+        glDepthMask(GL_FALSE);
+        // configure shader 1
+        for (i = 0; i < N; i++) {
+            glGetQueryObjectuivARB(queries[i], GL_QUERY_RESULT_ARB,
+                                   &sampleCount);
+            if (sampleCount > 0) {
+                // render object i
+            }
+        }

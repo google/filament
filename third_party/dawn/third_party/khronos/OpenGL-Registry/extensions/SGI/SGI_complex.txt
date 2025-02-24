@@ -1,0 +1,291 @@
+Name
+
+    SGI_complex
+
+Name Strings
+
+    GL_SGI_complex
+
+Version
+
+    $Date: 1996/10/01 21:31:49 $ $Revision: 1.4 $
+
+Number
+
+    87
+
+Dependencies
+
+    EXT_abgr affects the definition of this extension
+    EXT_texture3D affects the definition of this extension
+    EXT_subtexture affects the definition of this extension
+    EXT_histogram affects the definition of this extension
+    EXT_convolution affects the definition of this extension
+    SGI_color_table affects the definition of this extension
+    SGIS_texture4D affects the definition of this extension
+    EXT_cmyka affects the definition of this extension
+    EXT_blend_minmax affects the definition of this extension
+    EXT_blend_logicop affects the definition of this extension
+    EXT_blend_subtract affects the definition of this extension
+
+
+Overview
+
+    This extension extends the notion of color values to include
+    complex color consisting of a real and imaginary parts or subcomponents
+    for each color component.  This extension defines the extended semantics
+    for all operations that currently apply to color values.
+
+    The purpose of this extension is to provide the foundation for complex
+    color processing.  With this foundation in place further
+    extensions can be added to define complex input formats, complex
+    storage formats, and additional complex processing operations.
+
+Issues
+
+    * is there a better way?
+
+    * all multiplies of color*color become complex multiplies
+      (texture environment, blending); is this overkill?
+
+    * scalar multiplies for fog and antialiasing coverage scale the
+      real and imaginary components equally. is this okay?
+
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the GL Specification (OpenGL Operation)
+
+    To Section 2.7 Vertex Specification
+
+    Paragraph 3:
+
+    Finally, there are several ways to set the current color.  The GL stores
+    both a current single-valued color index, and a current 4-valued complex
+    RGBA color. One or the other of these is significant depending as the GL is
+    in color index mode or RGBA mode. The mode selection is made when the GL is
+    initialized.  In RGBA mode state is maintained for both the real and
+    imaginary parts of each component, but only the real part may be set.
+
+    Paragraph 5:
+
+    ... The initial RGBA color is (R, G, B, A) = ({1,0},{1,0},{1,0},{1,0}).
+
+
+    Section 2.12 Colors and Coloring
+
+    Paragraph 1:
+
+    Paragraph 2:
+
+    ... After lighting, both real and imaginary parts of RGBA colors are
+    clamped to the range [0, 1].
+
+    Section 2.12.1 Lighting
+
+    [ All colors expanded to complex ]
+
+    Section 2.12.6 Clamping or Masking
+
+    Paragraph 1:
+
+    ... After lighting, real and imaginary parts of RGBA colors are clamped
+    to [0, 1]. ...
+
+    Section 2.12.8 Color and Texture Coordinate Clipping
+
+    [ are real and imaginary parts clipped independently? ]
+
+
+    Section 2.12.9 Final Color Processing
+
+    [ indicate the both real & imaginary components are converted and
+      stored as appropriate for the framebuffer ]
+
+
+Additions to Chapter 3 of the GL Specification (Rasterization)
+
+    Section 3.2 Antialiasing
+
+    Paragraph 2:
+
+    In RGBA mode, the R, G, and B values of the rasterized fragment are
+    left unaffected, but the A value is multiplied by a floating-point real
+    value in the range [0, 1] that describes a fragment's screen coverage.
+    ...
+
+    Section 3.6.3 Rasterization of Pixel Rectangles
+
+    Conversion to Complex (follows Conversion to floating point)
+
+    This step applies only to groups of components.  It is no performed on
+    indices.  Each element in a group is converted to a complex value by
+    setting the real part to the floating-point value computed in the
+    previous step and setting the imaginary part to zero.
+
+    RGBA to RGBA Lookup
+
+    ... First, each component is converted to a real value by discarding
+    the imaginary component and the real value is clamped to the range [0, 1].
+    There is a table associated with each of the R, G, B, and A component
+    elements: PIXEL_MAP_R_TO_R for R, PIXEL_MAP_G_TO_G for G, PIXEL_MAP_B_TO_B
+    for B, and PIXEL_MAP_A_TO_A for A.  Each element is multiplied by an integer
+    on less thanthe size of the corresponding table, and, for each element,
+    and address is found by rounding this value to the nearest integer.  For
+    each element, the addressed value in the correspoding table replaces the 
+    element.  The real value is then converted to a complex value by assigning
+    zero to the imaginary part.
+
+    Section 3.8 Texturing
+
+    Paragraph 2
+
+    ... The arguments width, height, format, type, and data correspond precisely
+    to the corresponding arguments to DrawPixels (refer to section 3.6.3); they
+    specify the image's width and height., a format of the image data, the type
+    of those data, and a pointer to the image data in memory. The image is taken
+    from memory exactly as if these arguments were passed to DrawPixels, but
+    the process stops just before final conversion. Both the real and imaginary
+    part of the complex R, G, B, and A value so extracted is clamped to [0, 1].
+    ...
+
+    Section 3.8.3 Texture Environments and Texture Functions
+
+    Paragraph 1.
+
+    ... TEXTURE_ENV_COLOR is set to a RGBA color by providing four
+    single-precision floating-point values in the range [0, 1].  (values
+    outside this range are clamped to it).  The four values are assigned to
+    the real parts of the complex color; the imaginary parts are unchanged
+    from the default value of zero. If intergers are proivide for
+    TEXTURE_ENV_COLOR, then they are converted to floating-point as specified
+    in Table 2.4 for signed integers.
+
+    Table 3.9
+
+    [ modify to show complex equations ]
+
+    Paragraph 3.
+
+    The state required for the current texture environment consists of the
+    three-valued integer indicating the texture function and four complex
+    floating-point TEXTURE_ENV_COLOR values.  In the initial state, the
+    texture function is given by MODULATE and TEXTURE_ENV_COLOR is
+    ({0,0},{0,0},{0,0},{0,0}).
+
+    Section 3.9
+
+    Paragraph 5.
+
+    ... The R, G, B, and A values of C sub f are specified by calling Fog
+    with <pname> equal to FOG_COLOR; in this case params points to four values
+    comprising the real part of C sub f.  ...
+
+    Paragraph 7.
+
+    The state required for fog consists of a three valued integer to select
+    the fog equation, three floating-point values d, e, and s, and RGBA fog
+    color a fog color index, and a single bit to indicate whether or not fog
+    is enabled.  In the initial state, fog is disabled, FOG_MODE is EXP, d =
+    1.0, e = 1.0, and s = 0.0; C sub f = ({0,0},{0,0},{0,0},{0,0}) and i sub
+    f = 0.
+
+
+Additions to Chapter 4 of the GL Specification (Per-Fragment Operations
+and the Framebuffer)
+
+    Paragraph 3.
+
+    Color buffers consist of either unsigned integer color indices or R, G,
+    B, and optionally A unsigned integer values storing the real parts of
+    pixel colors.
+
+
+    Section 4.1.3 Alpha test
+
+    This step applies only in RGBA mode.  In color index mode, proceed to the
+    next step. The alpha test discards a fragment conditional on the outcome
+    of a comparison between the incoming fragments's alpha real-part value
+    and a constant value. ...
+
+
+    Section 4.1.6 Blending
+
+    [complex blending equations.  the destination color imaginary subcomponent
+     is zero so the equations degenerate to the real equations,
+     GL_ONE is interpreted as {1,0} and GL_ZERO as {0,0} ]
+
+    Section 4.3.2 Reading Pixels
+
+    Conversion of RGBA values
+
+    Paragraph 2.
+
+    The R, G, and B (and possibly A) values form a group of elements. Each
+    element is taken to be a fixed-point value in [0,1] wiht m bits, where
+    m is the number of bits in the corresponding color component of the
+    selected buffer (see section 2.12.9).  The corresponding color value
+    is assigned to the real-part of the resulting color.  The imaginary
+    part is set to zero.
+
+    Convolution
+
+    [???]
+
+    Color Tables
+
+    [???]
+
+    Histogram
+
+    [???]
+
+    Final Conversion
+
+    For an index, if the type is not FLOAT, final conversion consists of
+    masking the index with the value given Table 4.6; if the type is FLOAT,
+    then the integer index is converted to a GL float data value.  For a
+    component, each the real and imaginary parts are first clamped to [0,1] 
+    Then the appropriate conversion formula from Table 4.7 is applied to the
+    both the real and imaginary parts of each component.
+
+
+Additions to Chapter 5 of the GL Specification (Special Functions)
+
+    Section 5.1 Evaluators
+
+    [ color maps evaluate to complex colors, by setting imaginary component to
+      zero ]
+
+    Section 5.3 Feedback
+
+    [ only real colors are returned.  define new COLOR formats to get complex
+      colors ]
+
+Additions to Chapter 6 of the GL Specification (State and State Requests)
+
+    [ add GetComplexFloatv(enum value, float *data); redefined state tables ]
+
+Additions to the GLX Specification
+
+    None
+
+GLX Protocol
+
+Errors
+
+    None
+
+New State
+
+    [ lots ? ]
+
+New Implementation Dependent State
+
+    None

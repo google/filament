@@ -1,0 +1,423 @@
+Name
+
+    NV_parameter_buffer_object
+
+Name Strings
+
+    None (implied by NV_gpu_program4)
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+    Eric Werness, NVIDIA Corporation (ewerness 'at' nvidia.com)
+
+Status
+
+    Shipping for GeForce 8 Series (November 2006)
+
+Version
+
+    Last Modified Date:         03/09/2011
+    NVIDIA Revision:            9
+
+Number
+
+    339
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    NV_gpu_program4 is required.
+
+    This extension is written against the OpenGL 2.0 specification.
+
+    NV_transform_feedback affects this extension.
+
+    OpenGL 3.0 affects this extension.
+
+Overview
+
+    This extension, in conjunction with NV_gpu_program4, provides a new type
+    of program parameter than can be used as a constant during vertex,
+    fragment, or geometry program execution.  Each program target has a set of
+    parameter buffer binding points to which buffer objects can be attached.
+
+    A vertex, fragment, or geometry program can read data from the attached
+    buffer objects using a binding of the form "program.buffer[a][b]".  This
+    binding reads data from the buffer object attached to binding point <a>.
+    The buffer object attached is treated either as an array of 32-bit words
+    or an array of four-component vectors, and the binding above reads the
+    array element numbered <b>.
+
+    The use of buffer objects allows applications to change large blocks of
+    program parameters at once, simply by binding a new buffer object.  It
+    also provides a number of new ways to load parameter values, including
+    readback from the frame buffer (EXT_pixel_buffer_object), transform
+    feedback (NV_transform_feedback), buffer object loading functions such as
+    MapBuffer and BufferData, as well as dedicated parameter buffer update
+    functions provided by this extension.
+
+New Procedures and Functions
+
+    void BindBufferRangeNV(enum target, uint index, uint buffer,
+                           intptr offset, sizeiptr size);
+    void BindBufferOffsetNV(enum target, uint index, uint buffer,
+                            intptr offset);
+    void BindBufferBaseNV(enum target, uint index, uint buffer);
+    void ProgramBufferParametersfvNV(enum target, uint bindingIndex, uint wordIndex,
+                                     sizei count, const float *params);
+    void ProgramBufferParametersIivNV(enum target, uint bindingIndex, uint wordIndex, 
+                                      sizei count, const int *params);
+    void ProgramBufferParametersIuivNV(enum target, uint bindingIndex, uint wordIndex, 
+                                       sizei count, const uint *params);
+    void GetIntegerIndexedvEXT(enum value, uint index, int *data);
+
+New Tokens
+
+    Accepted by the <pname> parameter of GetProgramivARB:
+
+      MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS_NV          0x8DA0
+      MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV              0x8DA1
+
+    Accepted by the <target> parameter of ProgramBufferParametersfvNV,
+    ProgramBufferParametersIivNV, and ProgramBufferParametersIuivNV,
+    BindBufferRangeNV, BindBufferOffsetNV, BindBufferBaseNV, and BindBuffer
+    and the <value> parameter of GetIntegerv and GetIntegerIndexedvEXT:
+
+      VERTEX_PROGRAM_PARAMETER_BUFFER_NV                0x8DA2
+      GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV              0x8DA3
+      FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV              0x8DA4
+
+Additions to Chapter 2 of the OpenGL 2.0 Specification (OpenGL Operation)
+
+    Modify "Section 2.14.1" of the ARB_vertex_program specification.
+
+    (Add after the discussion of environment parameters.)
+
+    Additionally, each program target has an array of parameter buffer binding
+    points, to which a buffer object (Section 2.9) can be bound.  The number
+    of available binding points is given by the implementation-dependent
+    constant MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS_NV. These binding points
+    are shared by all programs of a given type.  All bindings are initialized
+    to the name zero, which indicates that no valid binding is present.
+
+    A program parameter binding is associated with a buffer object using
+    BindBufferOffsetNV with a <target> of VERTEX_PROGRAM_PARAMETER_BUFFER_NV,
+    GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV, or
+    FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV and <index> corresponding to the
+    number of the desired binding point. The error INVALID_VALUE is generated
+    if the value of <index> is greater than or equal to
+    MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS.
+
+    Buffer objects are made to be sources of program parameter buffers by
+    calling one of
+
+      void BindBufferRangeNV(enum target, uint index, uint buffer,
+                             intptr offset, sizeiptr size)
+      void BindBufferOffsetNV(enum target, uint index, uint buffer,
+                              intptr offset)
+      void BindBufferBaseNV(enum target, uint index, uint buffer)
+
+    where <target> is set to VERTEX_PROGRAM_PARAMETER_BUFFER_NV,
+    GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV, or
+    FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV.  Any of the three BindBuffer*
+    commands perform the equivalent of BindBuffer(target, buffer).  <buffer>
+    specifies which buffer object to bind to the target at index number
+    <index>.  <index> must be less than the value of
+    MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS_NV.  <offset> specifies a starting
+    offset into the buffer object <buffer>.  <size> specifies the number of
+    elements in the bound portion of the buffer.  Both <offset> and <size> are
+    in basic machine units. The error INVALID_VALUE is generated if the value
+    of <size> is less than or equal to zero.  The error INVALID_VALUE is
+    generated if <offset> or <size> are not word-aligned.  For program
+    parameter buffers, the error INVALID_VALUE is generated if <offset> is
+    non-zero.
+
+    BindBufferBaseNV is equivalent to calling BindBufferOffsetNV with an
+    <offset> of 0. BindBufferOffsetNV is the equivalent of calling
+    BindBufferRangeNV with <size> = sizeof(buffer) - <offset> and rounding
+    <size> down so that it is word-aligned.
+
+    All program parameter buffer parameters are either single-component 32-bit
+    words or four-component vectors made up of 32-bit words.  The program
+    parameter buffers may hold signed integer, unsigned integer, or
+    floating-point data.  There is a limit on the maximum number of words of a
+    buffer object that can be accessed using any single parameter buffer
+    binding point, given by the implementation-dependent constant
+    MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV.  Buffer objects larger than this
+    size may be used, but the results of accessing portions of the buffer
+    object beyond the limit are undefined.
+
+    The commands
+
+      void ProgramBufferParametersfvNV(enum target, uint bindingIndex, uint wordIndex,
+                                       sizei count, const float *params);
+      void ProgramBufferParametersIivNV(enum target, uint bindingIndex, uint wordIndex, 
+                                        sizei count, const int *params);
+      void ProgramBufferParametersIuivNV(enum target, uint bindingIndex, uint wordIndex, 
+                                        sizei count, const uint *params);
+
+    update words <wordIndex> through <wordIndex>+<count>-1 in the buffer object bound
+    to the binding point numbered <bindingIndex> for the program target <target>.
+    The new data is referenced by <params>.  The error INVALID_OPERATION is
+    generated if no buffer object is bound to the binding point numbered
+    <bindingIndex>.  The error INVALID_VALUE is generated if <wordIndex>+<count> is
+    greater than either the number of words in the buffer object or the
+    maximum parameter buffer size MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV.  These
+    functions perform an operation functionally equivalent to calling
+    BufferSubData, but possibly with higher performance.
+
+Additions to Chapter 3 of the OpenGL 2.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.0 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 2.0 Specification (State and
+State Requests)
+
+    Modify the second paragraph of section 6.1.1 (Simple Queries) p. 244 to
+    read as follows:
+
+    ...<data> is a pointer to a scalar or array of the indicated type in which
+    to place the returned data.
+
+        void GetIntegerIndexedvEXT(enum target, uint index,
+                                   int *data);
+
+    are used to query indexed state.  <target> is the name of the indexed
+    state and <index> is the index of the particular element being queried.
+    <data> is a pointer to a scalar or array of the indicated type in which to
+    place the returned data.
+
+    When <target> is one of VERTEX_PROGRAM_PARAMETER_BUFFER_NV,
+    GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV, or
+    FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV, the <index> is a buffer
+    binding index; the error INVALID_VALUE is generated if <index>
+    is greater or equal to the implementation-dependent value of
+    MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    TBD
+
+Dependencies on NV_transform_feedback
+
+    Both NV_transform_feedback and this extension define the behavior of
+    BindBuffer{Range, Offset, Base}NV. Both definitions should be functionally
+    identical.
+
+Dependencies on OpenGL 3.0
+
+    GetIntegeri_v accepts the same target parameters GetIntegerIndexedvEXT
+    and the two queries return identical results.
+
+Errors
+
+    The error INVALID_VALUE is generated by BindBufferRangeNV,
+    BindBufferOffsetNV, or BindBufferBaseNV if <target> is
+    VERTEX_PROGRAM_PARAMETER_BUFFER_NV, GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV,
+    or FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV, and <index> is greater than or
+    equal to MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS.
+
+    The error INVALID_VALUE is generated by BindBufferRangeNV or
+    BindBufferOffsetNV if <offset> or <size> is not word-aligned.
+
+    The error INVALID_VALUE is generated by BindBufferRangeNV if <size> is
+    less than zero.
+
+    The error INVALID_VALUE is generated by BindBufferRangeNV or
+    BindBufferOffsetNV if <target> is VERTEX_PROGRAM_PARAMETER_BUFFER_NV,
+    GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV, or
+    FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV, and <offset> is non-zero.
+
+    The error INVALID_OPERATION is generated by ProgramBufferParametersfvNV,
+    ProgramBufferParametersIivNV, or ProgramBufferParametersIuivNV if no
+    buffer object is bound to the binding point numbered <bindingIndex> for program
+    target <target>.
+
+    The error INVALID_VALUE is generated by ProgramBufferParametersfvNV,
+    ProgramBufferParametersIivNV, or ProgramBufferParametersIuivNV if the sum
+    of <wordIndex> and <count> is greater than either the number of words in the
+    buffer object bound to <bindingIndex> or the maximum parameter buffer size
+    MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV.
+
+    The error INVALID_VALUE is generated by GetIntegerIndexedvEXT
+    when <target> is one of VERTEX_PROGRAM_PARAMETER_BUFFER_NV,
+    GEOMETRY_PROGRAM_PARAMETER_BUFFER_NV, or
+    FRAGMENT_PROGRAM_PARAMETER_BUFFER_NV, and the <index> is greater
+    than or equal to MAX_PROGRAM_PARAMETER_BUFFER_BINDINGS.
+
+New State
+
+    (Modify ARB_vertex_program, Table X.6 -- Program State)
+
+                                                      Initial
+    Get Value                    Type    Get Command  Value   Description               Sec.    Attribute
+    ---------                    ------- -----------  ------- ------------------------  ------  ---------
+    VERTEX_PROGRAM_PARAMETER_    Z+      GetIntegerv  0       Active vertex program     2.14.1  -
+      BUFFER_NV                                               buffer object binding
+    VERTEX_PROGRAM_PARAMETER_    nxZ+    GetInteger-  0       Buffer objects bound for  2.14.1  -
+      BUFFER_NV                          IndexedvEXT          vertex program use
+    GEOMETRY_PROGRAM_PARAMETER_  Z+      GetIntegerv  0       Active geometry program   2.14.1  -
+      BUFFER_NV                                               buffer object binding
+    GEOMETRY_PROGRAM_PARAMETER_  nxZ+    GetInteger-  0       Buffer objects bound for  2.14.1  -
+      BUFFER_NV                          IndexedvEXT          geometry program use
+    FRAGMENT_PROGRAM_PARAMETER_  Z+      GetIntegerv  0       Active fragment program   2.14.1  -
+      BUFFER_NV                                               buffer object binding
+    FRAGMENT_PROGRAM_PARAMETER_  nxZ+    GetInteger-  0       Buffer objects bound for  2.14.1  -
+      BUFFER_NV                          IndexedvEXT          fragment program use
+
+New Implementation Dependent State
+
+                                                      Minimum
+    Get Value                    Type    Get Command  Value   Description       Sec.    Attribute
+    ---------                    ------- -----------  ------- ----------------  ------  ---------
+    MAX_PROGRAM_PARAMETER_       Z       GetProgram-  8       size of program   2.14.1  -
+      BUFFER_BINDINGS_NV                   ivARB              parameter binding
+                                                              tables
+    MAX_PROGRAM_PARAMETER_       Z       GetProgram-  4096    maximum usable    2.14.1  -
+      BUFFER_SIZE_NV                       ivARB              size of program
+                                                              parameter buffers
+
+Examples
+
+    !!NVfp4.0
+    # Legal
+    BUFFER bones[] = { program.buffer[0] };
+    ALIAS funBone = bones[69];
+    MOV t, bones[1];
+    # Illegal
+    ALIAS numLights = program.buffer[5][6];
+    MOV t, program.buffer[3][x];
+    END
+
+Issues
+
+    (1) PBO is already taken as an acronym?  What do we call this?
+
+      RESOLVED: PaBO.
+
+    (2) How should the ability to simultaneously access multiple parameter
+        buffers be exposed?
+
+      RESOLVED: In the program text (see NV_gpu_program4), the buffers are
+      referred to using a buffer binding statement which is dereferenced in
+      the instructions.  In the rest of the APIs, an array of internal binding
+      points is provided, which are dereferenced using the index parameter of
+      BindBufferBaseNV and associated functions.
+
+    (3) Should program parameter buffer bindings be provided per-target (i.e.,
+        environment parameters), per-program (i.e., local parameters), or some
+        combination of the two?
+
+      RESOLVED: Per-target. That fits most naturally with the ARB program
+      model, similar to textures. Having both per-program and per-target add
+      complexity with no benefit.
+
+    (4) Should references to the parameter buffer be scalar or vector?
+
+      RESOLVED: Scalar. Having vector is more consistent with the legacy APIs,
+      but is more difficult to build the arbitrary data structures that are
+      interesting to store in a parameter buffer. A future extension can
+      define an alternate keyword in the program text to specify accesses of a
+      different size.
+
+    (5) Should parameter buffers be editable using the ProgramEnvParameter
+        API?
+
+      RESOLVED: No. There is a new parallel API for the bindable buffers,
+      including the ability to update multiple parameters at a time. These are
+      more convenient than having to rebind for BufferData and potentially
+      faster.
+
+    (6) Should parameter buffers be editable outside the ProgramBufferParameters
+        API?
+
+      RESOLVED:  Yes.  The use of buffer objects allows the buffers to be
+      naturally manipulated using normal buffer object mechanisms.  That
+      includes CPU mapping, loading via BufferData or BufferSubData, and even
+      reading data back using the ARB_pixel_buffer_object extension.
+
+    (7) Will buffer object updates from different sources cause potential
+        synchronization problems?  If so, how will they be resolved.
+
+      RESOLVED: If reads and write occur in the course of the same call
+      (e.g. reading from a buffer using parameter buffer binding while writing
+      to it using transform feedback. All other cases are allowed and occur in
+      command order. Any synchronization is handled by the GL.
+
+    (8) Is there an implementation-dependent limit to the size of program
+        parameter buffers?
+
+      RESOLVED: Yes, limited-size buffers are provided to reduce the
+      complexity of the GPU design that supports program parameter buffer
+      access and updates.  However, the minimum limit is 16K scalar
+      parameters, or 64KB.  A larger buffer object can be provided, but only
+      the first 64KB is accessible. The limit is queryable with
+      GetProgramivARB with <pname> MAX_PROGRAM_PARAMETER_BUFFER_SIZE_NV.
+
+    (9) With scalar buffers, which parameter setting routines do we need?
+
+      UNRESOLVED: A function to set N scalars is very important. It might be
+      nice to have convenience functions that take 1 or 4 parameters directly.
+
+    (10) Do we need GetProgramBufferParameter functions?
+
+      UNRESOLVED: Probably not - they aren't performance critical and offer no
+      functionality beyond getting the buffer object data any of the standard
+      ways.
+
+    (11) What happens if a value written using ProgramBufferParametersfNV is
+         read as an integer or the other way around?
+
+      RESOLVED: Undefined - likely just a raw bit cast between whatever
+      internal representations are used by the GL.
+
+    (12) What's the differece between the "GLuint buffer"
+         in BindBuffer*NV commands and the "GLuint bindingIndex"
+         in ProgramBufferParameter*NV commands?
+
+      RESOLVED: The "GLuint buffer" parameter is a buffer object name
+      created with glBindBuffer or glGenBuffers.
+
+      The "GLuint bindingIndex" parameter is an unsigned index into the target's
+      array of buffer bindings.
+
+      The index used by GetIntegerIndexvEXT for NV_parameter_buffer_object
+      query tokens is an index into the query token's array of buffer
+      bindings (similar to bindingIndex).
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     9    03/09/11  mjk       Fix glGetIntegerIndexedvEXT prototype
+                              Note about glGetIntegeri_v
+                              Rename buffer and index parameters and
+                              add Issue #12 to clarify the API
+
+     8    10/02/08  mjk       Fix New Tokens to note glGetIntegerv works
+                              for *_PROGRAM_PARAMETER_NV (matching the table);
+                              NVIDIA drivers before 180.00 fail to implement
+                              this get, later drivers do
+     7    04/18/07  pbrown    Fixed state table to include the buffer
+                              object binding array for each program type.
+
+     6    02/07/07  ewerness  Updated inconsistent prototypes in spec -
+                              <count> for ProgramBufferParameters* is
+                              a <sizei>, not a <uint>.
+
+    1-5                       Internal revisions.

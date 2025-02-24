@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title xmlns:xlink="http://www.w3.org/1999/xlink">eglCopyBuffers - EGL Reference Pages</title>
+    <link rel="stylesheet" type="text/css" href="khronos-man.css"/>
+    <meta name="generator" content="DocBook XSL Stylesheets V1.79.1"/>
+  </head>
+  <body>
+    <header/>
+    <div class="refentry" id="eglCopyBuffers">
+      <div class="titlepage"/>
+      <div class="refnamediv">
+        <h2>Name</h2>
+        <p>eglCopyBuffers — 
+            copy <abbr class="acronym">EGL</abbr> surface color buffer to a native pixmap
+        </p>
+      </div>
+      <div class="refsynopsisdiv">
+        <h2>C Specification</h2>
+        <div class="funcsynopsis">
+          <table style="border: 0; cellspacing: 0; cellpadding: 0;" class="funcprototype-table">
+            <tr>
+              <td>
+                <code class="funcdef">EGLBoolean <strong class="fsfunc">eglCopyBuffers</strong>(</code>
+              </td>
+              <td>EGLDisplay <var class="pdparam">display</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>EGLSurface <var class="pdparam">surface</var>, </td>
+            </tr>
+            <tr>
+              <td> </td>
+              <td>NativePixmapType <var class="pdparam">native_pixmap</var><code>)</code>;</td>
+            </tr>
+          </table>
+          <div class="funcprototype-spacer"> </div>
+        </div>
+      </div>
+      <div class="refsect1" id="parameters">
+        <h2>Parameters</h2>
+        <div class="variablelist">
+          <dl class="variablelist">
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>display</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL display connection.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>surface</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the EGL surface whose color buffer is to be copied.
+                    </p>
+            </dd>
+            <dt>
+              <span class="term">
+                <em class="parameter">
+                  <code>native_pixmap</code>
+                </em>
+              </span>
+            </dt>
+            <dd>
+              <p>
+                        Specifies the native pixmap as target of the copy.
+                    </p>
+            </dd>
+          </dl>
+        </div>
+      </div>
+      <div class="refsect1" id="description">
+        <h2>Description</h2>
+        <p>
+            <code class="function">eglCopyBuffers</code> copies the color buffer of
+            <em class="parameter"><code>surface</code></em> to <em class="parameter"><code>native_pixmap</code></em>.
+        </p>
+        <p>
+            <code class="function">eglCopyBuffers</code> performs an implicit
+            <a class="citerefentry" href="glFlush.xhtml"><span class="citerefentry"><span class="refentrytitle">glFlush</span></span></a>
+            before it returns. Subsequent
+            GL commands may be issued immediately after calling
+            <code class="function">eglCopyBuffers</code>,
+            but are not executed until copying of the color buffer is completed.
+        </p>
+      </div>
+      <div class="refsect1" id="notes">
+        <h2>Notes</h2>
+        <p>
+            The color buffer of <em class="parameter"><code>surface</code></em> is left unchanged
+            after calling <code class="function">eglCopyBuffers</code>.
+        </p>
+      </div>
+      <div class="refsect1" id="errors">
+        <h2>Errors</h2>
+        <p>
+            <code class="constant">EGL_FALSE</code> is returned if swapping of the
+            surface buffers fails, <code class="constant">EGL_TRUE</code> otherwise.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_DISPLAY</code> is generated if
+            <em class="parameter"><code>display</code></em> is not an EGL display connection.
+        </p>
+        <p>
+            <code class="constant">EGL_NOT_INITIALIZED</code> is generated if
+            <em class="parameter"><code>display</code></em> has not been initialized.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_SURFACE</code> is generated if
+            <em class="parameter"><code>surface</code></em> is not an EGL drawing surface.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_NATIVE_PIXMAP</code> is generated if
+            the implementation does not support native pixmaps.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_NATIVE_PIXMAP</code> may be generated if
+            <em class="parameter"><code>native_pixmap</code></em> is not a valid native pixmap.
+        </p>
+        <p>
+            <code class="constant">EGL_BAD_MATCH</code> is generated if
+            the format of <em class="parameter"><code>native_pixmap</code></em> is not compatible
+            with the color buffer of <em class="parameter"><code>surface</code></em>.
+        </p>
+        <p>
+            <code class="constant">EGL_CONTEXT_LOST</code> is generated if a power management
+            event has occurred. The application must destroy all contexts and
+            reinitialise OpenGL ES state and objects to continue rendering.
+        </p>
+      </div>
+      <div class="refsect1" id="seealso">
+        <h2>See Also</h2>
+        <p>
+            <a class="citerefentry" href="glFlush.xhtml"><span class="citerefentry"><span class="refentrytitle">glFlush</span></span></a>,
+            <a class="citerefentry" href="eglSwapBuffers.xhtml"><span class="citerefentry"><span class="refentrytitle">eglSwapBuffers</span></span></a>
+        </p>
+      </div>
+      <p>
+    </p>
+      <div class="refsect3" id="copyright">
+        <img src="KhronosLogo.jpg"/>
+        <p>
+            Copyright © 2003-2014 The Khronos Group Inc.
+            Permission is hereby granted, free of charge, to any person obtaining a
+            copy of this software and/or associated documentation files (the
+            "Materials"), to deal in the Materials without restriction, including
+            without limitation the rights to use, copy, modify, merge, publish,
+            distribute, sublicense, and/or sell copies of the Materials, and to
+            permit persons to whom the Materials are furnished to do so, subject to
+            the condition that this copyright notice and permission notice shall be included
+            in all copies or substantial portions of the Materials.
+        </p>
+      </div>
+      <p>
+</p>
+    </div>
+    <footer/>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+RewriteEngine on
+
+# Avoid redirect loops
+RewriteCond %{ENV:REDIRECT_STATUS} 200
+RewriteRule ^ - [L]
+
+# Unlike the OpenGL ES and OpenGL reference pages, we're not keeping
+# old versions of the EGL man pages around. Just redirect links to
+# egl/sdk/docs/man/xhtml/*.html to the new HTML 5 pages in html/*.xhtml.
+
+RewriteRule ^xhtml/$ https://www.khronos.org/registry/egl/sdk/docs/man/ [L,R=301]
+RewriteRule ^xhtml/index.html https://www.khronos.org/registry/egl/sdk/docs/man/ [L,R=301]
+RewriteRule ^xhtml/(.*)\.html https://www.khronos.org/registry/egl/sdk/docs/man/html/$1.xhtml [L,R=301]

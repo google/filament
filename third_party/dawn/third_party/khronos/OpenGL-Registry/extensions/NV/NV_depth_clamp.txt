@@ -1,0 +1,249 @@
+Name
+
+    NV_depth_clamp
+
+Name Strings
+
+    GL_NV_depth_clamp
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 2001.
+
+Status
+
+    Shipping
+
+Version
+
+    Last Modified Date:  2003/01/08
+    NVIDIA Revision:     1
+
+Number
+
+    260
+
+Dependencies
+
+    Written based on the wording of the OpenGL 1.2.1 specification.
+
+Overview
+
+    Conventional OpenGL clips geometric primitives to a clip volume
+    with six faces, two of which are the near and far clip planes.
+    Clipping to the near and far planes of the clip volume ensures that
+    interpolated depth values (after the depth range transform) must be
+    in the [0,1] range.
+
+    In some rendering applications such as shadow volumes, it is useful
+    to allow line and polygon primitives to be rasterized without
+    clipping the primitive to the near or far clip volume planes (side
+    clip volume planes clip normally).  Without the near and far clip
+    planes, rasterization (pixel coverage determination) in X and Y
+    can proceed normally if we ignore the near and far clip planes.
+    The one major issue is that fragments of a  primitive may extend
+    beyond the conventional window space depth range for depth values
+    (typically the range [0,1]).  Rather than discarding fragments that
+    defy the window space depth range (effectively what near and far
+    plane clipping accomplish), the depth values can be clamped to the
+    current depth range.
+
+    This extension provides exactly such functionality.  This
+    functionality is useful to obviate the need for near plane capping
+    of stenciled shadow volumes.  The functionality may also be useful
+    for rendering geometry "beyond" the far plane if an alternative
+    algorithm (rather than depth testing) for hidden surface removal is
+    applied to such geometry (specifically, the painter's algorithm).
+    Similar situations at the near clip plane can be avoided at the
+    near clip plane where apparently solid objects can be "seen through"
+    if they intersect the near clip plane.
+
+Issues
+
+    Another way to specify this functionality is to describe it in terms
+    of generating the equivalent capping geometry that would need to be
+    drawn at the near or far clip plane to have the same effect as not
+    clipping to the near and far clip planes and clamping interpolated
+    depth values outside the window-space depth range.  Should the
+    functionality be described this way?
+
+      RESOLUTION:  No.  Describing the functionality as capping is
+      fairly involved.  Eliminating far and near plane clipping and
+      clamping interpolated depth values to the depth range is much
+      simpler to specify.
+
+    Should depth clamping affect points or just line and polygon geometric
+    primitives?
+
+      RESOLUTION:  All geometric primitives are affected by depth
+      clamping.
+
+      In the case of points, if you render a point "in front of" the
+      near clip plane, it should be rendered with the zw value min(n,f)
+      where n and f are the near and far depth range values if depth
+      clamping is enabled.  Similarly, a point "behind" the far clip
+      plane should be rendered with the zw value max(n,f).
+
+    How should the setting of the raster position function when depth
+    clamping is enabled?
+
+      RESOLUTION:  When setting the raster position, clamp the raster
+      position zw to the range [min(n,f),max(n,f)] where n and f are
+      the near and far depth range values.
+
+      This rule ensures that the raster position zw will never be outside
+      the [0,1] range (because n and far are clamped to the [0,1] range).
+      We specify the raster position to be updated this way because
+      otherwise a raster position zw could be specified outside the [0,1]
+      range when depth clamping is enabled, but then if depth clamping
+      is subsequently disabled, that out-of-range raster position zw
+      could not be written to the depth buffer.
+
+      This semantic can make for some unexpected semantics that are
+      described here.  Say that depth clamping is enabled and the raster
+      position is set to point behind the far clip plane such that the
+      pre-clamped zw is 2.5.  Because depth clamping is enabled the
+      raster position zw is clamped to the current near and far depth
+      range values.  Say these values are 0.1 and 0.9.  So 2.5 is clamped
+      to 0.9.
+
+      Now consider what happens if a bitmap (or image rectangle) is
+      rendered with depth testing enabled under various situations.
+      If depth clamping remains enabled and the depth range is unchanged,
+      the bitmap fragments are generated with a zw of 0.9.
+
+      However, if depth range is subsequently set to 0.2 and 0.8 and
+      depth clamping is enabled, the bitmap fragments will have their
+      zw depth component clamped to 0.8.  But if the depth range was
+      changed to 0.2 and 0.8 but depth range clamped is disabled, the
+      bitmap fragments will have a 0.9 zw depth component since then
+      the depth clamping is then not applied.
+
+    What push/pop attrib bits should affect the depth clamp enable?
+
+      RESOLUTION:  GL_ENABLE_BIT and GL_TRANSFORM_BIT.
+
+    How does depth clamping interact with depth replace operations (say
+    from NV_texture_shader)?
+
+      RESOLUTION:  The depth clamp operation occurs as part of the depth
+      test so depth clamping occurs AFTER any depth replace operation
+      in the pipeline.  A depth replace operation can reassign the
+      fragment's zw, but depth clamping if enabled will subsequently
+      clamp this new zw.
+
+    Does depth clamping affect read/draw/copy pixels operations involving
+    depth component pixels?
+
+      RESOLUTION:  No.
+
+    Does depth clamping occur after polygon offset?
+
+      RESOLUTION:  Yes.  Depth clamping occurs immediately before the
+      depth test.
+
+    Can fragments with wc<=0 be generated when this extension is supported?
+
+      RESOLUTION:  No.  The core OpenGL specification (section 2.11) is
+      worded to allow the possibility of generating fragments where wc<=0.
+      These should never be generated when this extension is supported.
+
+New Procedures and Functions
+
+    None
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        DEPTH_CLAMP_NV                                0x864F
+
+Additions to Chapter 2 of the OpenGL 1.2.1 Specification (OpenGL Operation)
+
+ --  Section 2.11 "Clipping"
+ 
+    Add to the end of the 3rd paragraph:
+
+    "Depth clamping is enabled with the generic Enable command and
+    disabled with the Disable command.  The value of the argument to
+    either command is DEPTH_CLAMP_NV.  If depth clamping is enabled, the
+    "-wc <= zc <= wc" plane equation are ignored by video volume clipping
+    (effectively, there is no near or far plane clipping)."
+
+    Change the 8th paragraph to indicate that only wc>0 fragments should
+    be generated rather than even allowing the posibility that wc<=0
+    fragments may be generated:
+
+    "A line segment or polygon whose vertices have wc values of differing
+    signs may generate multiple connected components after clipping.
+    GL implementations are not required to handle this situation.
+    That is, only the portion of the primitive that lies in the region
+    of wc>0 should be produced by clipping."
+
+ --  Section 2.12 "Current Raster Position"
+ 
+    Add to the end of the 4th paragraph:
+
+    "If depth clamping (see section 2.11) is enabled, then raster position
+    zw is first clamped as follows.  If the raster postition's wc>0,
+    then zw is clamped the range [min(n,f),max(n,f)] where n and f are
+    the current near and far depth range values (see section 2.10.1)."
+
+Additions to Chapter 3 of the OpenGL 1.2.1 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the OpenGL 1.2.1 Specification (Per-Fragment Operations
+and the Framebuffer)
+
+ --  Section 4.1.5 "Depth buffer test"
+ 
+    Add to the end of the 2nd paragraph:
+
+    "If depth clamping (see section 2.11) is enabled, before the incoming
+    fragment's zw is compared, zw must first be clamped as follows: If the
+    fragment's wc>0, then zw is clamped to the range [min(n,f),max(n,f)]
+    where n and f are the current near and far depth range values (see
+    section 2.10.1)."
+
+Additions to Chapter 5 of the OpenGL 1.2.1 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the OpenGL 1.2.1 Specification (State and State Requests)
+
+    None
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None
+
+GLX Protocol
+
+    None
+
+Errors
+
+    None
+
+New State
+
+(table 6.7)
+Get Value       Type  Get Command  Initial Value  Description     Sec      Attribute
+--------------  ----  -----------  -------------  --------------  ------   ----------------
+DEPTH_CLAMP_NV  B     IsEnabled    False          Depth clamping  2.10.2   transform/enable
+                                                  on/off
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    None

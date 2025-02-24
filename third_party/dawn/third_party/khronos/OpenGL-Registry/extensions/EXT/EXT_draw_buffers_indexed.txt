@@ -1,0 +1,484 @@
+Name
+
+    EXT_draw_buffers_indexed
+
+Name Strings
+
+    GL_EXT_draw_buffers_indexed
+
+Contact
+
+    Daniel Koch, NVIDIA Corporation (dkoch 'at' nvidia.com)
+
+Contributors
+
+    Graham Connor, Imagination
+    Ben Bowman, Imagination
+    Jonathan Putsman, Imagination
+    Contributors to EXT_draw_buffers2
+    Contributors to ARB_draw_buffers_blend
+
+Status
+
+    Complete.
+
+Version
+
+    Last Modified Date: July 14, 2014
+    Revision: 5
+
+Number
+
+    OpenGL ES Extension #176
+
+Dependencies
+
+    OpenGL ES 3.0 or EXT_draw_buffers is required.
+
+    This extension is written against the OpenGL ES 3.0 specification.
+
+Overview
+
+    This extension builds upon the EXT_draw_buffers extension.
+    In EXT_draw_buffers (part of OpenGL ES 3.0), separate values could
+    be written to each color buffer, but the blend enable, blend functions,
+    blend equations and color write masks are global and apply to all color
+    outputs.
+
+    This extension provides the ability to independently
+      * enable or disable blending,
+      * set the blend equations,
+      * set the blend functions, and
+      * set the color write masks
+    per color output.
+
+    This extension introduces indexed versions of the enable,
+    blend equation, blend function, and color mask commands, as
+    well as associated indexed queries in order to control and
+    query these states independently on a per-color output basis.
+
+New Procedures and Functions
+
+    void EnableiEXT(enum target, uint index);
+
+    void DisableiEXT(enum target, uint index);
+
+    void BlendEquationiEXT(uint buf, enum mode);
+
+    void BlendEquationSeparateiEXT(uint buf, enum modeRGB,
+                                   enum modeAlpha);
+
+    void BlendFunciEXT(uint buf, enum src, enum dst);
+
+    void BlendFuncSeparateiEXT(uint buf, enum srcRGB, enum dstRGB,
+                               enum srcAlpha, enum dstAlpha);
+
+    void ColorMaskiEXT(uint buf, boolean r, boolean g,
+                       boolean b, boolean a);
+
+    boolean IsEnablediEXT(enum target, uint index);
+
+New Tokens
+
+    Accepted by the <target> parameter of GetBooleani_v, GetIntegeri_v, and
+    GetInteger64i_v:
+
+        BLEND_EQUATION_RGB
+        BLEND_EQUATION_ALPHA
+        BLEND_SRC_RGB
+        BLEND_SRC_ALPHA
+        BLEND_DST_RGB
+        BLEND_DST_ALPHA
+        COLOR_WRITEMASK
+
+    Accepted by the <target> parameter of EnableiEXT, DisableiEXT, and
+    IsEnablediEXT:
+
+        BLEND
+
+    Accepted by the <mode> parameter of BlendEquationiEXT and by the
+    <modeRGB> and <modeAlpha> parameters of BlendEquationSeparateiEXT:
+
+        FUNC_ADD
+        FUNC_SUBTRACT
+        FUNC_REVERSE_SUBTRACT
+        MIN
+        MAX
+
+    Accepted by the <src> and <dst> parameters of BlendFunciEXT and
+    by the <srcRGB>, <dstRGB>, <srcAlpha>, and <dstAlpha> parameters
+    of BlendFuncSeparateiEXT:
+
+        ZERO
+        ONE
+        SRC_COLOR
+        ONE_MINUS_SRC_COLOR
+        DST_COLOR
+        ONE_MINUS_DST_COLOR
+        SRC_ALPHA
+        ONE_MINUS_SRC_ALPHA
+        DST_ALPHA
+        ONE_MINUS_DST_ALPHA
+        CONSTANT_COLOR
+        ONE_MINUS_CONSTANT_COLOR
+        CONSTANT_ALPHA
+        ONE_MINUS_CONSTANT_ALPHA
+        SRC_ALPHA_SATURATE
+
+    (Note all of the above tokens are already defined in OpenGL ES 3.0.)
+
+Additions to Chapter 2 of the OpenGL ES 3.0 Specification (OpenGL ES Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL ES 3.0 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL ES 3.0 Specification (Per-Fragment
+Operations and the Framebuffer)
+
+    Modify the fifth paragraph of section 4.1.7 (Blending), p. 179, to
+    read as follows:
+
+    "Blending is enabled or disabled for an individual draw buffer with
+    the commands:
+
+        void EnableiEXT(enum target, uint index);
+        void DisableiEXT(enum target, uint index);
+
+    <target> is the symbolic constant BLEND and <index> is an integer
+    <i> specifying the draw buffer associated with the symbolic constant
+    DRAW_BUFFER<i>. Blending can be enabled or
+    disabled for all draw buffers using Enable or Disable with the
+    symbolic constant BLEND.  If blending is disabled for a particular
+    draw buffer, proceed to the next operation."
+
+    Modify section "Blend Equation" replacing the first paragraph beginning
+    on p. 179, with the following:
+
+    "Blending is controlled by the blend equation. This equation can be
+    simultaneously set to the same value for all draw buffers using the
+    commands:
+
+       void BlendEquation(enum mode);
+       void BlendEquationSeparate(enum modeRGB, enum modeAlpha);
+
+    or for an individual draw buffer using the indexed commands:
+
+        void BlendEquationiEXT(uint buf, enum mode);
+        void BlendEquationSeparateiEXT(uint buf
+                                       enum modeRGB,
+                                       enum modeAlpha);
+
+    BlendEquationSeparate and BlendEquationSeparateiEXT argument
+    <modeRGB> determines the RGB blend equation while <modeAlpha>
+    determines the alpha blend equation. BlendEquation and
+    BlendEquationiEXT argument <mode> determines both the RGB and alpha
+    blend equations. <mode>, <modeRGB>, and <modeAlpha> must be one of
+    FUNC_ADD, FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MIN, MAX.
+    BlendEquation and BlendEquationSeparate modify the blend equations
+    for all draw buffers. BlendEquationiEXT and
+    BlendEquationSeparateiEXT modify the blend equations associated with
+    an individual draw buffer. The <buf> argument is an integer <i> that
+    indicates that the blend equations should be modified for
+    DRAW_BUFFER<i>."
+
+    Modify section "Blend Functions" on p. 181, replacing the last sentence
+    of the first paragraph and the second paragraph with the following:
+
+    "Blend functions are simultaneously specified
+    for all draw buffers using the commands:
+
+        void BlendFunc(enum src, enum dst);
+        void BlendFuncSeparate(enum srcRGB, enum dstRGB,
+                               enum srcAlpha, enum dstAlpha);
+
+    or for an individual draw buffer using the indexed commands:
+
+        void BlendFunciEXT(uint buf, enum src, enum dst);
+        void BlendFuncSeparateiEXT(uint buf, enum srcRGB,
+                                   enum dstRGB, enum srcAlpha,
+                                   enum dstAlpha);
+
+    BlendFuncSeparate and BlendFuncSeparateiEXT arguments <srcRGB> and
+    <dstRGB> determine the source and destination RGB blend functions,
+    respectively, while <srcAlpha> and <dstAlpha> determine the source
+    and destination alpha blend functions. BlendFunc and BlendFunciEXT
+    argument <src> determines both RGB and alpha source functions, while
+    <dst> determines both RGB and alpha destination functions.
+    BlendFuncSeparate and BlendFunc modify the blend functions for all
+    draw buffers. BlendFuncSeparateiEXT and BlendFunciEXT modify the
+    blend functions associated with an individual draw buffer. The <buf>
+    argument is an integer <i> that indicates that the blend equations
+    should be modified for DRAW_BUFFER<i>."
+
+    Modify section "Blending State" on p. 183, replacing the first two
+    paragraphs with the following:
+
+    "The state required for blending, for each draw buffer, is two
+    integers for the RGB and alpha blend equations, four integers
+    indicating the source and destination RGB and alpha blending
+    functions, and a bit indicating whether blending is enabled or
+    disabled. Additionally, four floating-point values to store the RGBA
+    constant blend color are required.
+
+    For all draw buffers, the initial blend equations for RGB and alpha
+    are both FUNC_ADD, and the initial blending functions are ONE for
+    the source RGB and alpha functions, and ZERO for the destination RGB
+    and alpha functions. Initially, blending is disabled for all draw
+    buffers. The initial constant blend color is (R,G,B,A) = (0,0,0,0).
+
+    The value of the blend enable for draw buffer <i> can be queried by
+    calling IsEnablediEXT with <target> BLEND and <index> <i>, and the
+    values of the blend equations and functions can be queried by calling
+    GetIntegeri_v with the corresponding <target> as shown in
+    table 6.11 and <index> <i>.
+
+    The value of the blend enable, or the blend equations and functions
+    for draw buffer zero may also be queried by calling IsEnabled, or
+    GetInteger, respectively, with the same symbolic constants but no
+    <index> parameter."
+
+    Modify section 4.2.2 (Fine Control of Buffer Updates) replacing the
+    first two paragraphs as follows:
+
+    "Writing to bits of each of the logical framebuffers after all
+    per-fragment operations have been performed may be "masked". The
+    commands:
+
+        void ColorMask(boolean r, boolean g, boolean b, boolean a);
+        void ColorMaskiEXT(uint buf, boolean r, boolean g,
+                           boolean b, boolean a);
+
+    control writes to the active draw buffers.
+
+    ColorMask and ColorMaskiEXT are used to mask
+    the writing of R, G, B and A values to the draw buffer or buffers.
+    ColorMaskiEXT sets the mask for a particular draw buffer.
+    The mask for DRAW_BUFFER<i> is modified by passing <i> as the parameter
+    <buf>.  <r>, <g>, <b>, and <a> indicate whether R, G, B, or A
+    values, respectively, are written or not (a value of TRUE means
+    that the corresponding  value is written).  The mask specified by
+    <r>, <g>, <b>, and <a> is applied to the color buffer associated
+    with DRAW_BUFFER<i>.
+
+    ColorMask sets the mask for all draw buffers to the same values as
+    specified by <r>, <g>, <b>, and <a>.
+
+    In the initial state, all color values are enabled for writing for all
+    draw buffers.
+
+    The value of the color writemask for draw buffer <i> can be queried
+    by calling GetBooleani_v with <target> COLOR_WRITEMASK and <index>
+    <i>.  The value of the color writemask for draw buffer zero may also be
+    queried by calling GetBooleanv with the symbolic constant COLOR_WRITEMASK."
+
+Additions to Chapter 5 of the OpenGL ES 3.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL ES 3.0 Specification (State and
+State Requests)
+
+    Modify section 6.1.1 (Simple Queries) p. 226.
+
+    Replace the 3rd paragraph with the following:
+
+    "Finally,
+
+        boolean IsEnabled(enum cap);
+
+    can be used to determine if <cap> is currently enabled (as with
+    Enable) or disabled, and
+
+        boolean IsEnablediEXT(enum target, uint index);
+
+    can be used to determine if the index state corresponding to
+    <target> and <index> is enabled or disabled.
+
+Additions to Appendix A of the OpenGL ES 3.0 Specification (Invariance)
+
+    None.
+
+Additions to the EGL/AGL/GLX/WGL Specifications
+
+    None.
+
+Errors
+
+    The error INVALID_VALUE is generated by BlendEquationiEXT,
+    BlendEquationSeparateiEXT, BlendFuncSeparateiEXT, and
+    BlendFunciEXT if the <buf> parameter is outside the range
+    [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_VALUE is generated by GetIntegeri_v
+    if <target> is BLEND_EQUATION_RGB, BLEND_EQUATION_ALPHA, BLEND_SRC_RGB,
+    BLEND_SRC_ALPHA, BLEND_DST_RGB, BLEND_DST_ALPHA, and <index> is outside
+    the range [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by BlendFunciEXT
+    if either <src>, or <dst> is not an accepted value.
+
+    The error INVALID_ENUM is generated by BlendFuncSeparateiEXT
+    if either <srcRGB>, <dstRGB>, <srcAlpha>, or <dstAlpha> is not
+    an accepted value.
+
+    The error INVALID_ENUM is generated if the <mode> parameter of
+    BlendEquationiEXT is not one of FUNC_ADD, FUNC_SUBTRACT,
+    FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    The error INVALID_ENUM is generated if either the <modeRGB> or
+    <modeAlpha> parameter of BlendEquationSeparateiEXT is not one of
+    FUNC_ADD, FUNC_SUBTRACT, FUNC_REVERSE_SUBTRACT, MAX, or MIN.
+
+    The error INVALID_ENUM is generated by EnableiEXT and
+    DisableiEXT if the <target> parameter is not BLEND.
+
+    The error INVALID_VALUE is generated by EnableiEXT and
+    DisableiEXT if the <target> parameter is BLEND and the <index>
+    parameter is outside the range [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_ENUM is generated by IsEnablediEXT if the
+    <target> parameter is not BLEND.
+
+    The error INVALID_VALUE is generated by IsEnablediEXT if
+    the <target> parameter is BLEND and the <index> parameter is
+    outside the range [0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_VALUE is generated by ColorMaskiEXT
+    if the <buf> parameter is outside the range[0, MAX_DRAW_BUFFERS-1].
+
+    The error INVALID_VALUE is generated by GetBooleani_v if the <target>
+    parameter is COLOR_WRITEMASK and the <index> parameter is outside the
+    range [0, MAX_DRAW_BUFFERS-1].
+
+New State
+
+     Modify Table 6.11 (Pixel Operations) p. 254, modifying the entries for
+     BLEND enable, the blend functions and blend equations, adding indexed
+     versions:
+
+                                                 Initial
+    Get Value            Type      Get Command   Value    Description                           Section
+    -------------------- --------- ------------- -------- ------------------------------------  -------
+    BLEND                B         IsEnablediEXT False    Blending enabled for draw buffer <i>  4.1.7
+                                                          where <i> is specified as <index>
+    BLEND_SRC_RGB        4* x Z_19 GetIntegeri_v ONE      Blending source RGB                   4.1.7
+                                                          function for draw buffer <i>
+                                                          where <i> is specified as <index>
+    BLEND_SRC_ALPHA      4* x Z_19 GetIntegeri_v ONE      Blending source A                     4.1.7
+                                                          function for draw buffer <i>
+                                                          where <i> is specified as <index>
+    BLEND_DST_RGB        4* x Z_19 GetIntegeri_v ZERO     Blending destination RGB              4.1.7
+                                                          function for draw buffer <i>
+                                                          where <i> is specified as <index>
+    BLEND_DST_ALPHA      4* x Z_19 GetIntegeri_v ZERO     Blending destination A                4.1.7
+                                                          function for draw buffer <i>
+                                                          where <i> is specified as <index>
+    BLEND_EQUATION_RGB   4* x Z_5  GetIntegeri_v FUNC_ADD RGB blending equation                 4.1.7
+                                                          for draw buffer <i>
+                                                          where <i> is specified as <index>
+    BLEND_EQUATION_ALPHA 4* x Z_5  GetIntegeri_v FUNC_ADD Alpha blending equation               4.1.7
+                                                          for draw buffer <i>
+                                                          where <i> is specified as <index>
+
+    Modify Table 6.12 (Framebuffer Control) p. 255, modifying the entry for
+    COLOR_WRITEMASK:
+
+    Get Value       Type     Get Command   Value  Description                        Section
+    --------------- -------- ------------- ------ ---------------------------------- -------
+    COLOR_WRITEMASK 4* x 4xB GetBooleani_v 4xTrue Color write enables (R, G, B, A)   4.2.2
+                                                  for draw buffer <i>
+                                                  where <i> is specified as <index>
+
+Issues
+
+    Note: these issues apply specifically to the definition of
+    EXT_draw_buffers_indexed, which is based on the OpenGL EXT_draw_buffers2
+    and ARB_draw_buffers_blend extensions as updated in OpenGL 4.x.
+    Resolved issues from EXT_draw_buffers2 and ARB_draw_buffers_blend have
+    been removed but remain largely applicable to this extension. These
+    extensions can be found in the OpenGL Registry.
+
+    (1) What functionality was removed from EXT_draw_buffers2 and
+    ARB_draw_buffers_blend?
+
+    - removed mention of multiple buffers being associated with DRAW_BUFFER<i>
+    - removed mention of logical operation on color values
+    - removed mention of the IndexMask command
+    - removed errors related to glBegin/End
+
+    (2) What functionality was changed or added relative to EXT_draw_buffers2
+    and ARB_draw_buffers_blend?
+
+    - use EnableiEXT/DisableiEXT instead of Enable/DisableIndexedEXT
+    - use ColorMaskiEXT instead of ColorMaskIndexedEXT
+    - use IsEnablediEXT instead of IsEnabledIndexedEXT
+    - GetIntegeri_v is already in ES 3.0 and is re-used instead of adding
+      GetIntegerIndexedvEXT.
+    - GetBooleani_v is already in ES 3.1 and is re-used instead of adding
+      GetBooleanIndexedvEXT
+    - change the errors to be consistent and match GL 4.4.
+
+    (3) What should we call this extension?
+
+    RESOLVED: EXT_draw_buffers_indexed, because it adds the indexed "i"
+    variants of all the draw buffer related state setting commands.
+    Other options considered include:
+    * EXT_draw_buffers2, EXT_draw_buffers_blend: both potentially confusing due
+    to similarly named GL extensions, while this incorporates the functionality
+    of both. Furthermore, this will likely be an EXT extension and there already
+    is an EXT_draw_buffers2 in the GL registry. Using the same name and having
+    different functionality is strongly discouraged.
+    * EXT_draw_buffers_separate: because it allows separate control of the drawing
+    buffers. Potentially could be confused with the "blend_func_separate" and
+    "blend_equation_separate" extensions, which allow separately controlling a
+    of the RGB and A equations and functions.
+    * EXT_draw_buffers_independent: because it allows the functionality of the
+    separate drawing buffers to be independently controlled.
+
+    (4) Why doesn't this extension include GetBooleani_vEXT?
+
+    RESOLVED: GetBooleani_v was added in OpenGL ES 3.1 per Bug 11326 and thus
+    no longer needs to be added by this extension.  This extension does
+    however extend the commands accepted by this core function.
+
+    (5) What is the correct error for all the commands which take a <buf>
+    or <index> parameter which should be in the range [0, MAX_DRAW_BUFFERS-1]?
+
+    RESOLVED: INVALID_VALUE is the correct error.
+    EXT_draw_buffers2 specified INVALID_OPERATION for the EnableIndexedEXT,
+    DisableIndexedEXT, IsEnabledIndexedEXT, and GetBooleanIndexedvEXT commands.
+    ARB_draw_buffers_blend specified INVALID_ENUM for the
+    Blend{Equation Func}[Separate]iARB commands.
+    OpenGL 4.4 specifies INVALID_VALUE for the core versions of all these
+    commands. This was clarified by Bug 7705, but never propagated back to
+    the ARB_draw_buffers_blend extension.  Since we are basing the
+    functionality on the core versions of these commands we will use the
+    GL 4.x error values.
+
+    (6) What is the correct error for the Blend{Equation Func}[Separate]iEXT
+    commands if mode/modeRGB/modeAlpha/srcRGB/srcAlpha/dstRGB/dstAlpha is
+    not a legal value?
+
+    RESOLVED. INVALID_ENUM. Some versions of the GL 4.4 spec said it should be
+    INVALID_VALUE, but it seems that the more correct error value should
+    INVALID_ENUM since all of these values are specified as 'enum' in the
+    function signatures. This was clarified in Bug 11354.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     5    07/14/14  dkoch     Remove stray tokens from error (bug 12358)
+     4    03/26/14  dkoch     Update contributors.
+     3    03/10/14  Jon Leech Change NNN suffix to EXT.
+     2    12/16/13  dkoch     Removed GetBooleani_vEXT.
+                              Resolved Issues 4 and 6.
+                              Expanded out New Tokens section to clarify the
+                              tokens accepted by the new functions.
+     1    12/02/13  dkoch     Initial revision based on EXT_draw_buffers2 v10
+                              and ARB_draw_buffers_blend v4 and updated with
+                              GL 4.4 commands and language.

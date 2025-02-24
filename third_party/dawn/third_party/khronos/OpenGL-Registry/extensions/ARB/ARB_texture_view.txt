@@ -1,0 +1,598 @@
+Name
+
+    ARB_texture_view
+
+Name Strings
+
+    GL_ARB_texture_view
+
+Contact
+
+    Jeff Bolz, NVIDIA Corporation (jbolz 'at' nvidia.com)
+
+Contributors
+
+    Pat Brown, NVIDIA
+    Daniel Koch, TransGaming
+    Jon Leech
+
+Notice
+
+    Copyright (c) 2012-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete.
+    Approved by the ARB on 2012/06/12.
+
+Version
+
+    Last Modified Date: July 15, 2013
+    Revision: 4
+
+Number
+
+    ARB Extension #124
+
+Dependencies
+
+    This extension is written against the OpenGL 4.2 Core profile 
+    specification.
+
+    ARB_texture_storage or OpenGL 4.2 is required.
+
+    ARB_internalformat_query2 interacts with this extension.
+
+    EXT_texture_compression_s3tc interacts with this extension.
+
+    EXT_texture_sRGB interacts with this extension.
+
+    ARB_texture_storage_multisample interacts with this extension.
+
+Overview
+
+    This extension allows a texture's data store to be "viewed" in multiple 
+    ways, either reinterpreting the data format/type as a different format/
+    type with the same element size, or by clamping the mipmap level range 
+    or array slice range. 
+    
+    The goals of this extension are to avoid having these alternate views 
+    become shared mutable containers of shared mutable objects, and to add 
+    the views to the API in a minimally invasive way.
+
+    No new object types are added. Conceptually, a texture object is split
+    into the following parts:
+    
+        - A data store holding texel data.
+        - State describing which portions of the data store to use, and how
+          to interpret the data elements.
+        - An embedded sampler object.
+        - Various other texture parameters.
+
+    With this extension, multiple textures can share a data store and have 
+    different state describing which portions of the data store to use and how
+    to interpret the data elements. The data store is refcounted and not 
+    destroyed until the last texture sharing it is deleted.
+
+    This extension leverages the ARB_texture_storage concept of an "immutable 
+    texture". Views can only be created of textures created with TexStorage.
+
+
+New Procedures and Functions
+
+    void TextureView(uint texture, enum target, uint origtexture, 
+                     enum internalformat,
+                     uint minlevel, uint numlevels, 
+                     uint minlayer, uint numlayers);
+
+New Tokens
+
+    Accepted by the <pname> parameters of GetTexParameterfv and 
+    GetTexParameteriv:
+
+        TEXTURE_VIEW_MIN_LEVEL                          0x82DB
+        TEXTURE_VIEW_NUM_LEVELS                         0x82DC
+        TEXTURE_VIEW_MIN_LAYER                          0x82DD
+        TEXTURE_VIEW_NUM_LAYERS                         0x82DE
+        TEXTURE_IMMUTABLE_LEVELS                        0x82DF
+
+    Used as compatibility class names in table 3.X.2 (see the "Interactions
+    with ARB_internalformat_query2" section below).
+
+        VIEW_CLASS_128_BITS                             
+        VIEW_CLASS_96_BITS                              
+        VIEW_CLASS_64_BITS                              
+        VIEW_CLASS_48_BITS                              
+        VIEW_CLASS_32_BITS                              
+        VIEW_CLASS_24_BITS                              
+        VIEW_CLASS_16_BITS                              
+        VIEW_CLASS_8_BITS                               
+        VIEW_CLASS_S3TC_DXT1_RGB                        
+        VIEW_CLASS_S3TC_DXT1_RGBA                       
+        VIEW_CLASS_S3TC_DXT3_RGBA                       
+        VIEW_CLASS_S3TC_DXT5_RGBA                       
+        VIEW_CLASS_RGTC1_RED                            
+        VIEW_CLASS_RGTC2_RG                             
+        VIEW_CLASS_BPTC_UNORM                           
+        VIEW_CLASS_BPTC_FLOAT                           
+
+
+Additions to Chapter 2 of the OpenGL 4.2 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the OpenGL 4.2 Specification (Rasterization)
+
+    Modify subsection 3.9.8 (Texture Parameters)
+
+    Add the following to the end of the paragraph on p. 240:
+
+    If the texture was created with TextureView, then the TEXTURE_BASE_LEVEL
+    and TEXTURE_MAX_LEVEL parameters are interpreted relative to the view and 
+    not relative to the original data store.
+
+    Modify subsection 3.9.15 (Texture State and Proxy State)
+
+    Add to the second paragraph on p. 256:
+
+    The values of TEXTURE_IMMUTABLE_LEVELS, TEXTURE_VIEW_MIN_LEVEL,
+    TEXTURE_VIEW_NUM_LEVELS, TEXTURE_VIEW_MIN_LAYER, TEXTURE_VIEW_NUM_LAYERS
+    are 0.
+
+    Modify subsection 3.9.16 (Immutable-Format Texture Images)
+
+    Modify the second to last bullet on p. 258:
+
+    If the command is successful, TEXTURE_IMMUTABLE_FORMAT becomes TRUE, 
+    TEXTURE_IMMUTABLE_LEVELS and TEXTURE_VIEW_NUM_LEVELS become <levels>.
+    If the texture target is TEXTURE_1D_ARRAY then TEXTURE_VIEW_NUM_LAYERS 
+    becomes <height>. If the texture target is TEXTURE_2D_ARRAY, 
+    TEXTURE_CUBE_MAP_ARRAY, or TEXTURE_2D_MULTISAMPLE_ARRAY then 
+    TEXTURE_VIEW_NUM_LAYERS becomes <depth>. If the texture target is 
+    TEXTURE_CUBE_MAP, then TEXTURE_VIEW_NUM_LAYERS becomes 6. For any other
+    texture target, TEXTURE_VIEW_NUM_LAYERS becomes 1.
+
+    Add a new subsection at the end of 3.9 (Texturing)
+
+    3.9.X  Texture Views
+
+    A texture can be created which references the data store of another texture
+    and interprets the data with a different format, and/or selects a subset of
+    the levels and/or layers of the other texture. The data store for such a 
+    texture is shared with the data store of the original texture.  Updating 
+    the shared data store using the original texture affects texture values read
+    using the new texture, and vice versa.  A texture data store remains in 
+    existence until all textures that reference it are deleted.
+
+    The command:
+
+        void TextureView(uint texture, enum target, uint origtexture, 
+                         enum internalformat,
+                         uint minlevel, uint numlevels, 
+                         uint minlayer, uint numlayers);
+    
+    initializes the texture named <texture> to the target specified by
+    <target>. <texture>'s data store is inherited from the texture named 
+    <origtexture>, but elements of the data store are interpreted according 
+    to the internal format specified by <internalformat>. Additionally, if the
+    original texture is an array or has multiple mipmap levels, the parameters 
+    <minlayer>, <numlayers>, <minlevel>, and <numlevels> control which of those 
+    slices and levels are considered part of the texture.
+
+    The <minlevel> and <minlayer> parameters are relative to the view of the 
+    original texture. If <numlayers> or <numlevels> extend beyond the original 
+    texture, they are clamped to the max extent of the original texture. If 
+    <minlevel> or <minlayer> are larger than the greatest level or layer of the 
+    original texture, the error INVALID_VALUE is generated.
+
+    If the command is successful, the texture parameters in <texture> are 
+    updated as follows:
+    
+     - TEXTURE_IMMUTABLE_FORMAT is set to TRUE.
+
+     - TEXTURE_IMMUTABLE_LEVELS is set to the value of TEXTURE_IMMUTABLE_LEVELS 
+       from the original texture.
+
+     - TEXTURE_VIEW_MIN_LEVEL is set to <minlevel> plus the value of 
+       TEXTURE_VIEW_MIN_LEVEL from the original texture.
+
+     - TEXTURE_VIEW_MIN_LAYER is set to <minlayer> plus the value of 
+       TEXTURE_VIEW_MIN_LAYER from the original texture.
+
+     - TEXTURE_VIEW_NUM_LEVELS is set to the lesser of <numlevels> and the 
+       value of TEXTURE_VIEW_NUM_LEVELS from the original texture minus 
+       <minlevels>.
+
+     - TEXTURE_VIEW_NUM_LAYERS is set to the lesser of <numlayers> and the 
+       value of TEXTURE_VIEW_NUM_LAYERS from the original texture minus 
+       <minlayer>.
+
+    The new texture's target must be "compatible" with the target of the 
+    original texture, or else an INVALID_OPERATION error is generated. 
+    Compatibility is defined by Table 3.X.1:
+
+        ---------------------------------------------------------------------------------------------------------
+        | Original target             |  Valid new targets                                                      |
+        ---------------------------------------------------------------------------------------------------------
+        | TEXTURE_1D                  |  TEXTURE_1D, TEXTURE_1D_ARRAY                                           |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_2D                  |  TEXTURE_2D, TEXTURE_2D_ARRAY                                           |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_3D                  |  TEXTURE_3D                                                             |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_CUBE_MAP            |  TEXTURE_CUBE_MAP, TEXTURE_2D, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP_ARRAY |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_RECTANGLE           |  TEXTURE_RECTANGLE                                                      |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_BUFFER              |  <none>                                                                 |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_1D_ARRAY            |  TEXTURE_1D_ARRAY, TEXTURE_1D                                           |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_2D_ARRAY            |  TEXTURE_2D_ARRAY, TEXTURE_2D, TEXTURE_CUBE_MAP, TEXTURE_CUBE_MAP_ARRAY |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_CUBE_MAP_ARRAY      |  TEXTURE_CUBE_MAP_ARRAY, TEXTURE_2D_ARRAY, TEXTURE_2D, TEXTURE_CUBE_MAP |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_2D_MULTISAMPLE      |  TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY                   |
+        |-------------------------------------------------------------------------------------------------------|
+        | TEXTURE_2D_MULTISAMPLE_ARRAY|  TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY                   |
+        ---------------------------------------------------------------------------------------------------------
+        
+        Table 3.X.1: Legal texture targets for TextureView.
+
+    If the new texture's target is TEXTURE_CUBE_MAP, the clamped <numlayers> 
+    must be equal to 6. If the new texture's target is TEXTURE_CUBE_MAP_ARRAY, 
+    then <numlayers> counts layer-faces rather than layers, and the clamped 
+    <numlayers> must be a multiple of 6. Otherwise, the error INVALID_VALUE is
+    generated. If the new texture's target is TEXTURE_CUBE_MAP or 
+    TEXTURE_CUBE_MAP_ARRAY, the width and height of the original texture's 
+    levels must be equal otherwise the error INVALID_OPERATION is generated.
+
+    When the original texture's target is TEXTURE_CUBE_MAP, the layer 
+    parameters are interpreted in the same order as if it were a 
+    TEXTURE_CUBE_MAP_ARRAY with 6 layer-faces. 
+
+    If <target> is TEXTURE_1D, TEXTURE_2D, TEXTURE_3D, TEXTURE_RECTANGLE, or 
+    TEXTURE_2D_MULTISAMPLE and <numlayers> does not equal 1, the error
+    INVALID_VALUE is generated.
+
+    If the dimensions of the original texture are larger than the maximum 
+    supported dimensions of the new target, the error INVALID_OPERATION is 
+    generated. For example, if the original texture has a TEXTURE_2D_ARRAY 
+    target and its width is greater than MAX_CUBE_MAP_TEXTURE_SIZE, an error 
+    will be generated if TextureView is called to create a TEXTURE_CUBE_MAP 
+    view.
+
+    The two textures' internal formats must be compatible according to Table 
+    3.X.2 (Compatible internal formats for TextureView) if the internal format
+    exists in that table and the internal formats must be identical if not in 
+    that table, or else an INVALID_OPERATION error is generated.
+
+    ---------------------------------------------------------------------------
+    | Class                 | Internal formats                                | 
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_128_BITS   | RGBA32F, RGBA32UI, RGBA32I                      |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_96_BITS    | RGB32F, RGB32UI, RGB32I                         |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_64_BITS    | RGBA16F, RG32F, RGBA16UI, RG32UI, RGBA16I,      |
+    |                       | RG32I, RGBA16, RGBA16_SNORM                     |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_48_BITS    | RGB16, RGB16_SNORM, RGB16F, RGB16UI, RGB16I     |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_32_BITS    | RG16F, R11F_G11F_B10F, R32F,                    |
+    |                       | RGB10_A2UI, RGBA8UI, RG16UI, R32UI,             |
+    |                       | RGBA8I, RG16I, R32I, RGB10_A2, RGBA8, RG16,     |
+    |                       | RGBA8_SNORM, RG16_SNORM, SRGB8_ALPHA8, RGB9_E5  |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_24_BITS    | RGB8, RGB8_SNORM, SRGB8, RGB8UI, RGB8I          |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_16_BITS    | R16F, RG8UI, R16UI, RG8I, R16I, RG8, R16,       |
+    |                       | RG8_SNORM, R16_SNORM                            |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_8_BITS     | R8UI, R8I, R8, R8_SNORM                         |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_RGTC1_RED  | COMPRESSED_RED_RGTC1,                           |
+    |                       | COMPRESSED_SIGNED_RED_RGTC1                     |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_RGTC2_RG   | COMPRESSED_RG_RGTC2,                            |
+    |                       | COMPRESSED_SIGNED_RG_RGTC2                      |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_BPTC_UNORM | COMPRESSED_RGBA_BPTC_UNORM,                     |
+    |                       | COMPRESSED_SRGB_ALPHA_BPTC_UNORM                |
+    ---------------------------------------------------------------------------
+    | VIEW_CLASS_BPTC_FLOAT | COMPRESSED_RGB_BPTC_SIGNED_FLOAT,               |
+    |                       | COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT              |
+    ---------------------------------------------------------------------------
+
+        Table 3.X.2: Compatible internal formats for TextureView. Formats in 
+        the same entry may be cast to each other.
+
+    If the internal format does not exactly match the internal format of the 
+    original texture, the contents of the memory are reinterpreted in the same
+    manner as for image bindings described in section 3.9.20 (Texture Image 
+    Loads and Stores).
+
+    If <texture> has already been bound and given a target, then the error
+    INVALID_OPERATION is generated. If <texture> is 0, INVALID_VALUE is
+    generated. If <texture> is not a valid name returned by GenTextures, the
+    error INVALID_OPERATION is generated.
+
+    If <origtexture> is not the name of a texture, INVALID_VALUE is generated. 
+    If <origtexture>'s TEXTURE_IMMUTABLE_FORMAT value is not TRUE, 
+    INVALID_OPERATION is generated. 
+
+    Texture commands that take a <level> or <layer> parameter, such as 
+    TexSubImage2D, interpret that parameter to be relative to the view of the 
+    texture. i.e. the mipmap level of the data store that would be updated via 
+    TexSubImage2D would be the sum of <level> and the value of 
+    TEXTURE_VIEW_MIN_LEVEL.
+
+
+Additions to Chapter 4 of the OpenGL 4.2 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 4.2 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the OpenGL 4.2 Specification (State and
+State Requests)
+
+    Modify subsection 6.1.3 (Enumerated Queries)
+
+    Modify the paragraph after GetTexParameter on p. 350:
+
+    ... <value> must be IMAGE_FORMAT_COMPATIBILITY_TYPE, 
+    TEXTURE_IMMUTABLE_FORMAT, TEXTURE_VIEW_MIN_LEVEL,
+    TEXTURE_VIEW_NUM_LEVELS, TEXTURE_VIEW_MIN_LAYER, 
+    TEXTURE_VIEW_NUM_LAYERS, or TEXTURE_IMMUTABLE_LEVELS.
+
+Additions to Appendix D of the OpenGL 4.2 Specification (Shared Objects and
+Multiple Contexts)
+
+    Modify section D.3 (Propagating Changes to Objects) 
+
+    Modify the second bullet point on p 461:
+
+      - The contents of the data stores of textures and renderbuffers.
+
+    Add the following sentence to the paragraph that begins "When the contents
+    of an object <T>":
+
+    When <T> is a texture, "the contents of an object <T>" should be construed
+    to include the contents of the data store of <T>, even if <T>'s data store
+    was modified via a different view of the data store.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD
+
+Dependencies on EXT_texture_compression_s3tc
+
+    If EXT_texture_compression_s3tc and EXT_texture_sRGB are supported, then
+    Table 3.X.2 is updated to add the following rows:
+
+    -------------------------------------------------------------------
+    | Class                     | Internal formats                    |
+    -------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT1_RGB  | COMPRESSED_RGB_S3TC_DXT1_EXT,       |
+    |                           | COMPRESSED_SRGB_S3TC_DXT1_EXT       |
+    -------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT1_RGBA | COMPRESSED_RGBA_S3TC_DXT1_EXT,      |
+    |                           | COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT |
+    -------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT3_RGBA | COMPRESSED_RGBA_S3TC_DXT3_EXT,      |
+    |                           | COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT |
+    -------------------------------------------------------------------
+    | VIEW_CLASS_S3TC_DXT5_RGBA | COMPRESSED_RGBA_S3TC_DXT5_EXT,      |
+    |                           | COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT |
+    -------------------------------------------------------------------
+
+Interactions with ARB_internalformat_query2
+
+    The VIEW_CLASS_* tokens used as compatibility class names in table 3.X.2
+    are the same tokens returned by the VIEW_COMPATIBILITY_CLASS query in
+    ARB_internalformat_query2. In this extension they are simply a labelling
+    mechanism and serve no functional purpose in the API, so their numeric
+    values are not specified.
+
+Dependencies on ARB_texture_storage_multisample
+
+    Views are only supported for textures created by TexStorage. The original 
+    ARB_texture_storage extension did not include TexStorage commands for 
+    multisample textures. These are added by ARB_texture_storage_multisample, 
+    so without that extension multisample textures cannot be used with views.
+
+Errors
+
+    TODO
+
+New State
+
+    Changes to table 6.16, p. 277 (Texture, state per texture object)
+
+                                                     Initial
+    Get Value                Type   Get Command      Value    Description                   Sec.      Attribute
+    ---------                ----   -----------      -------  -----------                   ----      ---------
+    TEXTURE_VIEW_MIN_LEVEL    Z+    GetTexParameter  0        view base texture level       3.9.X     texture
+    TEXTURE_VIEW_NUM_LEVELS   Z+    GetTexParameter  0        view number of texture levels 3.9.X     texture
+    TEXTURE_VIEW_MIN_LAYER    Z+    GetTexParameter  0        view min array layer          3.9.X     texture
+    TEXTURE_VIEW_NUM_LAYERS   Z+    GetTexParameter  0        view number of array layers   3.9.X     texture
+    TEXTURE_IMMUTABLE_LEVELS  Z+    GetTexParameter  0        storage number of levels      3.9.X     texture
+
+New Implementation Dependent State
+
+    None.
+
+Examples
+
+    TODO
+
+Issues
+
+    (1) What internal formats can be cast to what other formats?
+
+    RESOLVED: In general, we try to follow the precedent from 
+    ARB_shader_image_load_store where formats with the same element size can
+    be cast to each other. Some specific issues with that:
+
+     - Depth formats cannot be cast to other formats. D3D1x handles depth
+       formats differently than GL, depth formats are not texturable and
+       instead there are equivalent "RG" formats for each depth format. In GL,
+       depth formats are all texturable and we don't have equivalent RG 
+       formats for most of them (we only have R32F and R16). Since these can
+       be textured from in GL, there's no great need to cast them.
+
+     - Compressed formats can only be cast to other compressed formats with
+       nearly identical encodings. Only the sRGB/signed-ness can change. See 
+       also issue (10).
+
+     - RGB formats cannot be cast to/from RGBA. For the case of RGBA->RGB, 
+       the same can be accomplished using ARB_texture_swizzle. For the case
+       of RGB->RGBA, an RGB texture may have been allocated without storage
+       for alpha bits so this needs to be disallowed.
+
+    (2) Should TEXTURE_IMMUTABLE_FORMAT be renamed?
+
+    ARB_texture_storage isn't really about the format being immutable, it's 
+    more about the data store not needing to be reallocated. This extension 
+    allows interpreting the data store with a different format, so this enum
+    now feels poorly named.
+
+    RESOLVED: Leave it as is.
+
+    (3) Is it possible to create a texture view using an original texture
+    which is itself a view? And if so, how are the level/layer values 
+    interpreted?
+
+    RESOLVED: It is legal. For example, let's say texture 1 is a 2D_ARRAY
+    texture with 200 layers. It will have TEXTURE_VIEW_MIN_LAYER=0, 
+    TEXTURE_VIEW_NUM_LAYERS=200. Then we create texture 2 from texture 1 using 
+    <minlayer>=100, <numlayers>=100. It will have TEXTURE_VIEW_MIN_LAYER=100, 
+    TEXTURE_VIEW_NUM_LAYERS=100. Then we create texture 3 from texture 2 using
+    <minlayer>=50, <numlayers>=50. It will have TEXTURE_VIEW_MIN_LAYER=150, 
+    TEXTURE_VIEW_NUM_LAYERS=50.
+
+    (4) Should we allow views of textures not created through TexStorage?
+
+    RESOLVED: No. It might be possible, but if TexImage is called on a texture
+    whose data store is shared it would likely require orphaning the old data
+    store and creating/copying to a new data store. That's not desirable.
+
+    (5) How are TEXTURE_BASE_LEVEL and TEXTURE_MAX_LEVEL interpreted if 
+    TEXTURE_VIEW_MIN_LEVEL is non-zero?
+
+    RESOLVED: The intent is that TEXTURE_BASE_LEVEL is relative to the view,
+    i.e. the base level is TEXTURE_BASE_LEVEL+TEXTURE_VIEW_MIN_LEVEL relative
+    to the data store.
+
+    (6) Do we need any new "typeless" formats?
+
+    RESOLVED: No. Any "compatible" format can be used in place of a typeless
+    format.
+
+    (7) Why aren't BUFFER textures supported?
+
+    RESOLVED: The same can be accomplished with the contemporaneous 
+    GL_ARB_texture_buffer_range extension.
+
+    (8) This extension requires TEXTURE_IMMUTABLE_FORMAT to be TRUE,
+    but we don't have TexStorage*Multisample. Should we add these 
+    commands, or not require immutable format?
+
+    RESOLVED: Add TexStorage*Multisample. This is done by
+    ARB_texture_storage_multisample.
+
+    (9) Should it be possible to create a 2D view from a RECTANGLE texture
+    or vice versa?
+
+    RESOLVED: No. These targets may have different max dimensions, or may be 
+    allocated in memory with different tiling/swizzling.
+
+    (10) Should it be possible to view a compressed texture in such a way
+    that a block of the compressed view corresponds to a texel of an 
+    uncompressed view? For example, taking a 256x256 DXT1 texture and viewing
+    it as a 64x64 RG32UI texture?
+
+    RESOLVED: No. The different mipmap stack sizes would be a problem, and 
+    it's unclear whether all hardware could support this. Maybe a future 
+    extension could enable this, but only allowing the view to have a single
+    level?
+
+    (11) Interaction between TEXTURE_IMMUTABLE_LEVELS and View textures?
+
+    RESOLVED: There are several new TexParameter queries, and the values they
+    return depend on how the texture was created:
+
+      - If the texture is in its initial state or the data store was created 
+        with TexImage, then all five new parameters are zero.
+
+      - If the texture was created with TexStorage, then the parameters take 
+        their values from the arguments, with both MIN parameters being zero,
+        both LEVELS parameters being <levels>, and NUM_LAYERS being the number
+        of layers if it's an array texture.
+
+      - If the texture was created with TextureView, then the VIEW parameters
+        describe the texture's subset of the entire data store, and 
+        IMMUTABLE_LEVELS is inherited from the original texture.
+
+    (12) Are uses of two different views of the same data store automatically
+    coherent?
+
+    RESOLVED: Yes, to the extent that they were for a single texture. A few 
+    examples of this are:
+
+      - TexSubImage to view A followed by texturing from view B.
+
+      - Rendering to view A attached to an FBO followed by texturing from
+        view B.
+
+      - Shader image stores to view A followed by texturing from view B.
+
+    The first two cases would automatically work correctly if A and B were
+    the same texture, as described in Appendix D, so they continue to work
+    with separate views. If an implementation were (for example) tracking
+    uses of the texture to do cache invalidations, it should do such 
+    tracking on the data store instead. 
+
+    The third case would not automatically work if A and B were the same
+    texture, instead requiring a MemoryBarrier call to force coherency. This
+    same solution applies with texture views.
+
+    (13) Are interactions with ETC2/EAC compressed texture formats defined?
+
+    RESOLVED: No. It is likely that these formats are emulated with
+    uncompressed internal formats on older hardware, and the resulting
+    complications make defining texture view classes for these formats too
+    difficult for too little functionality.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+      5   10/08/13  Jon Leech Add issue 13 discussing why ETC2/EAC view
+                              classes aren't supported (Bug 11011).
+      4   07/15/13  Jon Leech Change "Class" column of table 3.X.2 from
+                              abstract names to VIEW_CLASS_* enums from
+                              ARB_internalformat_query2 (Bug 10518).
+      3   08/13/12  Jon Leech Renumbered from #142 to #124
+      2   05/07/12  dgkoch    Added class names to Table 3.X.2
+      1             jbolz     Internal revisions.

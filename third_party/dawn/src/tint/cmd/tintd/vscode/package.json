@@ -1,0 +1,39 @@
+{
+    "name": "tintd",
+    "description": "Language support for WGSL",
+    "author": "Google",
+    "license": "BSD-3-Clause",
+    "version": "0.0.1",
+    "private": true,
+    "publisher": "Google",
+    "engines": {
+        "vscode": "^1.67.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "wgsl",
+                "extensions": [
+                    "wgsl"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "wgsl",
+                "scopeName": "source.wgsl",
+                "path": "wgsl.tmLanguage.json"
+            }
+        ]
+    },
+    "dependencies": {
+        "vscode-languageclient": "^8.1.0-next.4"
+    },
+    "activationEvents": [
+        "*"
+    ],
+    "main": "./extension.js"
+}

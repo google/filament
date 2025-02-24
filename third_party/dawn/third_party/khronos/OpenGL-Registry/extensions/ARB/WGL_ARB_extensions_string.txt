@@ -1,0 +1,143 @@
+Name
+
+    WGL_ARB_extensions_string
+
+Name Strings
+
+    WGL_ARB_extensions_string
+
+Contact
+
+    Pat Brown, NVIDIA (pbrown 'at' nvidia.com)
+    Paula Womack
+
+Notice
+
+    Copyright (c) 2000-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+Status
+
+    Complete. Approved by ARB on March 15, 2000
+
+Version
+
+    Last Modified Date: July 29, 2008
+    Author Revision: 1.2
+
+Number
+
+    ARB Extension #8
+
+Dependencies
+
+    None
+
+Overview
+
+    This extension provides a way for applications to determine which
+    WGL extensions are supported by a device. This is the foundation
+    upon which other WGL extensions are built.
+
+IP Status
+
+    No issues.
+
+Issues
+
+  1. Note that extensions that were previously advertised via
+     glGetString (e.g., the swap interval extension) should continue to
+     be advertised there so existing applications don't break. They
+     should also be advertised via wglGetExtensionsStringARB so new
+     applications can make one call to find out which WGL extensions are
+     supported.
+
+  2. Should this function take an hdc? It seems like a good idea. At
+     some point MS may want to incorporate this into OpenGL32. If they
+     do this and and they want to support more than one ICD, then an HDC
+     would be needed.
+
+New Procedures and Functions
+
+    const char *wglGetExtensionsStringARB(HDC hdc);
+
+New Tokens
+
+    None
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+    None
+
+Additions to the WGL Specification
+
+Advertising WGL Extensions
+
+    Applications should call wglGetProcAddress to see whether or not
+    wglGetExtensionsStringARB is supported. If it is supported then it
+    can be used to determine which WGL extensions are supported by the
+    device.
+
+      const char *wglGetExtensionsStringARB(HDC hdc);
+
+      <hdc>   device context to query extensions for
+
+    If the function succeeds, it returns a list of supported extensions
+    to WGL. Although the contents of the string is implementation
+    specific, the string will be NULL terminated and will contain a
+    space-separated list of extension names. (The extension names
+    themselves do not contain spaces.) If there are no extensions then
+    the empty string is returned.
+
+    If <hdc> does not indicate a valid device context then the function
+    fails and the error ERROR_DC_NOT_FOUND is generated. If the function
+    fails, the return value is NULL. To get extended error information,
+    call GetLastError.
+
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None
+
+Revision History
+
+    Changes from EXT_extension_string:
+
+    Added hdc parameter to facilitate moving this function into OPENGL32
+    Added WGL to name to avoid name collisions with GL and GLX
+
+    03/12/2002  1.1
+        - Updated contact information.
+
+    07/29/2008  1.2
+        - Updated contact information.

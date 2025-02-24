@@ -1,0 +1,132 @@
+XXX - Not complete yet!!!
+XXX - Apparently superseded by color_type.spec?
+
+Name
+
+    SGIX_color_typeXXX
+
+Name Strings
+
+    GLX_SGIX_color_typeXXX
+
+Version
+    
+    $Date: 1999/04/03 08:40:47 $ $Revision: 1.2 $
+
+Number
+
+    72
+
+Dependencies
+
+    SGIX_FBConfig is required
+    SGIX_pbuffer is required
+
+Overview
+
+    This extension enhances the fbconfig types to support signed
+    and complex data types.  These data types are useful to
+    imaging applications that often require signed data or
+    complex data formats.
+
+Issues
+
+   * at some point in the future, we may also need to add an internal
+     format attribute.  For Redtail, we currently can not interleave
+     complex components; the plan is to have them "striped". 
+
+   * we may also want to add GLX_FLOAT_COMPONENTS_SGIX at some point.
+
+   * with this current scheme, there's currently no way of extracting
+     individual (i.e. real vs. complex) components.  Can we just add
+     another attribute that will allow us to do this?
+     (We are currently implying that both real and complex values have
+     the same bit depth/type which seems to be the current norm....
+     for full flexibility we might want to consider setting the
+     individual real and complex bit depth;  but, I currently can't
+     see the usefulness of having this supported).
+
+
+New Procedures and Functions
+
+    None
+
+
+New Tokens
+
+    Accepted by the <attributes> parameter of glXGetFBConfigAttribSGIX, and 
+    by the <attrib_list> parameter of glXChooseFBConfigSGIX:
+
+        GLX_COLOR_TYPE_SGIX		0x????
+
+    Returned by glXGetFBConfigAttribSGIX (when <attribute> is set to 
+    GLX_COLOR_TYPE_SGIX) and accepted by the <attrib_list> parameter of 
+    glXChooseFBConfigSGIX (following the GLX_COLOR_TYPE_SGIX token):
+
+        GLX_UNSIGNED_COMPONENTS_SGIX		0x00000001
+        GLX_SIGNED_COMPONENTS_SGIX		0x00000002
+        GLX_COMPLEX_COMPONENTS_SGIX		0x00000003
+
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    None
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame buffer)
+
+    None
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None
+
+Additions to the GLX Specification
+
+    [Added to the description of glXChooseFBConfigSGIX ]
+
+   If GLX_COLOR_TYPE_SGIX is in <attrib_list> then the value that follows
+    indicates how color values are represented in the framebuffer:
+
+	GLX_UNSIGNED_COMPONENTS_SGIX specifies that each color component
+	is stored as an unsigned value.
+
+	GLX_SIGNED_COMPONENTS_SGIX specifies that each color component
+	is stored as a signed value.  Typically this means that
+	one bit per component is used to encode the sign of the
+	value, with a resulting loss in the range of values which
+	can be stored in the framebuffer.  The actual representation
+	of the data (two's complement, sign magnitude, floating point,
+	etc) is unspecified.
+
+	GLX_COMPLEX_COMPONENTS_SGIX specifies that each color component
+	is stored as a complex number.  The distribution of bits
+	used to represent the real and imaginary portions of the
+	complex number are unspecified as is the actual representation
+	of the data (two's complement, sign magnitude, floating point etc).
+    
+    In general, only non-displayable drawable types (e.g. GLXPbuffers) will
+    be able to be created with FBConfigs which support signed or complex color
+    component types (see GLX_DRAWABLE_TYPE_SGIX).
+
+
+Errors
+
+    [ Do we need a new error to indicate if a system doesn't
+      support signed and/or complex buffers? ]
+ 
+New State
+
+    None
+
+New Implementation Dependent State
+
+    None

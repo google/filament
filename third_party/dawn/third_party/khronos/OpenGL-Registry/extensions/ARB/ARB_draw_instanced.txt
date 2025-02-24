@@ -1,0 +1,251 @@
+Name
+
+    ARB_draw_instanced
+
+Name Strings
+
+    GL_ARB_draw_instanced
+
+Contributors
+    Michael Gold, NVIDIA
+    James Helferty, TransGaming Inc.
+    Daniel Koch, TransGaming Inc.
+
+Contact
+
+    James Helferty, TransGaming Inc. (james 'at' transgaming.com)
+    Daniel Koch, TransGaming Inc. (daniel 'at' transgaming.com)
+
+Notice
+
+    Copyright (c) 2008-2013 The Khronos Group Inc. Copyright terms at
+        http://www.khronos.org/registry/speccopyright.html
+
+Specification Update Policy
+
+    Khronos-approved extension specifications are updated in response to
+    issues and bugs prioritized by the Khronos OpenGL Working Group. For
+    extensions which have been promoted to a core Specification, fixes will
+    first appear in the latest version of that core Specification, and will
+    eventually be backported to the extension document. This policy is
+    described in more detail at
+        https://www.khronos.org/registry/OpenGL/docs/update_policy.php
+
+IP Status
+
+    Unknown
+
+Status
+
+    Approved by the ARB on July 11, 2008
+
+Version
+
+    Last Modified Date:  April 8, 2011
+    Author Revision: 5
+
+Number
+
+    ARB Extension #44
+
+Dependencies
+
+    OpenGL 2.0 is required.
+
+    The extension is written against the OpenGL 2.1 Specification.
+
+    EXT_gpu_shader4 or NV_vertex_program4 or OpenGL 3.0 is required.
+
+Overview
+
+    A common use case in GL for some applications is to be able to
+    draw the same object, or groups of similar objects that share
+    vertex data, primitive count and type, multiple times.  This 
+    extension provides a means of accelerating such use cases while 
+    restricting the number of API calls, and keeping the amount of 
+    duplicate data to a minimum.
+    
+    This extension introduces two draw calls which are conceptually
+    equivalent to a series of draw calls.  Each conceptual call in
+    this series is considered an "instance" of the actual draw call.
+    
+    This extension also introduces a read-only built-in variable to
+    GLSL which contains the "instance ID."  This variable initially
+    contains 0, but increases by one after each conceptual draw call.
+
+    By using the instance ID or multiples thereof as an index into
+    a uniform array containing transform data, vertex shaders can 
+    draw multiple instances of an object with a single draw call.
+
+New Tokens
+
+    None
+
+New Procedures and Functions
+
+    void DrawArraysInstancedARB(enum mode, int first, sizei count,
+            sizei primcount);
+    void DrawElementsInstancedARB(enum mode, sizei count, enum type,
+            const void *indices, sizei primcount);
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification
+(OpenGL Operation)
+
+    Modify section 2.8 (Vertex Arrays), p. 23
+
+    (insert before the final paragraph, p. 30)
+
+    The internal counter <instanceID> is a 32-bit integer value which
+    may be read by a vertex program as <vertex.instance>, as described
+    in section 2.X.3.2, or vertex shader as <gl_InstanceIDARB>, as
+    described in section 2.15.4.2.  The value of this counter is
+    always zero, except as noted below.
+
+    The command
+
+        void DrawArraysInstancedARB(enum mode, int first, sizei count,
+                sizei primcount);
+
+    behaves identically to DrawArrays except that <primcount>
+    instances of the range of elements are executed and the value of
+    <instanceID> advances for each iteration.  It has the same effect
+    as:
+
+        if (mode or count is invalid)
+            generate appropriate error
+        else {
+            for (i = 0; i < primcount; i++) {
+                instanceID = i;
+                DrawArrays(mode, first, count, i);
+            }
+            instanceID = 0;
+        }
+
+    The command
+
+        void DrawElementsInstancedARB(enum mode, sizei count, enum type,
+                const void *indices, sizei primcount);
+
+    behaves identically to DrawElements except that <primcount>
+    instances of the set of elements are executed, and the value of
+    <instanceID> advances for each iteration.  It has the same effect
+    as:
+
+        if (mode, count, or type is invalid )
+            generate appropriate error
+        else {
+            for (int i = 0; i < primcount; i++) {
+                instanceID = i;
+                DrawElements(mode, count, type, indices, i);
+            }
+            instanceID = 0;
+        }
+
+    Add a new section "2.15.4.2 Shader Inputs" before "Position
+    Invariance"
+
+    Besides having access to vertex attributes and uniform variables, vertex
+    shaders can access the read-only built-in variable gl_InstanceIDARB or
+    gl_InstanceID. The variables gl_InstanceIDARB and gl_InstanceID hold the
+    integer index of the current primitive in an instanced draw call.  See
+    also section 7.1 of the OpenGL Shading Language Specification.
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification
+(Special Functions)
+
+    The error INVALID_OPERATION is generated if DrawArraysInstancedARB
+    or DrawElementsInstancedARB is called during display list
+    compilation.
+
+Dependencies on NV_vertex_program4
+
+    If NV_vertex_program4 is not supported, all references to
+    vertex.instance are deleted.
+
+Errors
+
+    INVALID_ENUM is generated by DrawElementsInstancedARB if <type> is
+    not one of UNSIGNED_BYTE, UNSIGNED_SHORT or UNSIGNED_INT.
+
+    INVALID_VALUE is generated by DrawArraysInstancedARB if <first> is
+    less than zero.
+
+Modifications to The OpenGL Shading Language Specification, Version 1.10.59
+
+    Including the following line in a shader can be used to control the
+    language features described in this extension:
+
+      #extension GL_ARB_draw_instanced : <behavior>
+
+    where <behavior> is as specified in section 3.3.
+
+    A new preprocessor #define is added to the OpenGL Shading Language:
+
+      #define GL_ARB_draw_instanced 1
+
+    Change Section 7.1 "Vertex Shader Special Variables"
+
+    Add the following definitions to the list of built-in variable definitions:
+
+          int gl_InstanceIDARB; // read-only
+          int gl_InstanceID;    // read-only
+
+    Add the following paragraph at the end of the section:
+
+    The variables gl_InstanceIDARB and gl_InstanceID are available as a
+    read-only variables from within vertex shaders and hold the integer index
+    of the current primitive in an instanced draw call
+    (DrawArraysInstancedARB, DrawElementsInstancedARB). If the current
+    primitive does not come from an instanced draw call, the values of
+    gl_InstanceIDARB and gl_InstanceID are zero.
+
+
+Issues
+
+  (1) Should instanceID be provided by this extension, or should it be
+      provided by the core OpenGL 3.0 (similarly to how it was done with
+      EXT_gpu_shader4)?
+      
+        Resolved: Provide both instanceID and instanceIDARB.  The original
+        intention was that instanceID and other language changes should be
+        provided by this extension and properly decorated with the ARB suffix.
+        However, many vendors shipped implementations that supported both, and
+        some applications came to depend on this out-of-spec behavior.  It
+        appears that the EXT_gpu_shader4 incorrectly neglected to specify the
+        suffix EXT suffix for gl_InstanceID.
+
+  (2) Should MultiDrawArrays and MultiDrawElements affect the value of
+      instanceID?
+
+        Resolved: No, this may cause implementation difficulties and
+        is considered unlikely to provide any real benefit.
+
+  (3) Should DrawArraysInstanced and DrawElementsInstanced be compiled
+      into display lists?
+
+        Resolved: No, calling these during display list compilation
+        generate INVALID_OPERATION.
+
+
+Revision History
+
+    #5 April 8, 2011, Ian Romanick
+        - Fix typo "holds holds"
+        - Make both gl_InstanceID and gl_InstanceIDARB available to reflect
+          what vendors actually ship.
+        - Existence of gl_InstanceID and gl_InstanceIDARB do not depend on
+          OpenGL 3.0 or GL_EXT_gpu_shader4.
+    #4 July 8, 2008, jhelferty
+        - corrected dependency typo
+        - expanded Overview
+    #3 June 4, 2008, dgkoch
+        - merged instanceID and relevant language from the EXT_gpu_shader4
+          extension revision 13.
+        - renamed to InstanceID_ARB to properly follow conventions
+        - merged issues 1 & 4
+    #2 May 14 2008, jlheferty
+        - added contact, contributer information.
+        - bumped OpenGL spec written against to 2.1
+        - added issue 4
+    #1 May 12 2008, dgkoch
+        - initial conversion from EXT to ARB

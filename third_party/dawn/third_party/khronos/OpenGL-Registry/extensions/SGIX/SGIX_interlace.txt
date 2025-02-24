@@ -1,0 +1,104 @@
+Name
+
+    SGIX_interlace
+
+Name Strings
+
+    GL_SGIX_interlace
+
+Version
+
+    $Date: 1995/02/22 20:58:22 $ $Revision: 1.2 $
+
+Number
+
+    45
+
+Dependencies
+
+    None.
+
+Overview
+
+    This extension provides a way to interlace rows of pixels when
+    rasterizing pixel rectangles, and loading texture images.  In this
+    context, interlacing means skiping over rows of pixels or texels
+    in the destination.  This is useful for dealing with video data
+    since a single frame of video is typically composed from two images
+    or fields: one image specifying the data for even rows of the frame
+    and the other image specifying the data for odd rows of the frame.
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <cap> parameter of of Enable, Disable, IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv, GetFloatv,
+    GetDoublev:
+
+	INTERLACE_SGIX				0x8094
+
+Additions to Chapter 2 of the 1.0 Specification (OpenGL Operation)
+
+    None.
+
+Additions to Chapter 3 of the 1.0 Specification (Rasterization)
+
+    The specification of interlace operation is added the GL Specification
+    in section 3.6.3 "Rasterization of Pixel Rectangles", immediately
+    following the operations described by EXT_histogram, and immediately
+    prior to the subsection "Final Conversion".
+
+    The interlacing of rows of pixels is enabled or disabled with Enable or
+    Disable using the symbolic constant INTERLACE_SGIX.  If INTERLACE_SGIX
+    is enabled, then all of the groups which belong to a row m are treated
+    as if they belonged to the row 2 * m.  If the source image has a height
+    of h rows, this effectively expands the height of the image to 2 * h - 1
+    rows.  After interlacing, only every other row of the image is defined.
+    If the interlaced pixel rectangle is rasterized to the framebuffer, then
+    only these rows are converted to fragments.  If the interlaced pixel
+    rectangle is a texture image, then only these rows are written to texure
+    memory.
+
+    In cases where errors can result from the specification of invalid
+    image dimensions, it is the resulting dimensions that are tested, not
+    the dimensions of the source image.  (A specific example is TexImage2D,
+    which specifies constraints for image dimensions.  Even if TexImage2D
+    is called with a null pixel pointer, the dimensions of the resulting
+    texture image are those that would result from the effective expansion
+    of the specified image due to interlacing.)
+
+Additions to Chapter 4 of the 1.0 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+    In section 4.3 "Drawing, Reading, and Copying Pixels"
+
+    INTERLACE_SGIX has no effect on the operation of ReadPixels.
+
+Additions to Chapter 5 of the 1.0 Specification (Special Functions)
+
+    None.
+
+Additions to Chapter 6 of the 1.0 Specification (State and State Requests)
+
+    None.
+
+Additions to the GLX Specification
+
+    None.
+
+Errors
+
+    None.
+
+New State
+
+    Get Value				Get Command			Type		Initial Value		Attribute
+    ---------				-----------			----		-------------		---------
+    INTERLACE_SGIX			IsEnabled			B		False			pixel/enable
+
+New Implementation Dependent State
+
+    None.

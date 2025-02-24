@@ -1,0 +1,818 @@
+Name
+
+    EXT_transform_feedback2
+
+Name Strings
+
+    GL_EXT_transform_feedback2
+
+Contributors
+
+    Eric Zolnowski
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+    Eric Zolnowski, AMD (eric.zolnowski 'at' amd.com)
+
+Status
+
+    In Progress.
+
+Version
+
+    Last Modified Date:         10/12/2009
+    Author Revision:            3
+
+Number
+
+    xxx
+
+Dependencies
+
+    The OpenGL Shading Language (GLSL) is required.  OpenGL 2.0 or the 
+    ARB_shader_objects extension is required.
+
+    NV_transform_feedback or EXT_transform_feedback is required.  
+
+    EXT_geometry_shader4 trivially interacts with this extension.
+
+    This extension is written against the OpenGL 2.1 Specification.
+
+    This extension is written against the EXT_transform_feedback extension 
+    specification.
+
+
+Overview
+
+    The EXT_transform_feedback extension allows applications to capture 
+    primitives to one or more buffer objects when transformed by the GL.
+    This extension provides a few additional capabilities to these extensions,
+    making transform feedback mode more useful.
+
+    First, it provides transform feedback objects which encapsulate transform
+    feedback-related state, allowing applications to replace the entire
+    transform feedback configuration in a single bind call.  Second, it
+    provides the ability to pause and resume transform feedback operations.
+    When transform feedback is paused, applications may render without
+    transform feedback or may use transform feedback with different state and
+    a different transform feedback object.  When transform feedback is
+    resumed, additional primitives are captured and appended to previously
+    captured primitives for the object.
+
+    Additionally, this extension provides the ability to draw primitives
+    captured in transform feedback mode without querying the captured
+    primitive count.  The command DrawTransformFeedbackEXT() is equivalent to
+    glDrawArrays(<mode>, 0, <count>), where <count> is the number of vertices
+    captured to buffer objects during the last transform feedback capture
+    operation on the transform feedback object used.  This draw operation only
+    provides a vertex count -- it does not automatically set up vertex array
+    state or vertex buffer object bindings, which must be done separately by
+    the application.
+
+New Procedures and Functions
+
+    void BindTransformFeedbackEXT(enum target, uint id);
+    void DeleteTransformFeedbacksEXT(sizei n, const uint *ids);
+    void GenTransformFeedbacksEXT(sizei n, uint *ids);
+    boolean IsTransformFeedbackEXT(uint id);
+
+    void PauseTransformFeedbackEXT(void);
+    void ResumeTransformFeedbackEXT(void);
+
+    void DrawTransformFeedbackEXT(enum mode, uint id);
+
+New Tokens
+
+    Accepted by the <target> parameter of BindTransformFeedbackEXT:
+
+      TRANSFORM_FEEDBACK_EXT                             0x8E22
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev, GetIntegerv,
+    and GetFloatv:
+
+      TRANSFORM_FEEDBACK_BUFFER_PAUSED_EXT               0x8E23
+      TRANSFORM_FEEDBACK_BUFFER_ACTIVE_EXT               0x8E24
+      TRANSFORM_FEEDBACK_BINDING_EXT                     0x8E25
+
+Additions to Chapter 2 of the OpenGL 2.1 Specification (OpenGL Operation)
+
+    (Replace the "Section 2.Y" introduced by the EXT_transform_feedback 
+    specification.)
+
+    In transform feedback mode, attributes of the vertices of transformed
+    primitives are written out to one or more buffer objects. The vertices are
+    fed back after vertex color clamping but before clipping.  If a geometry
+    shader is active, the vertices recorded are those emitted from the geometry 
+    shader.  The transformed vertices may be optionally discarded after being 
+    stored into one or more buffer objects, or they can be passed on down to 
+    the clipping stage for further processing.  
+
+
+    Section 2.Y.1, Transform Feedback Objects
+
+    The set of buffer objects used to capture vertex attributes and related
+    state are stored in a transform feedback object.  If a vertex or geometry
+    shader is active, the set of attributes captured in transform feedback
+    mode is determined using the state of the active program object;
+    otherwise, it is taken from the state of the currently bound transform
+    feedback object, as described below.  The name space for transform
+    feedback objects is the unsigned integers.  The name zero designates the
+    default transform feedback object.
+
+    A transform feedback object is created by calling
+
+        void BindTransformFeedbackEXT(enum target, uint id)
+
+    with <target> set to TRANSFORM_FEEDBACK_EXT and <id> set an unused
+    transform feedback object name.  The resulting transform feedback object
+    is a new state vector, initialized to the default state values described
+    in Table 6.X.  Additionally, the new object is bound to the GL state
+    vector and is used for subsequent transform feedback operations.
+
+    BindTransformFeedbackEXT can also be used to bind an existing transform
+    feedback object to the GL state for subsequent use.  If the bind is
+    successful, no change is made to the state of the newly bound transform
+    feedback object and any previous binding to <target> is broken.
+
+    While a transform feedback buffer object is bound, GL operations on the
+    target to which it is bound affect the bound transform feedback object,
+    and queries of the target to which a transform feedback object is bound
+    return state from the bound object.  When buffer objects are bound for
+    transform feedback, they are attached to the currently bound transform
+    feedback object.  Buffer objects are used for transform feedback only if
+    they are attached to the currently bound transform feedback object.
+
+    In the initial state, a default transform feedback object is bound and
+    treated as a transform feedback object with a name of zero.  That object
+    is bound any time BindTransformFeedbackEXT() is called with <id> of zero.
+
+    The error INVALID_OPERATION is generated by BindTransformFeedbackEXT if 
+    the transform feedback operation is active on the currently bound 
+    transform feedback object, and that operation is not paused (as 
+    described below).
+
+    Transform feedback objects are deleted by calling
+
+        void DeleteTransformFeedbacksEXT(sizei n, const uint *ids)
+
+    <ids> contains <n> names of transform feedback objects to be deleted.
+    After a transform feedback object is deleted it has no contents, and its
+    name is again unused.  Unused names in <ids> are silently ignored, as is
+    the value zero. The default transform feedback object cannot be deleted.
+    The error INVALID_OPERATION is generated by DeleteTransformFeedbacksEXT 
+    if the transform feedback operation for any object named by <ids> is
+    currently active.
+
+    The command
+
+        void GenTransformFeedbacksEXT(sizei n, uint *ids)
+
+    returns <n> previously unused transform feedback object names in <ids>.
+    These names are marked as used, for the purposes of
+    GenTransformFeedbacksEXT only, but they acquire transform feedback state
+    only when they are first bound, just as if they were unused.
+
+
+    Section 2.Y.2, Transform Feedback Primitive Capture
+
+    Transform feedback for the currently bound transform feedback object is
+    started and finished by calling
+
+      void BeginTransformFeedbackEXT(enum primitiveMode)
+
+    and
+
+      void EndTransformFeedbackEXT(void),
+
+    respectively. Transform feedback is said to be active after a call to
+    BeginTransformFeedbackEXT and inactive after a call to
+    EndTransformFeedbackEXT.  <primitiveMode> is one of TRIANGLES, LINES, or
+    POINTS, and specifies the output type of primitives that will be recorded
+    into the buffer objects bound for transform feedback (see below).
+
+    Transform feedback commands must be paired; the error INVALID_OPERATION is
+    generated by BeginTransformFeedbackEXT if transform feedback is active,
+    and by EndTransformFeedbackEXT if transform feedback is inactive.
+    Transform feedback is initially inactive.
+
+    Transform feedback operations for the currently bound transform feedback
+    object may be paused and resumed by calling
+
+        void PauseTransformFeedbackEXT(void)
+
+    and
+
+        void ResumeTransformFeedbackEXT(void),
+
+    respectively.  When transform feedback operations are paused, transform
+    feedback is still considered active and changing most transform feedback
+    state related to the object results in an error.  However, a new transform
+    feedback object may be bound while transform feedback is paused.  The
+    error INVALID_OPERATION is generated by PauseTransformFeedbackEXT if the
+    currently bound transform feedback is not active or is paused.  The error
+    INVALID_OPERATION is generated by ResumeTransformFeedbackEXT if the
+    currently bound transform feedback is not active or is not paused.
+
+    When transform feedback is active and not paused, all geometric primitives
+    generated must be compatible with the value of <primitiveMode> passed to
+    BeginTransformFeedbackEXT.  The error INVALID_OPERATION is generated by
+    Begin or any operation that implicitly calls Begin (such as DrawElements)
+    if <mode> is not one of the allowed modes in Table X.1.  If a geometry
+    shader is active, its output primitive type is used instead of  the <mode>
+    parameter passed to Begin for the purposes of this error check. Any 
+    primitive type may be used while transform feedback is paused.
+
+        Transform Feedback
+        primitiveMode               allowed render primitive modes
+        ----------------------      ---------------------------------
+        POINTS                      POINTS
+        LINES                       LINES, LINE_LOOP, and LINE_STRIP
+        TRIANGLES                   TRIANGLES, TRIANGLE_STRIP,
+                                    TRIANGLE_FAN, QUADS, QUAD_STRIP,
+                                    and POLYGON
+
+        Table X.1 Legal combinations between the transform feedback primitive
+        mode, as passed to BeginTransformFeedbackEXT and the current primitive
+        mode.
+
+    Transform feedback mode captures the values of varying variables written by an
+    active vertex or geometry shader.  The error INVALID_OPERATION is
+    generated by BeginTransformFeedbackEXT if no vertex or geometry shader is
+    active.
+
+    Buffer objects are made to be targets of transform feedback by calling one
+    of the commands
+
+      void BindBufferRangeEXT(enum target, uint index, uint buffer,
+                              intptr offset, sizeiptr size),
+      void BindBufferOffsetEXT(enum target, uint index, uint buffer, or
+                               intptr offset),
+      void BindBufferBaseEXT(enum target, uint index, uint buffer),
+
+    with <target> set to TRANSFORM_FEEDBACK_BUFFER_EXT.  There is an array of
+    buffer object binding points that are used while transform feedback is
+    active, plus a single general binding point that can be used by other
+    buffer object manipulation functions (e.g., BindBuffer, MapBuffer).  All
+    three commands bind the buffer object named by <buffer> to the general
+    binding point, and additionally bind the buffer object to the binding
+    point in the array given by <index>.  The error INVALID_VALUE is generated
+    if <index> is greater than or equal to the value of
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    For BindBufferRangeEXT, <offset> specifies a starting offset into the
+    buffer object <buffer> and <size> specifies the amount of data that can be
+    written to the buffer object while transform feedback mode is active.
+    Both <offset> and <size> are in basic machine units.  The error
+    INVALID_VALUE is generated if the value of <size> is less than or equal to
+    zero, or if either <offset> or <size> are not word-aligned.  Calling
+    BindBufferOffsetEXT is equivalent of calling BindBufferRangeEXT with
+    <size> = sizeof(buffer) - <offset>, and rounding <size> down so that it is
+    word-aligned. BindBufferBaseEXT is equivalent to calling
+    BindBufferOffsetEXT with an <offset> of 0.
+
+    The set of buffer objects used by a transform feedback object may not
+    change while transform feedback is active.  The error INVALID_OPERATION is
+    generated by BindBufferRangeEXT, BindBufferOffsetEXT, or BindBufferBaseEXT
+    if <target> is TRANSFORM_FEEDBACK_BUFER_EXT and transform feedback is
+    currently active.
+
+    When an individual point, line, or triangle primitive reaches the
+    transform feedback stage while transform feedback is active and not
+    paused, the values of the specified varying variables of each vertex are 
+    appended to the buffer objects bound to the transform feedback binding 
+    points.  The attributes of the first vertex received after 
+    BeginTransformFeedbackEXT are written at the starting offsets of the bound
+    buffer objects set by BindBufferRangeEXT, and subsequent vertex attributes
+    are appended to the buffer object.  When capturing line and triangle 
+    primitives, all attributes of the first vertex are written first, followed
+    by attributes of the subsequent vertices.  When writing varying variables 
+    that are arrays, individual array elements are written in order.  For
+    multi-component varying variables, elements of varying arrays, or
+    transformed vertex attributes, the individual components are written in
+    order.  The value for any attribute specified to be streamed to a buffer
+    object but not actually written by a vertex or geometry shader is
+    undefined.  
+
+    When transform feedback is paused, no vertices are recorded.  When
+    transform feedback is resumed, subsequent vertices are appended to the
+    buffer objects bound immediately following the last vertex written while
+    transform feedback was paused.
+
+    When quads and polygons are provided to transform feedback with a
+    primitive mode of TRIANGLES, they will be tessellated and recorded as
+    triangles (the order of tessellation within a primitive is undefined).
+    Individual lines or triangles of a strip or fan primitive will be
+    extracted and recorded separately.  Incomplete primitives are not
+    recorded.
+
+    Transform feedback can operate in either INTERLEAVED_ATTRIBS_EXT or
+    SEPARATE_ATTRIBS_EXT mode.  In INTERLEAVED_ATTRIBS_EXT mode, the values of
+    one or more varyings or transformed vertex attributes are written
+    interleaved, into the buffer object bound to the first transform feedback
+    binding point (index = 0).  If more than one varying variable is written,
+    they will be recorded in the order specified by
+    TransformFeedbackVaryingsEXT (EXT_transform_feedback specification,
+    section 2.15.3).  In SEPARATE_ATTRIBS_EXT mode, the first varying variable
+    or transformed vertex attribute specified is written to the first 
+    transform feedback binding point; subsequent varying variables are written
+    to the subsequent transform feedback binding points.  The total number of 
+    variables or transformed attributes that may be captured in 
+    SEPARATE_ATTRIBS_EXT mode is given by 
+    MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    If recording the vertices of a primitive to the buffer objects being used
+    for transform feedback purposes would result in either exceeding the
+    limits of any buffer object's size, or in exceeding the end position
+    <offset> + <size> - 1, as set by BindBufferRangeEXT, then no vertices of
+    that primitive are recorded in any buffer object, and the counter
+    corresponding to the asynchronous query target
+    TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT (see Section 2.Z) is not
+    incremented.
+
+    In either separate or interleaved modes, all transform feedback binding
+    points that will be written to must have buffer objects bound when
+    BeginTransformFeedbackEXT is called.  The error INVALID_OPERATION is
+    generated by BeginTransformFeedbackEXT if any binding point used in
+    transform feedback mode does not have a buffer object bound.  In
+    interleaved mode, only the first buffer object binding point is ever
+    written to.
+
+    (add error paragraph describing conditions where it is illegal to change
+    transform feedback-related state)
+
+    When BeginTransformFeedbackEXT is called with an active program object
+    containing a vertex or geometry shader, the set of varying variables
+    captured during transform feedback is taken from the active program object
+    and may not be changed while transform feedback is active.  That program
+    object must be active until the EndTransformFeedbackEXT is called, except
+    while the transform feedback object is paused.  The error 
+    INVALID_OPERATION is generated:
+
+     * by TransformFeedbackVaryingsEXT if the current transform feedback 
+       object is active, even if paused;
+
+     * by UseProgram if the current transform feedback object is active and
+       not paused;
+
+     * by LinkProgram if <program> is the name of a program being used by one
+       or more transform feedback objects, even if the objects are not
+       currently bound or are paused; or
+
+     * by ResumeTransformFeedbackEXT if the program object being used by the
+       current transform feedback object is not active.
+
+
+    Section 2.Y.3, Transform Feedback Draw Operations
+
+    When transform feedback is active, the values of varyings or transformed
+    vertex attributes are captured into the buffer objects attached to the
+    current transform feedback object.  After transform feedback is complete,
+    subsequent rendering operations may use the contents of these buffer
+    objects (section 2.9).  The number of vertices captured during transform
+    feedback is stored in the corresponding transform feedback object and may
+    be used in conjunction with the command
+
+        void DrawTransformFeedbackEXT(enum mode, uint id)
+
+    to replay the captured vertices.  This command is equivalent to calling
+    DrawArrays with <mode> set to <mode>, <first> set to zero, and <count> set
+    to the number of vertices captured the last time transform feedback was
+    active on the transform feedback object named by <id>.  The error
+    INVALID_VALUE is generated if <id> is not the name of a transform feedback
+    object.  The error INVALID_OPERATION is generated if
+    EndTransformFeedbackEXT has never been called while the object named by
+    <id> was bound.  No error is generated if the transform feedback object
+    named by <id> is active; the vertex count used for the rendering operation
+    is set by the previous EndTransformFeedbackEXT command.
+
+
+Additions to Chapter 3 of the OpenGL 2.1 Specification (Rasterization)
+
+    None.
+
+Additions to Chapter 4 of the OpenGL 2.1 Specification (Per-Fragment
+Operations and the Frame Buffer)
+
+    None.
+
+Additions to Chapter 5 of the OpenGL 2.1 Specification (Special Functions)
+
+    On p. 244, add a new set of commands to the list of commands not compiled
+    into a display list:
+
+      Transform feedback objects:  GenTransformFeedbacksEXT,
+      DeleteTransformFeedbacksEXT, 
+
+    (note:  IsTransformFeedbackEXT is covered by the "Other queries" rule.)
+
+Additions to Chapter 6 of the OpenGL 2.1 Specification (State and
+State Requests)
+
+    (Add to the "Transform Feedback" query section added by the
+    EXT_transform_feedback extension.)
+
+    The command
+
+        boolean IsTransformFeedbackEXT(uint id)
+
+    returns TRUE if <id> is the name of a transform feedback object. If <id>
+    is a non-zero value that is not the name of a transform feedback object,
+    IsTransformFeedbackEXT() return FALSE.
+
+Additions to Appendix A of the OpenGL 2.1 Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    TBD (Protocol support needs to be added for the new functions.)
+
+Dependencies on NV_transform_feedback2
+
+Dependencies on EXT_transform_feedback
+
+    This language is written against the EXT_transform_feedback 
+    specification.
+
+Dependencies on EXT_geometry_shader4
+
+    If EXT_geometry_shader4 is not supported, remove all references to
+    geometry shaders.
+
+Errors
+
+    The error INVALID_OPERATION is generated by BindTransformFeedbackEXT if 
+    a transform feedback operation is active on the currently bound transform
+    feedback object, and that operation is not paused (as described below).
+
+    The error INVALID_OPERATION is generated by DeleteTransformFeedbacksEXT 
+    if the transform feedback operation for any object named by <ids> is
+    currently active.
+
+    The error INVALID_OPERATION is generated by BeginTransformFeedbackEXT if
+    transform feedback is active.
+
+    The error INVALID_OPERATION is generated by EndTransformFeedbackEXT if
+    transform feedback is inactive.
+
+    The error INVALID_OPERATION is generated by PauseTransformFeedbackEXT if
+    the currently bound transform feedback is not active or is paused.
+
+    The error INVALID_OPERATION is generated by ResumeTransformFeedbackEXT 
+    if the currently bound transform feedback is not active or is not paused.
+
+    The error INVALID_OPERATION is generated by Begin or any operation that
+    implicitly calls Begin (such as DrawElements) if transform feedback is
+    active and not paused and if <mode> is incompatible with the
+    <primitiveMode> parameter supplied to BeginTransformFeedbackEXT.
+
+    The error INVALID_VALUE is generated by BindBufferRangeEXT,
+    BindBufferOffsetEXT, or BindBufferBaseEXT if <target> is
+    TRANSFORM_FEEDBACK_BUFFER_EXT and <index> is greater than or equal to the
+    value of MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS_EXT.
+
+    The error INVALID_VALUE is generated by BindBufferRangeEXT if <size> is
+    less than or equal to zero or either <offset> or <size> are not
+    word-aligned.
+
+    The error INVALID_VALUE is generated by BindBufferOffsetEXT if <offset> is
+    not word-aligned.
+
+    The error INVALID_OPERATION is generated by BindBufferRangeEXT,
+    BindBufferOffsetEXT, or BindBufferBaseEXT if <target> is
+    TRANSFORM_FEEDBACK_BUFFER_EXT and transform feedback is currently active.
+
+    The error INVALID_OPERATION is generated by BeginTransformFeedbackEXT if
+    any binding point used in transform feedback mode does not have a buffer
+    object bound.
+
+    The error INVALID_OPERATION is generated by TransformFeedbackVaryingsEXT 
+    if the current transform feedback object is active, even if paused.
+
+    The error INVALID_OPERATION is generated by UseProgram if the current
+    transform feedback object is active and not paused.
+
+    The error INVALID_OPERATION is generated by LinkProgram if <program> is
+    the name of a program being used by one or more transform feedback
+    objects, even if the objects are not currently bound or are paused.
+
+    The error INVALID_OPERATION is generated by ResumeTransformFeedbackEXT if
+    the program object being used by the current transform feedback object is
+    not active.
+
+    The error INVALID_VALUE is generated by DrawTransformFeedbackEXT if <id>
+    is not the name of a transform feedback object.
+
+    The error INVALID_OPERATION is generated by DrawTransformFeedbackEXT if
+    EndTransformFeedbackEXT has never been called while the object named by
+    <id> was bound.
+
+
+New State
+
+   (Add a new table:  Table 6.X, Transform Feedback Object State)
+
+    Get Value             Type    Get Command     Init. Value  Description                Sec    Attrib
+    ------------------    ------  --------------  ------------ -------------------------  -----  ------
+    TRANSFORM_FEEDBACK_   Z+      GetIntegerv          0        Buffer object bound to    6.1.13   -
+      BUFFER_BINDING_EXT                                        generic bind point for
+                                                                transform feedback.
+    TRANSFORM_FEEDBACK_   nxZ+    GetInteger-          0        Buffer object bound to    6.1.13   -
+      BUFFER_BINDING_EXT          IndexedvEXT                   each transform feedback
+                                                                attribute stream.
+    TRANSFORM_FEEDBACK_   nxZ+    GetInteger-          0        Start offset of binding   6.1.13   -
+      BUFFER_START_EXT            IndexedvEXT                   range for each transform
+                                                                feedback attrib. stream
+    TRANSFORM_FEEDBACK_   nxZ+    GetInteger-          0        Size of binding range     6.1.13   -
+      BUFFER_SIZE_EXT             IndexedvEXT                   for each transform
+    TRANSFORM_FEEDBACK_   B       GetBooleanv        FALSE      Is transform feedback     6.1.13   -
+      BUFFER_PAUSED_EXT                                         paused on this object?
+    TRANSFORM_FEEDBACK_   B       GetBooleanv        FALSE      Is transform feedback     6.1.13   -
+      BUFFER_ACTIVE_EXT                                         active on this object?
+
+    [[ Note: This table includes all transform feedback state provided by
+       EXT_transform_feedback, except for transform feedback-related state
+       belonging to query objects and GLSL program objects.  The only other
+       transform feedback-related state not present in these objects is the
+       object binding (below) and implementation-dependent limits. ]]
+
+    (Modify table 6.10:  Transformation State, p. 275)
+
+    Get Value             Type    Get Command     Init. Value  Description                Sec    Attrib
+    ------------------    ------  --------------  ------------ -------------------------  -----  ------
+    TRANSFORM_FEEDBACK_   Z+      GetIntegerv          0       Object bound for transform 2.Y      -
+      BINDING_EXT                                              feedback operations
+
+New Implementation Dependent State
+
+    None.
+
+Issues
+
+    1.  How should we provide the ability to automatically render primitives
+        captured in transform feedback mode?
+
+        RESOLVED:  Adding a new transform feedback state object provides
+        encapsulation for two useful operations:  pause/resume and automatic
+        rendering.  
+
+        When applications pause and possibly switch to different transform
+        feedback state, it is necessary to save the state of the paused
+        transform feedback operation somewhere.  The transform feedback object
+        provides a convenient entity to hold this saved state.  The transform
+        feedback object is also a convenient place to store final counts for
+        use by actual drawing.
+
+        Additionally, the transform feedback object is helpful in ensuring
+        that the transform feedback state used when resuming transform
+        feedback is the same as when it was paused without a complicated error
+        check.  We simply disallow changing the state in an object while
+        transform feedback is active (even when paused), so the state can't
+        become inconsistent while paused.  The same basic consistency rules
+        apply to transform feedback state stored separately in a GLSL program
+        object; you can't change them while transform feedback is active in
+        the original extensions, and this extension treats the paused state as
+        active for the purposes of these restrictions.
+
+        Alternately, the in-progress transform feedback state (e.g., vertex
+        counts, pointers into buffer objects) could have been stored with the
+        buffer objects used to capture the primitives.
+
+    2.  Are transform feedback objects shared between contexts?
+
+        RESOLVED:  No.  The amount of state present in one of these objects is
+        fairly small -- there is not a lot of memory saved by avoiding
+        multiple copies through sharing.  Additionally, sharing transform
+        feedback objects between contexts doesn't seem particularly useful --
+        an object could only really be used by one context at a time and
+        explicit synchronization would be required to use the results of one
+        object.
+
+        Note that this resolution is consistent with query objects, which is
+        the primary type of object used in the original transform feedback
+        specification.
+
+    3.  How do the new transform feedback objects interact with GLSL program
+        objects?
+
+        RESOLVED:  The set of varyings captured during transform feedback and
+        the buffer mode (interleaved or separate) were assigned to the program
+        object in the original EXT_transform_feedback specification.  That
+        seems sensible given that the varyings themselves belong to the
+        program object.  
+
+        In the original extension, implementations are forbidden to unbind or
+        relink a program object or reassign the set of varyings to capture
+        while transform feedback is active.  The same basic restrictions apply
+        in this extension, except that than an application may unbind a
+        program object while transform feedback is paused.  In order to resume
+        transform feedback, the same program object must be active.
+        Applications may not relink a program or reassign its captured
+        varyings while it is being actively used for capture in any transform
+        feedback object.
+
+        The actual buffer objects bound in transform feedback mode were bound
+        to the context (not the program object) in the original transform
+        feedback extension.
+
+    4.  Should we provide any behavior to "cancel" paused transform feedback
+        operations?  If an application fails to assign the correct state
+        (e.g., GLSL program object), a resume operation may fail and the XFB
+        object might get stuck in a paused state indefinitely.
+
+        RESOLVED:  Yes.  EndTransformFeedback is defined to cancel an active
+        transform feedback operation, even if it is currently paused.
+
+    5.  Should buffer object bindings be encapsulated in the new transform
+        feedback object?
+
+        RESOLVED:  Yes.  This allows applications the convenience of updating
+        all the transform feedback state in one call.  Additionally, it
+        ensures that the set of buffer bindings remains consistent while
+        transform feedback is active -- even if we switch objects while
+        paused.
+
+    6.  Should we be able to use two different sets of transform feedback
+        state (one for capture, a second for rendering - via
+        DrawTransformFeedbackEXT)?
+
+        RESOLVED:  Yes.  We should support the ability to capture primitives
+        in transform feedback that are produced by DrawTransformFeedbackEXT.
+        Requiring that applications use the a single transform feedback object
+        for both operations (if even possible) seems inconvenient.  As a
+        result, we provide the ability to use separate objects for capture and
+        rendering.
+
+    7.  How should the second transform feedback object used for rendering be
+        provided to the GL?
+
+        RESOLVED:  The approach chosen by this extension is to have
+        DrawTransformFeedbackEXT() accept a transform feedback object ID.  
+
+        An alternate approach would have been to provide a second binding
+        point (TRANSFORM_FEEDBACK_RENDER_EXT?) whose bound object would be used
+        by any DrawTransformFeedbackEXT() call.
+
+
+    8.  Can a single transform feedback object be used for both capture and
+        drawing (via DrawTransformFeedback) at the same time?
+
+        RESOLVED:  Yes.  
+
+        DrawTransformFeedbackEXT is defined to use the vertex count established
+        when the previous transform feedback operation on that object
+        completes (by an EndTransformFeedbackEXT call).  If transform feedback
+        is active for an object (paused or not), the accumulated vertex count
+        for the in-progress operation is never used by
+        DrawTransformFeedbackEXT.
+
+    9.  Does DrawTransformFeedbackEXT() automatically use the buffer objects
+        from the previous transform feedback operation?  If not, does it
+        require that applications set up and use only those buffer manually?
+
+        RESOLVED:  DrawTransformFeedbackEXT() couldn't automatically set up
+        buffer objects, even if we wanted to (which we don't).  No mechanism
+        exists to automatically line up per-vertex outputs captured during
+        transform feedback against the inputs of a different vertex shader.
+
+        Applications are thus required to manually set up their vertex arrays
+        appropriately prior to calling DrawTransformFeedbackEXT().
+        Applications are not required to use any of the buffer objects
+        written to during the previous transform feedback operation, and are
+        allowed to use other buffer objects (OK) or vertex arrays not stored
+        in a buffer object at all (legal, but not recommended).  The only
+        information the draw call uses from the previous transform feedback
+        operation is the total number of vertices captured.
+
+   10.  Does DrawTransformFeedbackEXT() require that an application use the
+        same primitive type for drawing that was used during the previous
+        transform feedback operation?
+
+        RESOLVED:  No.  We do expect that will be the common case, however.
+
+   11.  What happens on if DrawTransformFeedbackEXT() uses a transform feedback
+        object whose last capture operation overflowed, and started dropping
+        primitives.
+
+        RESOLVED:  Any primitives discarded during a transform feedback
+        operation will not affect the vertex count extracted by
+        DrawTransformFeedbackEXT(), as though those primitives never existed.
+
+   12.  How does the ability to pause/resume transform feedback interact with
+        the TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN_EXT query object?
+
+        RESOLVED:  There is no explicit interaction in this case.  
+
+        The transform feedback-related query objects and transform feedback
+        objects are completely independent.  If multiple transform feedback
+        objects are used between BeginQuery() and EndQuery() calls, the query
+        result reflects the number of primitives written using *any* transform
+        feedback object.
+
+        Note that the primitives written counter is never incremented when
+        transform feedback is paused, because no primitives will be written to
+        buffers while transform feedback is paused.
+
+   13.  Should we provide a mechanism to query the number of vertices or
+        primitives recorded in the last transform feedback operation on an
+        object?  If so, how?
+
+        RESOLVED:  No, not in the this spec.  The existing TRANSFORM_FEEDBACK_
+        PRIMITIVES_WRITTEN_EXT queries can be used to obtain this information.
+
+   14.  Can a buffer object be attached to more than one transform feedback
+        object at the same time?
+
+        RESOLVED:  Yes.  Applications using transform feedback should avoid
+        cases where transform feedback operations can conflict, including:
+
+          * using multiple threads that simultaneously write to overlapping
+            regions of a single buffer object; or
+
+          * using one or multiple threads, where a portion of a buffer object
+            is written using one transform feedback object while another
+            transform feedback operation writing to an overlapping region of
+            the same buffer is paused.
+
+   15.  When a transform feedback object is active and not paused, binding a
+        different transform feedback object without pausing is specified to
+        result in an INVALID_OPERATION error.  Should we instead define the
+        bind to implicitly pause and resume as required?
+
+        RESOLVED:  No.  While implicit pauses and resumes would be convenient,
+        they have interaction issues with the current transform feedback API.
+
+        In particular, transform feedback forbids applications from changing
+        various pieces of relevant state (e.g., transform feedback buffer
+        bindings, active GLSL program object) during an active transform
+        feedback operation.  The active GLSL program object may be changed
+        while transform feedback is paused, but it must be restored prior to
+        resuming.
+
+        Consider two active transform feedback objects (A and B) using two
+        different program objects (C and D, respectively).  With the current
+        API, you can switch back and forth as follows:
+
+            // Perform first half of transform feedback for object A.
+            UseProgram(C);
+            BindTransformFeedbackEXT(TRANSFORM_FEEDBACK_EXT, A);
+            BeginTransformFeedbackEXT(...);
+            ...
+            PauseTransformFeedbackEXT();
+
+            // Perform first half of transform feedback for object B.
+            UseProgram(D);
+            BindTransformFeedbackEXT(TRANSFORM_FEEDBACK_EXT, B);
+            BeginTransformFeedbackEXT(...);
+            ...
+            PauseTransformFeedbackEXT();
+
+            // Perform second half of transform feedback for object A.
+            UseProgram(C);
+            BindTransformFeedbackEXT(TRANSFORM_FEEDBACK_EXT, A);
+            ResumeTransformFeedbackEXT();
+            ...
+            EndTransformFeedbackEXT();
+
+            // Perform second half of transform feedback for object B.
+            UseProgram(D);
+            BindTransformFeedbackEXT(TRANSFORM_FEEDBACK_EXT, B);
+            ResumeTransformFeedbackEXT();
+            ...
+            EndTransformFeedbackEXT();
+
+        Implicit pauses and resumes would allow applications to omit the
+        PauseTransformFeedbackEXT() and ResumeTransformFeedbackEXT() calls.  The
+        problem with this approach is that it's not clear when to change
+        program objects.  In the example above, the second call to
+        UseProgram(C) is legal because the bound transform feedback object (B)
+        is paused.  If the pause call were removed in favor of implicit
+        pauses, that UseProgram(C) call would be illegal because there is an
+        active transform feedback object.  Assume the UseProgram(C) call were
+        moved to be after the BindTransformFeedbackEXT(..., A) call on the next
+        line instead.  In that case, the implicit resume on the bind call
+        would be the problem instead -- we'd be resuming a transform feedback
+        operation while the wrong program object (D) is active.
+
+
+Revision History
+
+      Rev.    Date    Author    Changes
+      ----  --------  --------  -----------------------------------------
+       3    10/12/09  ericz     Removed some state that was part of
+                                NV_transform_feedback and only applied to
+                                fixed function.
+
+       2    09/10/09  ericz     Updated issues that were previously UNRESOLVED,
+                                based on the latest NV_transform_feedback2
+                                spec. Allow EndTransformFeedbackEXT to be
+                                called while transform feedback is paused.
+
+       1    06/13/09  ericz     Created an initial EXT_transform_feedback2
+                                spec by forking off the existing 
+                                NV_transform_feedback 2 spec.

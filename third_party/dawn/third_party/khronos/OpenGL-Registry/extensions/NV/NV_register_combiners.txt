@@ -1,0 +1,1564 @@
+Name
+    
+    NV_register_combiners
+
+Name Strings
+
+    GL_NV_register_combiners
+
+Contact
+
+    Mark J. Kilgard, NVIDIA Corporation (mjk 'at' nvidia.com)
+
+Notice
+
+    Copyright NVIDIA Corporation, 1999, 2000, 2001, 2002, 2003.
+
+IP Status
+
+    NVIDIA Proprietary.
+
+Status
+
+    Shipping (version 1.6)
+
+Version
+
+    NVIDIA Date: February 1, 2007 (version 1.7)
+
+Number
+
+    191
+
+Dependencies
+
+    ARB_multitexture, assuming the value of MAX_TEXTURE_UNITS_ARB is
+    at least 2.
+
+    Written based on the wording of the OpenGL 1.2 specification with
+    the ARB_multitexture appendix E.
+
+    NV_texture_shader affects the definition of this extension.
+
+    ARB_depth_texture and ARB_shadow -or- SGIX_depth_texture and
+    SGIX_shadow affect the definition of this extension.
+
+    ARB_color_buffer_float affects the definiton of this extension.
+
+Overview
+
+    NVIDIA's next-generation graphics processor and its derivative
+    designs support an extremely configurable mechanism know as "register
+    combiners" for computing fragment colors.
+
+    The register combiner mechanism is a significant redesign of NVIDIA's
+    original TNT combiner mechanism as introduced by NVIDIA's RIVA
+    TNT graphics processor.  Familiarity with the TNT combiners will
+    help the reader appreciate the greatly enhanced register combiners
+    functionality (see the NV_texture_env_combine4 OpenGL extension
+    specification for this background).  The register combiner mechanism
+    has the following enhanced functionality: 
+
+      The numeric range of combiner computations is from [-1,1]
+      (instead of TNT's [0,1] numeric range),
+
+      The set of available combiner inputs is expanded to include the
+      secondary color, fog color, fog factor, and a second combiner
+      constant color (TNT's available combiner inputs consist of
+      only zero, a single combiner constant color, the primary color,
+      texture 0, texture 1, and, in the case of combiner 1, the result
+      of combiner 0).
+
+      Each combiner variable input can be independently scaled and
+      biased into several possible numeric ranges (TNT can only
+      complement combiner inputs).
+
+      Each combiner stage computes three distinct outputs (instead
+      TNT's single combiner output).
+
+      The output operations include support for computing dot products
+      (TNT has no support for computing dot products).
+
+      After each output operation, there is a configurable scale and bias
+      applied (TNT's combiner operations builds in a scale and/or bias
+      into some of its combiner operations).
+
+      Each input variable for each combiner stage is fetched from any
+      entry in a combiner register set.  Moreover, the outputs of each
+      combiner stage are written into the register set of the subsequent
+      combiner stage (TNT could only use the result from combiner 0 as
+      a possible input to combiner 1; TNT lacks the notion of an
+      input/output register set).
+
+      The register combiner mechanism supports at least two general
+      combiner stages and then a special final combiner stage appropriate
+      for applying a color sum and fog computation (TNT provides two
+      simpler combiner stages, and TNT's color sum and fog stages are
+      hard-wired and not subsumed by the combiner mechanism as in register
+      combiners).
+
+    The register combiners fit into the OpenGL pipeline as a rasterization
+    processing stage operating in parallel to the traditional OpenGL
+    texture environment, color sum, AND fog application.  Enabling this
+    extension bypasses OpenGL's existing texture environment, color
+    sum, and fog application processing and instead use the register
+    combiners.  The combiner and texture environment state is orthogonal
+    so modifying combiner state does not change the traditional OpenGL
+    texture environment state and the texture environment state is
+    ignored when combiners are enabled.
+
+    OpenGL application developers can use the register combiner mechanism
+    for very sophisticated shading techniques.  For example, an
+    approximation of Blinn's bump mapping technique can be achieved with
+    the combiner mechanism.  Additionally, multi-pass shading models
+    that require several passes with unextended OpenGL 1.2 functionality
+    can be implemented in several fewer passes with register combiners.
+
+Issues
+
+    Should we expose the full register combiners mechanism?
+
+      RESOLUTION:  NO.  We ignore small bits of NV10 hardware
+      functionality.  The texture LOD input is ignored.  We also ignore
+      the inverts on input to the EF product.
+
+    Do we provide full gets for all the combiner state?
+
+      RESOLUTION:  YES.
+
+    Do we parameterize combiner input and output updates to avoid
+    enumerant explosions?
+
+      RESOLUTION:  YES.  To update a combiner stage input variable, you
+      need to specify the <stage>, <portion>, and <variable>.  To update a
+      combiner stage output operation, you need to specify the <stage> and
+      <portion>.  This does mean that we need to add special Get routines
+      that are likewise parameterized.  Hence, GetCombinerInputParameter*,
+      GetCombinerOutputParameter*, and GetFinalCombinerInputParameter*.
+
+   Is the register combiner functionality a super-set of the TNT combiner
+   functionality?
+
+      Yes, but only in the sense of being a computational super-set.
+      All computations performed with the TNT combiners can be performed
+      with the register combiners, but the sequence of operations necessary
+      to configure an identical computational result can be quite
+      different.
+
+      For example, the TNT combiners have an operation that includes
+      a final complement operation.  The register combiners can perform
+      range mappings only on inputs, but not on outputs.  The register
+      combiners can mimic the TNT operation with a post-operation
+      complement only by taking pains to complement on input any uses
+      of the output in later combiner stages.
+
+      What this does mean is that NV10's hardware functionality
+      will permit support for both the NV_register_combiners AND
+      NV_texture_env_combine4 extensions.
+
+      Note the existance of an "speclit" input complement bit supported
+      by NV10 (but not accessible through the NV_register_combiners
+      extensions).
+
+   Should we say anything about the precision of the combiner
+   computations?
+
+      RESOLUTION:  NO.  The spec is written as if the computations are
+      done on floating point values ranging from -1.0 to 1.0 (clamping is
+      specified where this range is exceeded).  The fact that NV10 does
+      the computations as 9-bit signed fixed point is not mentioned in
+      the spec.  This permits a future design to support more precision
+      or use a floating pointing representation.
+
+    What should the initial combiner state be?
+
+      RESOLUTION:  See tables NV_register_combiners.5 and
+      NV_register_combiners.6.  The default state has one general combiner
+      stage active that modulates the incoming color with texture 0.
+      The final combiner is setup initially to implement OpenGL 1.2's
+      standard color sum and fog stages.
+
+    What should happen to the TEXTURE0_ARB and TEXTUER1_ARB inputs if
+    one or both textures are disabled?
+
+      RESOLUTION:  The value of these inputs is undefined.
+
+    What do the TEXTURE0_ARB and TEXTURE1_ARB inputs correspond to?
+    Does the number correspond to the absolute texture unit number
+    or is the number based on how many textures are enabled (ie,
+    TEXTURE_ARB0 would correspond to the 2nd texture unit if the
+    2nd unit is enabled, but the 1st is disabled).
+
+      RESOLUTION:  The absolute texture unit.
+
+      This should be a lot less confusing to the programmer than having
+      the texture inputs switch textures if texture 0 is disabled.
+
+      Note that the proposed hardware actually determines the TEXTURE0
+      and TEXTURE1 input based on which texture is enabled.  This means
+      it is up to the ICD to properly update the combiner state when just
+      one texture is enabled.  Since we will already have to do this to
+      track the standard OpenGL texture environment for ARB_multitexture,
+      we can do it for this extension too.
+
+    Should the combiners state be PushAttrib/PopAttrib'ed along with
+    the texture state?
+
+      RESOLUTION:  YES.
+
+    Should we advertise the LOD fractional input to the combiners?
+
+      RESOLUTION:  NO.
+
+    There will be a performance impact when two combiner stages are
+    enabled versus just one stage.  Should we mention that somewhere?
+
+      RESOLUTION:  NO.  (But it is worth mentioning in this issues
+      section.)
+
+    Should the scale and bias for the CombinerOutputNV be indicated
+    by enumerants or specified outright as floats?
+
+      RESOLUTION:  ENUMERANTS.  While some future combiners might
+      support an arbitrary scale & bias specified as floats, NV10 just
+      does the enumerated options.
+
+    Should a dot product be computed in parralel with the sum of
+    products?
+
+      RESOLUTION:  YES (changed for version 1.6).  The hardware is
+      capable of summing the two dot products.
+
+      Versions of this specification prior to version 1.6 documented that
+      an INVALID_OPERATION should be generated if either <abDotProduct>
+      or <cdDotProduct> is true and then <sumOutput> is not GL_DISCARD.
+      However, this check was never added to the driver and some
+      applications found the mode useful.
+
+    Does the GL_E_TIMES_F_NV token for the final combiner perform any
+    mapping on E or F before the mapping?  Is the multiply signed?
+    Can the result be negative?
+
+      RESOLUTION:  Input mappings and component usage is applied to E or
+      F before their product is computed.  Yes, the product is a signed
+      multiplication.  The result can be negative, but the two allowed
+      final combiner input mapping modes (GL_UNSIGNED_IDENTITY_NV and
+      GL_UNSIGNED_INVERT_NV) both effectively clamp their results to
+      [0,1].
+
+      A negative value resulting from the "E times F" product with the
+      GL_UNSIGNED_IDENTITY_NV mapping mode would be clamped to zero.
+
+      A negative value resulting from the "E times F" product with the
+      GL_UNSIGNED_INVERT_NV mpaping mode would be clamped to zero but
+      then one minus that clamped result (zero) would generate one.
+
+New Procedures and Functions
+
+    void CombinerParameterfvNV(GLenum pname,
+                               const GLfloat *params);
+
+    void CombinerParameterivNV(GLenum pname,
+                               const GLint *params);
+
+    void CombinerParameterfNV(GLenum pname,
+                              GLfloat param);
+
+    void CombinerParameteriNV(GLenum pname,
+                              GLint param);
+
+    void CombinerInputNV(GLenum stage,
+                         GLenum portion,
+                         GLenum variable,
+                         GLenum input,
+                         GLenum mapping,
+                         GLenum componentUsage);
+
+    void CombinerOutputNV(GLenum stage,
+                          GLenum portion, 
+                          GLenum abOutput,
+                          GLenum cdOutput,
+                          GLenum sumOutput,
+                          GLenum scale,
+                          GLenum bias,
+                          GLboolean abDotProduct,
+                          GLboolean cdDotProduct,
+                          GLboolean muxSum);
+
+    void FinalCombinerInputNV(GLenum variable,
+                              GLenum input,
+                              GLenum mapping,
+                              GLenum componentUsage);
+
+    void GetCombinerInputParameterfvNV(GLenum stage,
+                                       GLenum portion,
+                                       GLenum variable,
+                                       GLenum pname,
+                                       GLfloat *params);
+
+    void GetCombinerInputParameterivNV(GLenum stage,
+                                       GLenum portion,
+                                       GLenum variable,
+                                       GLenum pname,
+                                       GLint *params);
+
+    void GetCombinerOutputParameterfvNV(GLenum stage,
+                                        GLenum portion, 
+                                        GLenum pname,
+                                        GLfloat *params);
+
+    void GetCombinerOutputParameterivNV(GLenum stage,
+                                        GLenum portion, 
+                                        GLenum pname,
+                                        GLint *params);
+
+    void GetFinalCombinerInputParameterfvNV(GLenum variable,
+                                            GLenum pname,
+                                            GLfloat *params);
+
+    void GetFinalCombinerInputParameterivNV(GLenum variable,
+                                            GLenum pname,
+                                            GLint *params);
+
+New Tokens
+
+    Accepted by the <cap> parameter of Enable, Disable, and IsEnabled,
+    and by the <pname> parameter of GetBooleanv, GetIntegerv,
+    GetFloatv, and GetDoublev:
+
+        REGISTER_COMBINERS_NV              0x8522
+
+    Accepted by the <stage> parameter of CombinerInputNV,
+    CombinerOutputNV, GetCombinerInputParameterfvNV,
+    GetCombinerInputParameterivNV, GetCombinerOutputParameterfvNV,
+    and GetCombinerOutputParameterivNV:
+
+        COMBINER0_NV                       0x8550
+        COMBINER1_NV                       0x8551
+        COMBINER2_NV                       0x8552
+        COMBINER3_NV                       0x8553
+        COMBINER4_NV                       0x8554
+        COMBINER5_NV                       0x8555
+        COMBINER6_NV                       0x8556
+        COMBINER7_NV                       0x8557
+
+    Accepted by the <variable> parameter of CombinerInputNV,
+    GetCombinerInputParameterfvNV, and GetCombinerInputParameterivNV:
+
+        VARIABLE_A_NV                      0x8523
+        VARIABLE_B_NV                      0x8524
+        VARIABLE_C_NV                      0x8525
+        VARIABLE_D_NV                      0x8526
+
+    Accepted by the <variable> parameter of FinalCombinerInputNV,
+    GetFinalCombinerInputParameterfvNV, and
+    GetFinalCombinerInputParameterivNV:
+
+        VARIABLE_A_NV
+        VARIABLE_B_NV
+        VARIABLE_C_NV
+        VARIABLE_D_NV
+        VARIABLE_E_NV                      0x8527
+        VARIABLE_F_NV                      0x8528
+        VARIABLE_G_NV                      0x8529
+
+    Accepted by the <input> parameter of CombinerInputNV:
+
+        ZERO                                          (not new)
+        CONSTANT_COLOR0_NV                 0x852A
+        CONSTANT_COLOR1_NV                 0x852B
+        FOG                                           (not new)
+        PRIMARY_COLOR_NV                   0x852C
+        SECONDARY_COLOR_NV                 0x852D
+        SPARE0_NV                          0x852E
+        SPARE1_NV                          0x852F
+        TEXTURE0_ARB                                  (see ARB_multitexture)
+        TEXTURE1_ARB                                  (see ARB_multitexture)
+
+    Accepted by the <mapping> parameter of CombinerInputNV:
+
+        UNSIGNED_IDENTITY_NV               0x8536
+        UNSIGNED_INVERT_NV                 0x8537
+        EXPAND_NORMAL_NV                   0x8538
+        EXPAND_NEGATE_NV                   0x8539
+        HALF_BIAS_NORMAL_NV                0x853A
+        HALF_BIAS_NEGATE_NV                0x853B
+        SIGNED_IDENTITY_NV                 0x853C
+        SIGNED_NEGATE_NV                   0x853D
+
+    Accepted by the <input> parameter of FinalCombinerInputNV:
+
+        ZERO                                          (not new)
+        CONSTANT_COLOR0_NV
+        CONSTANT_COLOR1_NV
+        FOG                                           (not new)
+        PRIMARY_COLOR_NV
+        SECONDARY_COLOR_NV
+        SPARE0_NV
+        SPARE1_NV
+        TEXTURE0_ARB                                  (see ARB_multitexture)
+        TEXTURE1_ARB                                  (see ARB_multitexture)
+        E_TIMES_F_NV                       0x8531
+        SPARE0_PLUS_SECONDARY_COLOR_NV     0x8532
+
+    Accepted by the <mapping> parameter of FinalCombinerInputNV:
+
+        UNSIGNED_IDENTITY_NV
+        UNSIGNED_INVERT_NV
+
+    Accepted by the <scale> parameter of CombinerOutputNV:
+
+        NONE                                          (not new)
+        SCALE_BY_TWO_NV                    0x853E
+        SCALE_BY_FOUR_NV                   0x853F
+        SCALE_BY_ONE_HALF_NV               0x8540
+
+    Accepted by the <bias> parameter of CombinerOutputNV:
+
+        NONE                                          (not new)
+        BIAS_BY_NEGATIVE_ONE_HALF_NV       0x8541
+
+    Accepted by the <abOutput>, <cdOutput>, and <sumOutput> parameter
+    of CombinerOutputNV:
+
+        DISCARD_NV                         0x8530
+        PRIMARY_COLOR_NV
+        SECONDARY_COLOR_NV  
+        SPARE0_NV  
+        SPARE1_NV  
+        TEXTURE0_ARB                                  (see ARB_multitexture)
+        TEXTURE1_ARB                                  (see ARB_multitexture)
+
+    Accepted by the <pname> parameter of GetCombinerInputParameterfvNV
+    and GetCombinerInputParameterivNV:
+
+        COMBINER_INPUT_NV                  0x8542
+        COMBINER_MAPPING_NV                0x8543
+        COMBINER_COMPONENT_USAGE_NV        0x8544
+
+    Accepted by the <pname> parameter of GetCombinerOutputParameterfvNV
+    and GetCombinerOutputParameterivNV:
+
+        COMBINER_AB_DOT_PRODUCT_NV         0x8545
+        COMBINER_CD_DOT_PRODUCT_NV         0x8546
+        COMBINER_MUX_SUM_NV                0x8547
+        COMBINER_SCALE_NV                  0x8548
+        COMBINER_BIAS_NV                   0x8549
+        COMBINER_AB_OUTPUT_NV              0x854A
+        COMBINER_CD_OUTPUT_NV              0x854B
+        COMBINER_SUM_OUTPUT_NV             0x854C
+
+    Accepted by the <pname> parameter of CombinerParameterfvNV,
+    CombinerParameterivNV, GetBooleanv, GetDoublev, GetFloatv, and
+    GetIntegerv:
+
+        CONSTANT_COLOR0_NV
+        CONSTANT_COLOR1_NV
+
+    Accepted by the <pname> parameter of CombinerParameterfvNV,
+    CombinerParameterivNV, CombinerParameterfNV, CombinerParameteriNV,
+    GetBooleanv, GetDoublev, GetFloatv, and GetIntegerv:
+
+        NUM_GENERAL_COMBINERS_NV           0x854E
+        COLOR_SUM_CLAMP_NV                 0x854F
+
+    Accepted by the <pname> parameter of GetFinalCombinerInputParameterfvNV
+    and GetFinalCombinerInputParameterivNV:
+
+        COMBINER_INPUT_NV
+        COMBINER_MAPPING_NV
+        COMBINER_COMPONENT_USAGE_NV
+
+    Accepted by the <pname> parameter of GetBooleanv, GetDoublev,
+    GetFloatv, and GetIntegerv:
+
+        MAX_GENERAL_COMBINERS_NV           0x854D
+
+Additions to Chapter 2 of the 1.2 Specification (OpenGL Operation)
+
+     None
+
+Additions to Chapter 3 of the 1.2 Specification (Rasterization)
+
+ --  Figure 3.1 "Rasterization" (page 58)
+
+     +  Change the "Texturing" block to say "Texture Fetching".
+
+     +  Insert a new block between "Texture Fetching" and "Color Sum".
+        Name the new block "Texture Environment Application".
+
+     +  Insert a new block after "Texture Fetching".  Name the new block
+        "Register Combiners Application".
+
+     +  The output of the "Texture Fetching" stage feeds to both "Texture
+        Environment Application" and "Register Combiners Application".
+
+     +  The input for "Color Sum" comes from "Texture Environment
+        Application".
+
+     +  The output to "Fragments" is switched (controlled by
+        Disable/Enable REGISTER_COMBINERS_NV) between the output of "Fog"
+        and "Register Combiners Application".
+
+     Essentially, when register combiners are enabled, the entire standard
+     texture environment application, color sum, and fog blocks are
+     replaced with the single register combiners block.  [Note that this
+     is different from how the NV_texture_env_combine4 extension works;
+     that extension controls the texture environment application
+     block, but still uses the standard color sum and fog blocks.]
+
+ --  NEW Section 3.8.12 "Register Combiners Application"
+
+     "In parallel to the texture application, color sum, and fog processes
+     described in sections 3.8.10, 3.9, and 3.10, register combiners
+     provide a means of computing fcoc, the final combiner output color,
+     for each fragment generated by rasterization.
+
+     The register combiners consist of two or more general combiner stages
+     arranged in a fixed sequence ordered by each combiner stage's number.
+     An implementation supports a maximum number of general combiners
+     stages, which may be queried by calling GetIntegerv with the symbolic
+     constant MAX_GENERAL_COMBINERS_NV.  Implementations must
+     support at least two general combiner stages.  The general combiner
+     stages are named COMBINER0_NV, COMBINER1_NV, and so on.
+
+     Each general combiner in the sequence receives its inputs and
+     computes its outputs in an identical manner.  At the end of the
+     sequence of general combiner stages, there is a final combiner stage
+     that operates in a different manner than the general combiner stages.
+     The general combiner operation is described first, followed by a
+     description of the final combiner operation.
+
+     Each combiner stage (the general combiner stages and the final
+     combiner stage) has an associated combiner register set.  Each
+     combiner register set contains <n> RGBA vectors with components
+     ranging from -1.0 to 1.0 where <n> is 8 plus the maximum number
+     of active textures supported (that is, the implementation's value
+     for MAX_TEXTURE_UNITS_ARB).  The combiner register set entries
+     are listed in the table NV_register_combiners.1.
+
+     [ Table NV_register_combiners.1 ]
+
+                                Initial                        Output
+        Register Name           Value       Reference          Status
+        ---------------------   ----------  ----------------   ---------
+        ZERO                    0           -                  read only
+        CONSTANT_COLOR0_NV      ccc0        Section 3.8.12.1   read only
+        CONSTANT_COLOR1_NV      ccc1        Section 3.8.12.1   read only
+        FOG                     Cf          Section 3.10       read only
+        PRIMARY_COLOR_NV        cpri        Section 2.13.1     read/write
+        SECONDARY_COLOR_NV      csec        Section 2.13.1     read/write
+        SPARE0_NV               see below   Section 3.8.12     read/write
+        SPARE1_NV               undefined   Section 3.8.12     read/write
+        TEXTURE0_ARB            CT0         Figure E.2         read/write
+        TEXTURE1_ARB            CT1         Figure E.2         read/write
+        TEXTURE<i>_ARB          CT<i>       Figure E.2         read/write
+
+     The register set of COMBINER0_NV, the first combiner stage,
+     is initialized as described in table NV_register_combiners.1.
+
+     The initial value of the alpha portion of register SECONDARY_COLOR_NV
+     is undefined.  The initial value of the alpha portion of register
+     SPARE0_NV is the alpha component of texture 0 if texturing is
+     enabled for texture 0; however, the initial value of the RGB portion
+     SPARE0_NV is undefined.  The initial value of the SPARE1_NV register
+     is undefined.  The initial of registers TEXTURE0_ARB, TEXTURE1_ARB,
+     and TEXTURE<i>_ARB are undefined if texturing is not enabled for
+     textures 0, 1, and <i>, respectively.
+
+     The mapping of texture components to components of texture registers
+     is summarized in Table NV_register_combiners.2.  In the following
+     table, At, Lt, It, Rt, Gt, Bt, and Dt, are the filtered texel
+     values.
+
+     [Table NV_register_combiners.2]: Correspondence of texture components
+     to register components for texture registers.
+
+        Base Internal Format            RGB Values      Alpha Value
+        --------------------            ----------      -----------
+        ALPHA                           0,  0,  0       At
+        LUMINANCE                       Lt, Lt, Lt      1
+        LUMINANCE_ALPHA                 Lt, Lt, Lt      At
+        INTENSITY                       It, It, It      It
+        RGB                             Rt, Gt, Bt      1
+        RGBA                            Rt, Gt, Bt      At
+
+        DEPTH_COMPONENT                 0,  0,  0,      Lt
+          (when TEXTURE_COMPARE_MODE_ARB is NONE -or-
+                TEXTURE_COMPARE_SGIX is false)
+        DEPTH_COMPONENT                 Lt, Lt, Lt,     Lt
+          (when TEXTURE_COMPARE_MODE_ARB is COMPARE_R_TO_TEXTURE -or-
+                TEXTURE_COMPARE_SGIX is true)
+
+        HILO_NV                         0,  0,  0,      0
+        DSDT_NV                         0,  0,  0,      0
+        DSDT_MAG_NV                     0,  0,  0,      0
+        DSDT_MAG_INTENSITY_NV           0,  0,  0,      It
+
+     Note that the ALPHA, DEPTH_COMPONENT, and DSDT_MAG_INTENSITY_NV
+     base internal formats are mapped to components differently than
+     one could infer from the standard texture environment operations
+     with this formats.  A texture's DEPTH_TEXTURE_MODE_ARB state (see
+     the ARB_depth_texture extension) is irrelevant for determining the
+     correspondence of texture components to register components for
+     texture registers when REGISTER_COMBINERS_NV is enabled.
+
+     3.8.12.1  Combiner Parameters
+
+     Combiner parameters are specified by
+
+         CombinerParameterfvNV(GLenum pname, const GLfloat *params);
+         CombinerParameterivNV(GLenum pname, const GLint *params);
+         CombinerParameterfNV(GLenum pname, GLfloat param);
+         CombinerParameteriNV(GLenum pname, GLint param);
+
+     <pname> is a symbolic constant indicating which parameter is to be
+     set as described in the table NV_register_combiners.3:
+
+     [ Table NV_register_combiners.3 ]
+                                               Number
+       Parameter   Name                        of values   Type
+       ---------   -------------------------   ---------   ---------------
+       ccc0        CONSTANT_COLOR0_NV          4           color
+       ccc1        CONSTANT_COLOR1_NV          4           color
+       ngc         NUM_GENERAL_COMBINERS_NV    1           positive integer
+       csc         COLOR_SUM_CLAMP_NV          1           boolean
+
+     <params> is a pointer to a group of values to which to set the
+     indicated parameter.  <param> is simply the indicated parameter.
+     The number of values pointed to depends on the parameter being
+     set as shown in the table above.  Color parameters specified with
+     CombinerParameter*NV are converted to floating-point values (if
+     specified as integers) as indicated by Table 2.6 for signed integers.
+     The floating-point color values are then clamped to the range [0,1].
+
+     The values ccc0 and ccc1 named by CONSTANT_COLOR0_NV and
+     CONSTANT_COLOR1_NV are constant colors available for inputs to the
+     combiner stages.  The value ngc named by NUM_GENERAL_COMBINERS_NV
+     is a positive integer indicating how many general combiner stages are
+     active, that is, how many general combiner stages a fragment should
+     be processed by.  Setting ngc to a value less than one or
+     greater than the value of MAX_GENERAL_COMBINERS_NV generates an
+     INVALID_VALUE error.  The value csc named by COLOR_SUM_CLAMP_NV
+     is a boolean described in section 3.8.12.3.
+
+     3.8.12.2  General Combiner Stage Operation
+
+     The command
+
+         CombinerInputNV(GLenum stage,
+                         GLenum portion,
+                         GLenum variable,
+                         GLenum input,
+                         GLenum mapping,
+                         GLenum componentUsage);
+
+     controls the assignment of all the general combiner input variables.
+     For the RGB combiner portion, these are Argb, Brgb, Crgb, and
+     Drgb; and for the combiner alpha portion, these are Aa, Ba, Ca,
+     and Da.  The <stage> parameter is a symbolic constant of the form
+     COMBINER<i>_NV, indicating that general combiner stage <i> is to
+     be updated.  The constant COMBINER<i>_NV = COMBINER0_NV + <i>
+     where <i> is in the range 0 to <k>-1 and <k> is the implementation
+     dependent value of MAX_COMBINERS_NV.  The <portion> parameter
+     may be either RGB or ALPHA and determines whether the RGB color
+     vector or alpha scalar portion of the specified combiner stage is
+     updated.  The <variable> parameter may be one of VARIABLE_A_NV,
+     VARIABLE_B_NV, VARIABLE_C_NV, or VARIABLE_D_NV and determines
+     which respective variable of the specified combiner stage and
+     combiner stage portion is updated.
+
+     The <input>, <mapping>, and <componentUsage> parameters specify
+     the assignment of a value for the input variable indicated by
+     <stage>, <portion>, and <variable>.  The <input> parameter may be
+     one of the register names from table NV_register_combiners.1.
+
+     The <componentUsage> parameter may be one of RGB, ALPHA, or BLUE.
+
+     When the <portion> parameter is RGB, a <componentUsage> parameter
+     of RGB indicates that the RGB portion of the indicated register
+     should be assigned to the RGB portion of the combiner input variable,
+     while an ALPHA <componentUsage> parameter indicates that the
+     alpha portion of the indicated register should be replicated across
+     the RGB portion of the combiner input variable.
+
+     When the <portion> parameter is ALPHA, the <componentUsage>
+     parameter of ALPHA indicates that the alpha portion of the indicated
+     register should be assigned to the alpha portion of the combiner
+     input variable, while a BLUE <componentUsage> parameter indicates
+     that the blue component of the indicated register should be assigned
+     to the alpha portion of the combiner input variable.
+
+     When the <portion> parameter is ALPHA, a <componentUsage> parameter
+     of RGB generates an INVALID_OPERATION error.  When the <portion>
+     parameter is RGB, a <componentUsage> parameter of BLUE generates
+     an INVALID_OPERATION error.
+
+     When the <componentUsage> parameter is ALPHA, an <input> parameter
+     of FOG generates an INVALID_OPERATION error.  The alpha component of
+     the fog register is only available in the final combiner.  The alpha
+     component of the fog register is the fragment's fog factor when fog
+     is enabled; otherwise, the alpha component of the fog register is
+     one.
+
+     Before the value in the register named by <input> is assigned to the
+     specified input variable, a range mapping is performed based on
+     <mapping>.  The mapping may be one of the tokens from the table
+     NV_register_combiners.4.
+
+     [ Table NV_register_combiners.4 ]
+
+       Mapping Name              Mapping Function
+       -----------------------   -------------------------------------
+       UNSIGNED_IDENTITY_NV      max(0.0, e)
+       UNSIGNED_INVERT_NV        1.0 - min(max(e, 0.0), 1.0)
+       EXPAND_NORMAL_NV          2.0 * max(0.0, e) - 1.0
+       EXPAND_NEGATE_NV          -2.0 * max(0.0, e) + 1.0
+       HALF_BIAS_NORMAL_NV       max(0.0, e) - 0.5
+       HALF_BIAS_NEGATE_NV       -max(0.0, e) + 0.5
+       SIGNED_IDENTITY_NV        e
+       SIGNED_NEGATE_NV          -e
+
+     Based on the <mapping> parameter, the mapping function in the table
+     above is evaluated for each element <e> of the input vector before
+     assigning the result to the specified input variable.  Note that
+     the mapping for the RGB and alpha portion of each input variable
+     is distinct.
+
+     Each general combiner stage computes the following ten expressions
+     based on the values assigned to the variables Argb, Brgb, Crgb,
+     Drgb, Aa, Ba, Ca, and Da as determined by the combiner state set
+     by CombinerInputNV.
+
+     ["gcc" stands for general combiner computation.]
+
+        gcc1rgb = [ Argb[r]*Brgb[r], Argb[g]*Brgb[g], Argb[b]*Brgb[b] ]
+
+        gcc2rgb = [ Argb[r]*Brgb[r] + Argb[g]*Brgb[g] + Argb[b]*Brgb[b],
+                    Argb[r]*Brgb[r] + Argb[g]*Brgb[g] + Argb[b]*Brgb[b],
+                    Argb[r]*Brgb[r] + Argb[g]*Brgb[g] + Argb[b]*Brgb[b] ]
+
+        gcc3rgb = [ Crgb[r]*Drgb[r], Crgb[g]*Drgb[g], Crgb[b]*Drgb[b] ]
+
+        gcc4rgb = [ Crgb[r]*Drgb[r] + Crgb[g]*Drgb[g] + Crgb[b]*Drgb[b],
+                    Crgb[r]*Drgb[r] + Crgb[g]*Drgb[g] + Crgb[b]*Drgb[b],
+                    Crgb[r]*Drgb[r] + Crgb[g]*Drgb[g] + Crgb[b]*Drgb[b] ]
+
+        gcc5rgb = gcc1rgb + gcc3rgb
+
+        gcc6rgb = gcc1rgb or gcc3rgb               [see below]
+
+        gcc1a   = Aa * Ba
+
+        gcc2a   = Ca * Da
+
+        gcc3a   = gcc1a + gcc2a
+
+        gcc4a   = gcc1a or gcc2a                   [see below]
+
+     The computation of gcc6rgb and gcc4a involves a special "or"
+     operation.  This operation evaluates to the left-hand operand if
+     the alpha component of the combiner's SPARE0_NV register is less than
+     0.5; otherwise, the operation evaluates to the right-hand operand.  
+
+     The command 
+
+         CombinerOutputNV(GLenum stage,
+                          GLenum portion, 
+                          GLenum abOutput,
+                          GLenum cdOutput,
+                          GLenum sumOutput,
+                          GLenum scale,
+                          GLenum bias,
+                          GLboolean abDotProduct,
+                          GLboolean cdDotProduct,
+                          GLboolean muxSum);
+
+     controls the general combiner output operation including designating
+     the register set locations where results of the general combiner's
+     three computations are written.  The <stage> and <portion>
+     parameters take the same values as the respective parameters for
+     CombinerInputNV.
+
+     If the <portion> parameter is ALPHA, specifying a non-FALSE value
+     for either of the parameters <abDotProduct> or <cdDotProduct>,
+     generates an INVALID_VALUE error.
+
+     The <scale> parameter must be one of NONE, SCALE_BY_TWO_NV,
+     SCALE_BY_FOUR_NV, or SCALE_BY_ONE_HALF_NV and specifies the
+     value of the combiner stage's portion scale, either cscalergb or
+     cscalea depending on the <portion> parameter, to 1.0, 2.0, 4.0,
+     or 0.5, respectively.
+
+     The <bias> parameter must be either NONE or
+     BIAS_BY_NEGATIVE_ONE_HALF_NV and specifies the value of the
+     combiner stage's portion bias, either cbiasrgb or cbiasa depending
+     on the <portion> parameter, to 0.0 or -0.5, respectively.  If <scale>
+     is either SCALE_BY_ONE_HALF_NV or SCALE_BY_FOUR_NV, a <bias> of
+     BIAS_BY_NEGATIVE_ONE_HALF_NV generates an INVALID_OPERATION error.
+
+     If the <abDotProduct> parameter is FALSE, then
+        
+        if <portion> is RGB,     out1rgb = max(min(gcc1rgb + cbiasrgb) * cscalergb, 1), -1)
+        if <portion> is ALPHA,   out1a   = max(min((gcc1a + cbiasa) * cscalea, 1), -1) 
+
+     otherwise <portion> must be RGB and
+
+        out1rgb = max(min((gcc2rgb + cbiasrgb) * cscalergb, 1), -1)
+
+     If the <cdDotProduct> parameter is FALSE, then
+        
+        if <portion> is RGB,      out2rgb = max(min((gcc3rgb + cbiasrgb) * cscalergb, 1), -1)
+        if <portion> is ALPHA,    out2a   = max(min((gcc2a + cbiasa) * cscalea, 1), -1)
+
+     otherwise <portion> must be RGB so
+
+        out2rgb = max(min((gcc4rgb + cbiasrgb) * cscalergb, 1), -1)
+
+     If the <muxSum> parameter is FALSE, then
+        
+        if <portion> is RGB,      out3rgb = max(min((gcc5rgb + cbiasrgb) * cscalergb, 1), -1)
+        if <portion> is ALPHA,    out3a   = max(min((gcc3a + cbiasa) * cscalea, 1), -1)
+
+     otherwise
+
+        if <portion> is RGB,      out3rgb = max(min((gcc6rgb + cbiasrgb) * cscalergb, 1), -1)
+        if <portion> is ALPHA,    out3a   = max(min((gcc4a + cbiasa) * cscalea, 1), -1)
+
+     out1rgb, out2rgb, and out3rgb are written to the RGB portion of
+     combiner stage's registers named by <abOutput>, <cdOutput>, and
+     <sumOutput> respectively.  out1a, out2a, and out3a are written to
+     the alpha portion of combiner stage's registers named by <abOutput>,
+     <cdOutput>, and <sumOutput> respectively.  The parameters <abOutput>,
+     <cdOutput>, and <sumOutput> must be either DISCARD_NV or one of
+     the register names from table NV_register_combiners.1 that has an output
+     status of read/write.  If an output is set to DISCARD_NV, that
+     output is not written to any register.  The error INVALID_OPERATION
+     is generated if <abOutput>, <cdOutput>, and <sumOutput> do not all
+     name unique register names (though multiple outputs to DISCARD_NV
+     are legal).
+
+     When the general combiner stage's register set is written based on
+     the computed outputs, the updated register set is copied to the
+     register set of the subsequent combiner stage in the combiner
+     sequence.  Copied undefined values are likewise undefined.
+     The subsequent combiner stage following the last active general
+     combiner stage, indicated by the general combiner stage's number
+     being equal to ngc-1, in the sequence is the final combiner
+     stage.  In other words, the number of general combiner stages
+     each fragment is transformed by is determined by the value of
+     NUM_GENERAL_COMBINERS_NV.
+
+     3.8.12.3  Final Combiner Stage Operation
+
+     The final combiner stage operates differently from the general
+     combiner stages.  While a general combiner stage updates its register
+     set and passes the register set to the next combiner stage, the final
+     combiner outputs an RGBA color fcoc, the final combiner output color.
+     The final combiner stage is capable of applying the standard OpenGL
+     color sum and fog operations, but has the configurability to be
+     used for other purposes.
+     
+     The command
+
+        FinalCombinerInputNV(GLenum variable,
+                             GLenum input,
+                             GLenum mapping,
+                             GLenum componentUsage);
+
+     controls the assignment of all the final combiner input variables.
+     The variables A, B, C, D, E, and F are RGB vectors.  The variable
+     G is an alpha scalar.  The <variable> parameter may be one of
+     VARIABLE_A_NV, VARIABLE_B_NV, VARIABLE_C_NV, VARIABLE_D_NV,
+     VARIABLE_E_NV, VARIABLE_F_NV, and VARIABLE_G_NV, and determines
+     which respective variable of the final combiner stage is updated.
+
+     The <input>, <mapping>, and <componentUsage> parameters specify
+     the assignment of a value for the input variable indicated by
+     <variable>.
+
+     The <input> parameter may be any one of the register names from
+     table NV_register_combiners.1 or be one of two pseudo-register
+     names, either E_TIMES_F_NV or SPARE0_PLUS_SECONDARY_COLOR_NV.
+     The value of E_TIMES_F_NV is the product of the value of
+     variable E times the value of variable F.  The value of
+     SPARE0_PLUS_SECONDARY_COLOR_NV is the value the SPARE0_NV
+     register mapped using the UNSIGNED_IDENITY_NV input mapping plus
+     the value of the SECONDARY_COLOR_NV register mapped using the
+     UNSIGNED_IDENTITY_NV input mapping.  If csc, the color sum clamp,
+     is non-FALSE, the value of SPARE0_PLUS_SECONDARY_COLOR_NV is first
+     clamped to the range [0,1].  The alpha component of E_TIMES_F_NV
+     and SPARE0_PLUS_SECONDARY_COLOR_NV is always zero.
+
+     When <variable> is one of VARIABLE_E_NV, VARIABLE_F_NV,
+     or VARIABLE_G_NV and <input> is either E_TIMES_F_NV or
+     SPARE0_PLUS_SECONDARY_COLOR_NV, generate an INVALID_OPERATION
+     error.  When <variable> is VARIABLE_A_NV and <input> is
+     SPARE0_PLUS_SECONDARY_COLOR_NV, generate an INVALID_OPERATION
+     error.
+
+     The <componentUsage> parameter may be one of RGB, BLUE, ALPHA
+     (with certain restrictions depending on the <variable> and <input>
+     as described below).
+
+     When the <variable> parameter is not VARIABLE_G_NV, a
+     <componentUsage> parameter of RGB indicates that the RGB portion of
+     the indicated register should be assigned to the RGB portion of the
+     combiner input variable, while an ALPHA <componentUsage> parameter
+     indicates that the alpha portion of the indicated register should
+     be replicated across the RGB portion of the combiner input variable.
+
+     When the <variable> parameter is VARIABLE_G_NV, a <componentUsage>
+     parameter of ALPHA indicates that the alpha component of the
+     indicated register should be assigned to the alpha portion of the
+     G input variable, while a BLUE <componentUsage> parameter indicates
+     that the blue component of the indicated register should be assigned
+     to the alpha portion of the G input variable.
+
+     The INVALID_OPERATION error is generated when <componentUsage> is
+     BLUE and <variable> is not VARIABLE_G_NV.  The INVALID_OPERATION
+     error is generated when <componentUsage> is RGB and <variable>
+     is VARIABLE_G_NV.
+
+     The INVALID_OPERATION error is generated when both the <input>
+     parameter is either E_TIMES_F_NV or SPARE0_PLUS_SECONDARY_COLOR_NV
+     and the <componentUsage> parameter is ALPHA or BLUE.
+
+     Before the value in the register named by <input> is assigned to
+     the specified input variable, a range mapping is performed based
+     on <mapping>.  The mapping may be either UNSIGNED_IDENTITY_NV
+     or UNSIGNED_INVERT_NV and operates as specified in table
+     NV_register_combiners.4.
+
+     The final combiner stage computes the following expression based
+     on the values assigned to the variables A, B, C, D, E, F, and G as
+     determined by the combiner state set by FinalCombinerInputNV
+
+       fcoc = [ min(ab[r] + iac[r] + D[r], 1.0),
+                min(ab[g] + iac[g] + D[g], 1.0),
+                min(ab[b] + iac[b] + D[b], 1.0),
+                G ]
+
+     where 
+
+       ab   = [ A[r]*B[r], A[g]*B[g], A[b]*B[b] ]
+       iac  = [ (1.0 -A [r])*C[r], (1.0 - A[g])*C[g], (1.0 - A[b])*C[b] ]
+
+     3.8.12.4  Required State
+
+     The state required for the register combiners is a bit indicating
+     whether register combiners are enabled or disabled, an integer
+     indicating how many general combiners are active, a bit indicating
+     whether or not the color sum clamp to 1 should be performed, two
+     RGBA constant colors, <n> sets of general combiner stage state where
+     <n> is the value of MAX_GENERAL_COMBINERS_NV, and the final
+     combiner stage state.  The per-stage general combiner state consists
+     of the RGB input portion state and the alpha input portion state.
+     Each portion (RGB and alpha) of the per-stage general combiner
+     state consists of: four integers indicating the input register for
+     the four variables A, B, C, and D; four integers to indicate each
+     variable's range mapping; four bits to indicate whether to use the
+     alpha component of the input for each variable; a bit indicating
+     whether the AB dot product should be output; a bit indicating
+     whether the CD dot product should be output; a bit indicating
+     whether the sum or mux output should be output; two integers to
+     maintain the output scale and bias enumerants; three integers to
+     maintain the output register set names.  The final combiner stage
+     state consists of seven integers to indicate the input register
+     for the seven variables A, B, C, D, E, F, and G; seven integers to
+     indicate each variable's range mapping; and seven bits to indicate
+     whether to use the alpha component of the input for each variable.
+
+     The general combiner per-stage state is initialized as described
+     in table NV_register_combiners.5.
+
+     [ Table NV_register_combiners.5 ]
+
+                                                  Component
+        Portion   Variable   Input                Usage       Mapping
+        -------   --------   ------------------   ---------   ----------------------
+         RGB       A         PRIMARY_COLOR_NV     RGB         UNSIGNED_IDENTITY_NV
+         RGB       B         ZERO                 RGB         UNSIGNED_INVERT_NV
+         RGB       C         ZERO                 RGB         UNSIGNED_IDENTITY_NV
+         RGB       D         ZERO                 RGB         UNSIGNED_IDENTITY_NV
+         alpha     A         PRIMARY_COLOR_NV     ALPHA       UNSIGNED_IDENTITY_NV
+         alpha     B         ZERO                 ALPHA       UNSIGNED_INVERT_NV
+         alpha     C         ZERO                 ALPHA       UNSIGNED_IDENTITY_NV
+         alpha     D         ZERO                 ALPHA       UNSIGNED_IDENTITY_NV
+
+     The final combiner stage state is initialized as described in table
+     NV_register_combiners.6.
+
+     [ Table NV_register_combiners.6 ]
+
+                                                      Component
+        Variable   Input                              Usage       Mapping
+        --------   --------------------------------   ---------   ----------------------
+         A         FOG                                ALPHA       UNSIGNED_IDENTITY_NV
+         B         SPARE0_PLUS_SECONDARY_COLOR_NV     RGB         UNSIGNED_IDENTITY_NV
+         C         FOG                                RGB         UNSIGNED_IDENTITY_NV
+         D         ZERO                               RGB         UNSIGNED_IDENTITY_NV
+         E         ZERO                               RGB         UNSIGNED_IDENTITY_NV
+         F         ZERO                               RGB         UNSIGNED_IDENTITY_NV
+         G         SPARE0_NV                          ALPHA       UNSIGNED_IDENTITY_NV"
+
+ --  NEW Section 3.8.11 "Antialiasing Application"
+
+     Insert the following paragraph BEFORE the section's first paragraph:
+
+     "Register combiners are enabled or disabled using the generic Enable
+     and Disable commands, respectively, with the symbolic constant
+     REGISTER_COMBINERS_NV.  If the register combiners are enabled (and not in color
+     index mode), the fragment's color value is replaced with fcoc, the
+     final combiner output color, computed in section 3.8.12; otherwise,
+     the fragment's color value is the result of the fog application
+     in section 3.10."
+
+Additions to Chapter 4 of the 1.2 Specification (Per-Fragment Operations
+and the Frame Buffer)
+
+     None
+
+Additions to Chapter 5 of the 1.2 Specification (Special Functions)
+
+     None
+
+Additions to Chapter 6 of the 1.2 Specification (State and State Requests)
+
+ --  Section 6.1.3 "Enumerated Queries"
+
+     Change the first two sentences (page 182) to say:
+
+     "Other commands exist to obtain state variables that are identified by
+     a category (clip plane, light, material, combiners, etc.) as well as
+     a symbolic constant.  These are"
+
+     Add to the bottom of the list of function prototypes (page 183):
+
+       void GetCombinerInputParameterfvNV(GLenum stage, GLenum portion, GLenum variable,
+                                          GLenum pname, const GLfloat *params);
+       void GetCombinerInputParameterivNV(GLenum stage, GLenum portion, GLenum variable,
+                                          GLenum pname, const GLint *params);
+       void GetCombinerOutputParameterfvNV(GLenum stage, GLenum portion, GLenum pname, const GLfloat *params);
+       void GetCombinerOutputParameterivNV(GLenum stage, GLenum portion, GLenum pname, GLint *params);
+       void GetFinalCombinerInputParameterfvNV(GLenum variable, GLenum pname, const GLfloat *params);
+       void GetFinalCombinerInputParameterivNV(GLenum variable, GLenum pname, const GLfloat *params);
+
+     Add the following paragraph to the end of the section (page 184):
+
+     "The GetCombinerInputParameterfvNV,
+     GetCombinerInputParameterivNV, GetCombinerOutputParameterfvNV,
+     and GetCombinerOutputParameterivNV parameter <stage> may be one of
+     COMBINER0_NV, COMBINER1_NV, and so on, indicating which general
+     combiner stage to query.  The GetCombinerInputParameterfvNV,
+     GetCombinerInputParameterivNV, GetCombinerOutputParameterfvNV,
+     and GetCombinerOutputParameterivNV parameter <portion> may be
+     either RGB or ALPHA, indicating which portion of the general
+     combiner stage to query.  The GetCombinerInputParameterfvNV
+     and GetCombinerInputParameterivNV parameter <variable> may
+     be one of VARIABLE_A_NV, VARIABLE_B_NV, VARIABLE_C_NV,
+     or VARIABLE_D_NV, indicating which variable of the general
+     combiner stage to query.  The GetFinalCombinerInputParameterfvNV
+     and GetFinalCombinerInputParameterivNV parameter <variable> may be one
+     of VARIABLE_A_NV, VARIABLE_B_NV, VARIABLE_C_NV, VARIABLE_D_NV,
+     VARIABLE_E_NV, VARIABLE_F_NV, or VARIABLE_G_NV."
+
+Additions to the GLX Specification
+
+    None.
+
+GLX Protocol
+
+    Thirteen new GL commands are added.
+
+    The following seven rendering commands are sent to the sever as part
+    of a glXRender request:
+
+        CombinerParameterfNV
+            2           12              rendering command length
+            2           4136            rendering command opcode
+            4           ENUM            pname
+            4           FLOAT32         param
+
+        CombinerParameterfvNV
+            2           8+4*n           rendering command length
+            2           4137            rendering command opcode
+            4           ENUM            pname
+                        0x852A   n=4    GL_CONSANT_COLOR0_NV
+                        0x852B   n=4    GL_CONSANT_COLOR1_NV
+                        0x854E   n=1    GL_NUM_GENERAL_COMBINERS_NV
+                        0x854F   n=1    GL_COLOR_SUM_CLAMP_NV
+                        else     n=0
+            4*n         LISTofFLOAT32   params
+
+        CombinerParameteriNV
+            2           12              rendering command length
+            2           4138            rendering command opcode
+            4           ENUM            pname
+            4           INT32           param
+
+        CombinerParameterivNV
+            2           8+4*n           rendering command length
+            2           4139            rendering command opcode
+            4           ENUM            pname
+                        0x852A   n=4    GL_CONSANT_COLOR0_NV
+                        0x852B   n=4    GL_CONSANT_COLOR1_NV
+                        0x854E   n=1    GL_NUM_GENERAL_COMBINERS_NV
+                        0x854F   n=1    GL_COLOR_SUM_CLAMP_NV
+                        else     n=0
+            4*n         LISTofINT32     params
+
+        CombinerInputNV
+            2           28              rendering command length
+            2           4140            rendering command opcode
+            4           ENUM            stage
+            4           ENUM            portion
+            4           ENUM            variable
+            4           ENUM            input
+            4           ENUM            mapping
+            4           ENUM            componentUsage
+        
+        CombinerOutputNV
+            2           36              rendering command length
+            2           4141            rendering command opcode
+            4           ENUM            stage
+            4           ENUM            portion
+            4           ENUM            abOutput
+            4           ENUM            cdOutput
+            4           ENUM            sumOutput
+            4           ENUM            scale
+            4           ENUM            bias
+            1           BOOL            abDotProduct
+            1           BOOL            cdDotProduct
+            1           BOOL            muxSum
+            1           BOOL            unused
+        
+        FinalCombinerInputNV
+            2           20              rendering command length
+            2           4142            rendering command opcode
+            4           ENUM            variable
+            4           ENUM            input
+            4           ENUM            mapping
+            4           ENUM            componentUsage
+
+    The remaining six commands are non-rendering commands.  These commands
+    are sent separately (i.e., not as part of a glXRender or glXRenderLarge
+    request), using the glXVendorPrivateWithReply request:
+
+        GetCombinerInputParameterfvNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           1270            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            stage
+            4           ENUM            portion
+            4           ENUM            variable
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        GetCombinerInputParameterivNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           7               request length
+            4           1271            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            stage
+            4           ENUM            portion
+            4           ENUM            variable
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        GetCombinerOutputParameterfvNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           6               request length
+            4           1272            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            stage
+            4           ENUM            portion
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        GetCombinerOutputParameterivNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           6               request length
+            4           1273            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            stage
+            4           ENUM            portion
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+        GetFinalCombinerInputParameterfvNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           1274            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            variable
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           FLOAT32         params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofFLOAT32   params
+
+        GetFinalCombinerInputParameterivNV
+            1           CARD8           opcode (X assigned)
+            1           17              GLX opcode (glXVendorPrivateWithReply)
+            2           5               request length
+            4           1275            vendor specific opcode
+            4           GLX_CONTEXT_TAG context tag
+            4           ENUM            variable
+            4           ENUM            pname
+          =>
+            1           1               reply
+            1                           unused
+            2           CARD16          sequence number
+            4           m               reply length, m = (n==1 ? 0 : n)
+            4                           unused
+            4           CARD32          unused
+
+            if (n=1) this follows:
+
+            4           INT32           params
+            12                          unused
+
+            otherwise this follows:
+
+            16                          unused
+            n*4         LISTofINT32     params
+
+Dependencies on NV_texture_shader
+
+     If NV_texture_shader is not supported, references to HILO_NV,
+     DSDT_NV, DSDT_MAG_NV, and DSDT_MAG_INTENSITY_NV base internal
+     formats in this document are invalid and should be ignored.
+
+Dependencies on ARB_depth_texture and ARB_shadow -or- SGIX_depth_texture
+and SGIX_shadow
+
+     If ARB_depth_texture and ARB_shadow -or- SGIX_depth_texture and
+     SGIX_shadow are not supported, references to the DEPTH_COMPONENT base
+     internal format in this document are invalid and should be ignored.
+
+     If ARB_depth_texture and ARB_shadow are not supported, references
+     to the DEPTH_TEXTURE_MODE_ARB state in this document are invalid
+     and should be ignored.
+
+Dependencies on ARB_color_buffer_float
+
+     If ARB_color_buffer_float is also implemented, then the "max(0,x)",
+     "max(-1,x)" "min(1,x)", "min(x,1)", and "max(x,-1)" functions used
+     in Table NV_register_combiners.4 and the formulas for computing
+     out1rgb, out1a, out2rgb, out2a, out3rgb, out3a, and fcoc  when
+     CLAMP_FRAGMENT_COLOR_ARB is either FIXED_ONLY_ARB when rendering
+     to a floating-point color framebuffer or FALSE.
+
+     Also when CLAMP_FRAGMENT_COLOR_ARB is either FIXED_ONLY_ARB when
+     rendering to a floating-point color framebuffer or FALSE, the
+     COLOR COLOR_SUM_CLAMP_NV state operates as if TRUE regardless of
+     its actual state.
+
+     The intent of these interactions is to eliminate the specified
+     clamping behavior of register combiners when CLAMP_FRAGMENT_COLOR_ARB
+     indicates clamping should not be performed.
+
+Errors
+
+     INVALID_VALUE is generated when CombinerParameterfvNV
+     or CombinerParameterivNV is called with <pname> set to
+     NUM_GENERAL_COMBINERS and the value pointed to by <params>
+     is less than one or greater or equal to the value of
+     MAX_GENERAL_COMBINERS_NV.
+
+     INVALID_OPERATION is generated when CombinerInputNV is called
+     with a <componentUsage> parameter of RGB and a <portion> parameter
+     of ALPHA.
+
+     INVALID_OPERATION is generated when CombinerInputNV is called
+     with a <componentUsage> parameter of BLUE and a <portion> parameter
+     of RGB.
+
+     INVALID_OPERATION is generated When CombinerInputNV is called with a
+     <componentUsage> parameter of ALPHA and an <input> parameter of FOG.
+
+     INVALID_VALUE is generated when CombinerOutputNV is called with
+     a <portion> parameter of ALPHA, but a non-FALSE value for either
+     of the parameters <abDotProduct> or <cdDotProduct>.
+
+     INVALID_OPERATION is generated when CombinerOutputNV is called with
+     a <scale> of either SCALE_BY_ONE_HALF_NV or SCALE_BY_FOUR_NV and
+     a <bias> of BIAS_BY_NEGATIVE_ONE_HALF_NV.
+
+     INVALID_OPERATION is generated when CombinerOutputNV is called such
+     that <abOutput>, <cdOutput>, and <sumOutput> do not all name unique
+     register names (though multiple outputs to DISCARD_NV are legal).
+
+     INVALID_OPERATION is generated when FinalCombinerInputNV
+     is called where <variable> is one of VARIABLE_E_NV,
+     VARIABLE_F_NV, or VARIABLE_G_NV and <input> is E_TIMES_F_NV or
+     SPARE0_PLUS_SECONDARY_COLOR_NV.
+
+     INVALID_OPERATION is generated when FinalCombinerInputNV
+     is called where <variable> is VARIABLE_A_NV and <input> is
+     SPARE0_PLUS_SECONDARY_COLOR_NV.
+
+     INVALID_OPERATION is generated when FinalCombinerInputNV is called
+     with VARIABLE_G_NV for <variable> and RGB for <componentUsage>.
+
+     INVALID_OPERATION is generated when FinalCombinerInputNV is called
+     with a value other than VARIABLE_G_NV for <variable> and BLUE for
+     <componentUsage>.
+
+     INVALID_OPERATION is generated when FinalCombinerInputNV is
+     called where the <input> parameter is either E_TIMES_F_NV or
+     SPARE0_PLUS_SECONDARY_COLOR_NV and the <componentUsage> parameter
+     is ALPHA.
+
+New State
+
+ --  (NEW table 6.29, after p217) 
+
+Get Value                          Type      Get Command                          Initial Value           Description        Sec       Attribute
+---------                          --------  ----------------------------------   ----------------------  ----------------   --------  --------------
+REGISTER_COMBINERS_NV              B         IsEnabled                            False                   register           3.8.11    texture/enable
+                                                                                                          combiners enable
+NUM_GENERAL_COMBINERS_NV           Z+        GetIntegerv                          1                       number of active   3.8.12.1  texture
+                                                                                                          combiner stages
+COLOR_SUM_CLAMP_NV                 B         GetBooleanv                          True                    whether or not     3.8.12.1  texture
+                                                                                                          SPARE0_PLUS_
+                                                                                                          SECONDARY_
+                                                                                                          COLOR_NV clamps
+                                                                                                          combiner stages
+CONSTANT_COLOR0_NV                 C         GetFloatv                            0,0,0,0                 combiner constant  3.8.12.1  texture
+                                                                                                          color zero
+CONSTANT_COLOR1_NV                 C         GetFloatv                            0,0,0,0                 combiner constant  3.8.12.1  texture
+                                                                                                          color one
+COMBINER_INPUT_NV                  Z8x#x2x4  GetCombinerInputParameter*NV         see 3.8.12.4            combiner input     3.8.12.2  texture
+                                                                                                          variables
+COMBINER_COMPONENT_USAGE_NV        Z3x#x2x4  GetCombinerInputParameter*NV         see 3.8.12.4            use alpha for      3.8.12.2  texture
+                                                                                                          combiner input
+COMBINER_MAPPING_NV                Z8x#x2x4  GetCombinerInputParameter*NV         see 3.8.12.4            complement         3.8.12.2  texture
+                                                                                                          combiner input
+COMBINER_AB_DOT_PRODUCT_NV         Bx#x2     GetCombinerOutputParameter*NV        False                   output AB dot      3.8.12.3  texture
+                                                                                                          product
+COMBINER_CD_DOT_PRODUCT_NV         Bx#x2     GetCombinerOutputParameter*NV        False                   output CD dot      3.8.12.3  texture
+                                                                                                          product
+COMBINER_MUX_SUM_NV                Bx#x2     GetCombinerOutputParameter*NV        False                   output mux sum     3.8.12.3  texture
+COMBINER_SCALE_NV                  Z2x#x2    GetCombinerOutputParameter*NV        NONE                    output scale       3.8.12.3  texture
+COMBINER_BIAS_NV                   Z2x#x2    GetCombinerOutputParameter*NV        NONE                    output bias        3.8.12.3  texture
+COMBINER_AB_OUTPUT_NV              Z7x#x2    GetCombinerOutputParameter*NV        DISCARD_NV              AB output          3.8.12.3  texture
+                                                                                                          register
+COMBINER_CD_OUTPUT_NV              Z7x#x2    GetCombinerOutputParameter*NV        DISCARD_NV              CD output          3.8.12.3  texture
+                                                                                                          register
+COMBINER_SUM_OUTPUT_NV             Z7x#x2    GetCombinerOutputParameter*NV        SPARE0_NV               sum output         3.8.12.3  texture
+                                                                                                          register
+COMBINER_INPUT_NV                  Z10x7     GetFinalCombinerInputParameter*NV    see 3.8.12.4            final combiner     3.8.12.4  texture
+                                                                                                          input
+COMBINER_MAPPING_NV                Z2x7      GetFinalCombinerInputParameter*NV    UNSIGNED_IDENTITY_NV    final combiner     3.8.12.4  texture
+                                                                                                          input mapping
+COMBINER_COMPONENT_USAGE_NV        Z2x7      GetFinalCombinerInputParameter*NV    see 3.8.12.4            use alpha for      3.8.12.4  texture
+                                                                                                          final combiner
+                                                                                                          input mapping
+
+[ where # is the value of MAX_GENERAL_COMBINERS_NV   ]
+
+New Implementation Dependent State
+
+(table 6.24, p214) add the following entry:
+
+    Get Value                    Type    Get Command   Minimum Value   Description         Sec     Attribute
+    --------------------------   ----    -----------   -------------   ----------------    ------  --------------
+    MAX_GENERAL_COMBINERS_NV     Z+      GetIntegerv   2               Maximum num of      3.8.12  -
+                                                                       general combiner
+
+NVIDIA Implementation Details
+
+    The effective range of the RGB portion of the final combiner should
+    be [0,4] if the color sum clamp is false.  Exercising  this range
+    requires assigning SPARE0_PLUS_SECONDARY_COLOR_NV to the D variable
+    and either B or C or both B and C.  In practice this is a very
+    unlikely configuration.
+
+    However due to a bug in the GeForce 256 and Quadro hardware, values
+    generated above 2 in the RGB portion of the final combiner will be
+    computed incorrectly.  GeForce2 GTS and subsequent NVIDIA GPUs have
+    fixed this bug.
+
+    The behavior of the SIGNED_NEGATE_NV mapping mode is undefined on
+    GeForce3 GPUs (NV20) when used to map the initial value of a texture
+    register corresponding to an enabled texture with a base internal
+    format of GL_DEPTH_COMPONENT and a GL_TEXTURE_COMPARE_MODE_ARB mode of
+    GL_COMPARE_R_TO_TEXTURE (or for SGIX_shadow, GL_TEXTURE_COMPARE_SGIX
+    mode of true) mode when multiple enabled textures have different
+    values for GL_TEXTURE_COMPARE_FUNC_ARB (or for SGIX_shadow,
+    GL_TEXTURE_COMPARE_OPERATOR_SGIX).  Values subsequently assigned
+    to such registers and then mapped with SIGNED_NEGATIE_NV operate
+    as expected.  This issue does not affect GeForce4 Ti (NV25) and
+    subsequent GPUs.
+
+Revision History
+
+    April 4, 2000 - Document that alpha component of the FOG register
+    should be zero when fog is disabled.  The Release 4 NVIDIA drivers
+    have a bug where this is not always true (though it often still is).
+    The bug is fixed in the Release 5 NVIDIA drivers.
+
+    June 8, 2000 - The alpha component of the FOG register is not
+    available for use until the final combiner.  The specification
+    previously incorrectly stated:
+
+      "INVALID_OPERATION is generated When CombinerInputNV is called with
+      a <portion> parameter of ALPHA and an <input> parameter of FOG."
+
+    It is actually the <componentUsage> (not the <portion>) that should
+    not be allowed to be ALPHA.  The Release 4 NVIDIA drivers implemented
+    the above incorrect error check.  The Release 5 (and later) NVIDIA
+    drivers (after June 8, 2000) have fixed this bug and correctly
+    implement the error based on <componentUsage>.
+
+    The specification previously did not allow BLUE for the
+    <componentUsage> of the G variable in the final combiner.  This is
+    now allowed in the Release 5 (and later) NVIDIA drivers (after June
+    8, 2000).  The Release 4 NVIDIA drivers do not permit BLUE for the
+    <componentUsage> of the G variable and generate an INVALID_OPERATION
+    error if this is attempted.  The Release 5 NVIDIA drivers (after June
+    8, 2000) have fixed this bug and permit BLUE for the <componentUsage>
+    of the G variable.
+
+    August 11, 2000 - The "mux" operation was incorrectly documented in
+    previous versions of this specification.  The correct mux behave is
+    as follows:
+
+       spare0_alpha >= 0.5 ? C*D : A*B
+
+    or
+
+       spare0_alpha <  0.5 ? A*B : C*D
+
+    Previous versions of this specification had the mux sense reversed.
+
+    October 31, 2000 - The initial general combiner state
+    was misdocumented for the B variable.  Previously, Table
+    NV_register_combiners.5 said that the RGB and alpha inputs for B
+    were GL_TEXTURE#_ARB and the RGB and alpha input mappings for B
+    were GL_UNSIGNED_IDENTITY_NV.  The table is now updated so that the
+    RGB and alpha inputs for B are GL_ZERO and the RGB and alpha input
+    mappings for B are GL_UNSIGNED_INVERT_NV.  The implementation has
+    always behaved in the manner described by the updated specification.
+
+    December 13, 2000 - Added a new table NV_register_combiners.2
+    describing the correspondence of texture components to register
+    components for texture registers.  This table is based on the
+    table in the EXT_texture_env_combine extension.  The table includes
+    correspondences for HILO, DSDT, DSDT_MAG, DSDT_MAG_INTENSITY, and
+    DEPTH_COMPONENT formatted textures when supported in conjunction
+    with the NV_texture_shader, SGIX_depth_texture, and SGIX_shadow
+    extensions.
+
+    Because a new table 2 was inserted, all the tables beyond it are
+    renumbered.
+
+    Document the behavior of SIGNED_NEGATE_NV in conjunction with shadow
+    mapping in the "NVIDIA Implementation Details" section.
+
+    June 28, 2002 - Properly document NV_register_combiners interactions
+    with the ARB_depth_texture and ARB_shadow extensions (previously,
+    the extension just addressed the SGIX versions of these extensions).
+
+    September 30, 2003 - Remove an error (not implemented in early NVIDIA
+    drivers prior to Release 4x.xx drivers; implemented in Relase
+    4x.xx drivers; and again removed for Release 5x.xx drivers and up)
+    that was meant to restrict the API to not allow the summing of dot
+    product outputs.  NVIDIA hardware handles this case correctly however
+    so the functionality might as well be supported; some applications
+    found it useful.  The deleted error read:
+
+       If the <abDotProduct> or <cdDotProduct> parameter is non-FALSE,
+       the value of the <sumOutput> parameter must be GL_DISCARD_NV;
+       otherwise, generate an INVALID_OPERATION error.
+
+    October 19, 2006 - Add interaction with ARB_color_buffer_float to
+    document how ths extension behaves when ARB_color_buffer_float is
+    also supported and when its CLAMP_FRAGMENT_COLOR_ARB state is either
+    FIXED_ONLY_ARB when rendering to a floating-point color framebuffer
+    or FALSE.

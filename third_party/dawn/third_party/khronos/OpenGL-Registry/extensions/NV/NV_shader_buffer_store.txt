@@ -1,0 +1,584 @@
+Name
+
+    NV_shader_buffer_store
+
+Name Strings
+
+    none (implied by GL_NV_gpu_program5 or GL_NV_gpu_shader5)
+
+Contact
+
+    Pat Brown, NVIDIA Corporation (pbrown 'at' nvidia.com)
+
+Status
+
+    Shipping.
+
+Version
+
+    Last Modified Date:         May 25, 2022
+    NVIDIA Revision:            6
+
+Number
+
+    390
+
+Dependencies
+
+    OpenGL 3.0 and GLSL 1.30 are required.
+
+    This extension is written against the OpenGL 3.2 (Compatibility Profile)
+    specification, dated July 24, 2009.
+
+    This extension is written against version 1.50.09 of the OpenGL Shading
+    Language Specification.
+
+    OpenGL 3.0 and GLSL 1.30 are required.
+
+    NV_shader_buffer_load is required.
+
+    NV_gpu_program5 and/or NV_gpu_shader5 is required.
+
+    This extension interacts with EXT_shader_image_load_store.
+
+    This extension interacts with NV_gpu_shader5.
+
+    This extension interacts with NV_gpu_program5.
+
+    This extension interacts with GLSL 4.30, ARB_shader_storage_buffer_object, 
+    and ARB_compute_shader.
+
+    This extension interacts with OpenGL 4.2.
+
+Overview
+
+    This extension builds upon the mechanisms added by the
+    NV_shader_buffer_load extension to allow shaders to perform random-access
+    reads to buffer object memory without using dedicated buffer object
+    binding points.  Instead, it allowed an application to make a buffer
+    object resident, query a GPU address (pointer) for the buffer object, and
+    then use that address as a pointer in shader code.  This approach allows
+    shaders to access a large number of buffer objects without needing to
+    repeatedly bind buffers to a limited number of fixed-functionality binding
+    points.
+
+    This extension lifts the restriction from NV_shader_buffer_load that
+    disallows writes.  In particular, the MakeBufferResidentNV function now
+    allows READ_WRITE and WRITE_ONLY access modes, and the shading language is
+    extended to allow shaders to write through (GPU address) pointers.
+    Additionally, the extension provides built-in functions to perform atomic
+    memory transactions to buffer object memory.
+
+    As with the shader writes provided by the EXT_shader_image_load_store
+    extension, writes to buffer object memory using this extension are weakly
+    ordered to allow for parallel or distributed shader execution.  The
+    EXT_shader_image_load_store extension provides mechanisms allowing for
+    finer control of memory transaction order, and those mechanisms apply
+    equally to buffer object stores using this extension.
+
+
+New Procedures and Functions
+
+    None.
+
+New Tokens
+
+    Accepted by the <barriers> parameter of MemoryBarrierEXT:
+
+        SHADER_GLOBAL_ACCESS_BARRIER_BIT_NV             0x00000010
+
+    Accepted by the <access> parameter of MakeBufferResidentNV:
+
+        READ_WRITE
+        WRITE_ONLY
+
+
+Additions to Chapter 2 of the OpenGL 3.2 (Compatibility Profile) Specification
+(OpenGL Operation)
+
+    Modify Section 2.9, Buffer Objects, p. 46
+
+    (extend the language inserted by NV_shader_buffer_load in its "Append to
+     Section 2.9 (p. 45) to allow READ_WRITE and WRITE_ONLY mappings)
+
+    The data store of a buffer object may be made accessible to the GL 
+    via shader buffer loads and stores by calling:
+
+        void MakeBufferResidentNV(enum target, enum access);
+
+    <access> may be READ_ONLY, READ_WRITE, and WRITE_ONLY.  If a shader loads
+    from a buffer with WRITE_ONLY <access> or stores to a buffer with
+    READ_ONLY <access>, the results of that shader operation are undefined and
+    may lead to application termination.  <target> may be any of the buffer
+    targets accepted by BindBuffer.
+
+    The data store of a buffer object may be made inaccessible to the GL
+    via shader buffer loads and stores by calling:
+    
+        void MakeBufferNonResidentNV(enum target);
+
+
+    Modify "Section 2.20.X, Shader Memory Access" introduced by the
+    NV_shader_buffer_load specification, to reflect that shaders may store to
+    buffer object memory.
+
+    (first paragraph) Shaders may load from or store to buffer object memory
+    by dereferencing pointer variables.  ...
+
+    (second paragraph) When a shader dereferences a pointer variable, data are
+    read from or written to buffer object memory according to the following
+    rules:
+
+    (modify the paragraph after the end of the alignment and stride rules,
+    allowing for writes, and also providing rules forbidding reads to
+    WRITE_ONLY mappings or vice-versa) If a shader reads or writes to a GPU
+    memory address that does not correspond to a buffer object made resident
+    by MakeBufferResidentNV, the results of the operation are undefined and
+    may result in application termination.  If a shader reads from a buffer
+    object made resident with an <access> parameter of WRITE_ONLY, or writes
+    to a buffer object made resident with an <access> parameter of READ_ONLY,
+    the results of the operation are also undefined and may lead to
+    application termination.
+
+    Incorporate the contents of "Section 2.14.X, Shader Memory Access" from
+    the EXT_shader_image_load_store specification into the same "Shader memory
+    Access", with the following edits.
+
+    (modify first paragraph to reference pointers) Shaders may perform
+    random-access reads and writes to texture or buffer object memory using
+    pointers or with built-in image load, store, and atomic functions, as
+    described in the OpenGL Shading Language Specification.  ...
+
+    (add to list of bits in <barriers> in MemoryBarrierEXT)
+
+    - SHADER_GLOBAL_ACCESS_BARRIER_BIT_NV:  Memory accesses using pointers and
+        assembly program global loads, stores, and atomics issued after the
+        barrier will reflect data written by shaders prior to the barrier.
+        Additionally, memory writes using pointers issued after the barrier
+        will not execute until memory accesses (loads, stores, texture
+        fetches, vertex fetches, etc) initiated prior to the barrier complete.
+
+    (modify second paragraph after the list of <barriers> bits) To allow for
+    independent shader threads to communicate by reads and writes to a common
+    memory address, pointers and image variables in the OpenGL shading
+    language may be declared as "coherent".  Buffer object or texture memory
+    accessed through such variables may be cached only if...
+
+    (add to the coherency guidelines)
+
+    - Data written using pointers in one rendering pass and read by the shader
+      in a later pass need not use coherent variables or memoryBarrier().
+      Calling MemoryBarrierEXT() with the SHADER_GLOBAL_ACCESS_BARRIER_BIT_NV
+      set in <barriers> between passes is necessary.
+
+
+Additions to Chapter 3 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Rasterization)
+
+    None.
+
+
+Additions to Chapter 4 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Per-Fragment Operations and the Frame Buffer)
+
+    None.
+
+
+Additions to Chapter 5 of the OpenGL 3.2 (Compatibility Profile) Specification
+(Special Functions)
+
+    None.
+
+
+Additions to Chapter 6 of the OpenGL 3.2 (Compatibility Profile) Specification
+(State and State Requests)
+
+    None.
+
+
+Additions to Appendix A of the OpenGL 3.2 (Compatibility Profile)
+Specification (Invariance)
+
+    None.
+
+Additions to the AGL/GLX/WGL Specifications
+
+    None.
+
+GLX Protocol
+
+    None.
+    
+
+Additions to the OpenGL Shading Language Specification, Version 1.50 (Revision
+09)
+
+    Modify Section 4.3.X, Memory Access Qualifiers, as added by
+    EXT_shader_image_load_store
+
+    (modify second paragraph) Memory accesses to image and pointer variables
+    declared using the "coherent" storage qualifier are performed coherently
+    with similar accesses from other shader threads.  ...
+
+    (modify fourth paragraph) Memory accesses to image and pointer variables
+    declared using the "volatile" storage qualifier must treat the underlying
+    memory as though it could be read or written at any point during shader
+    execution by some source other than the executing thread.  ...
+
+    (modify fifth paragraph) Memory accesses to image and pointer variables
+    declared using the "restrict" storage qualifier may be compiled assuming
+    that the variable used to perform the memory access is the only way to
+    access the underlying memory using the shader stage in question.  ...
+
+    (modify sixth paragraph) Memory accesses to image and pointer variables
+    declared using the "const" storage qualifier may only read the underlying
+    memory, which is treated as read-only.  ...
+
+    (insert after seventh paragraph) 
+
+    In pointer variable declarations, the "coherent", "volatile", "restrict",
+    and "const" qualifiers can be positioned anywhere in the declaration, and
+    may apply qualify either a pointer or the underlying data being pointed
+    to, depending on its position in the declaration.  Each qualifier to the
+    right of the basic data type in a declaration is considered to apply to
+    whatever type is found immediately to its left; qualifiers to the left of
+    the basic type are considered to apply to that basic type.  To interpret
+    the meaning of qualifiers in pointer declarations, it is useful to read
+    the declaration from right to left as in the following examples.
+
+      int * * const a;     // a is a constant pointer to a pointer to int
+      int * volatile * b;  // b is a pointer to a volatile pointer to int
+      int const * * c;     // c is a pointer to a pointer to a constant int
+      const int * * d;     // d is like c
+      int const * const *  // e is a constant pointer to a constant pointer
+       const e;            //   to a constant int
+
+    For pointer types, the "restrict" qualifier can be used to qualify
+    pointers, but not non-pointer types being pointed to.
+
+      int * restrict a;    // a is a restricted pointer to int
+      int restrict * b;    // b qualifies "int" as restricted - illegal
+
+    (modify eighth paragraph) The "coherent", "volatile", and "restrict"
+    storage qualifiers may only be used on image and pointer variables, and
+    may not be used on variables of any other type.  ...
+
+    (modify last paragraph) The values of image and pointer variables
+    qualified with "coherent," "volatile," "restrict", or "const" may not be
+    assigned to function parameters or l-values lacking such qualifiers.
+
+    (add examples for the last paragraph)
+
+      int volatile * var1;
+      int * var2;
+      int * restrict var3;
+      var1 = var2;              // OK, adding "volatile" is allowed
+      var2 = var3;              // illegal, stripping "restrict" is not
+
+
+    Modify Section 5.X, Pointer Operations, as added by NV_shader_buffer_load
+
+    (modify second paragraph, allowing storing through pointers) The pointer
+    dereference operator ...  The result of a pointer dereference may be used
+    as the left-hand side of an assignment.
+
+
+    Modify Section 8.Y, Shader Memory Functions, as added by
+    EXT_shader_image_load_store
+
+    (modify first paragraph) Shaders of all types may read and write the
+    contents of textures and buffer objects using pointers and image
+    variables.  ...
+
+    (modify description of memoryBarrier) memoryBarrier() can be used to
+    control the ordering of memory transactions issued by a shader thread.
+    When called, it will wait on the completion of all memory accesses
+    resulting from the use of pointers and image variables prior to calling
+    the function.  ...
+
+    (add the following paragraphs to the end of the section)
+
+    If multiple threads need to atomically access shared memory addresses
+    using pointers, they may do so using the following built-in functions.
+    The following atomic memory access functions allow a shader thread to
+    read, modify, and write an address in memory in a manner that guarantees
+    that no other shader thread can modify the memory between the read and the
+    write.  All of these functions read a single data element from memory,
+    compute a new value based on the value read from memory and one or more
+    other values passed to the function, and writes the result back to the
+    same memory address.  The value returned to the caller is always the data
+    element originally read from memory.
+
+    Syntax:
+
+      uint      atomicAdd(uint *address, uint data);
+      int       atomicAdd(int *address, int data);
+      uint64_t  atomicAdd(uint64_t *address,  uint64_t data);
+
+      uint      atomicMin(uint *address, uint data);
+      int       atomicMin(int *address, int data);
+
+      uint      atomicMax(uint *address, uint data);
+      int       atomicMax(int *address, int data);
+
+      uint      atomicIncWrap(uint *address, uint wrap);
+
+      uint      atomicDecWrap(uint *address, uint wrap);
+
+      uint      atomicAnd(uint *address, uint data);
+      int       atomicAnd(int *address, int data);
+
+      uint      atomicOr(uint *address, uint data);
+      int       atomicOr(int *address, int data);
+
+      uint      atomicXor(uint *address, uint data);
+      int       atomicXor(int *address, int data);
+
+      uint      atomicExchange(uint *address, uint data);
+      int       atomicExchange(int *address, uint data);
+      uint64_t  atomicExchange(uint64_t *address, uint64_t data);
+
+      uint      atomicCompSwap(uint *address, uint compare, uint data);
+      int       atomicCompSwap(int *address, int compare, int data);
+      uint64_t  atomicCompSwap(uint64_t *address, uint64_t compare, 
+                               uint64_t data);
+
+    Description:
+
+    atomicAdd() computes the new value written to <address> by adding the
+    value of <data> to the contents of <address>.  This function supports 32-
+    and 64-bit unsigned integer operands, and 32-bit signed integer operands.
+
+    atomicMin() computes the new value written to <address> by taking the
+    minimum of the value of <data> and the contents of <address>.  This
+    function supports 32-bit signed and unsigned integer operands.
+
+    atomicMax() computes the new value written to <address> by taking the
+    maximum of the value of <data> and the contents of <address>.  This
+    function supports 32-bit signed and unsigned integer operands.
+
+    atomicIncWrap() computes the new value written to <address> by adding one
+    to the contents of <address>, and then forcing the result to zero if and
+    only if the incremented value is greater than or equal to <wrap>.  This
+    function supports only 32-bit unsigned integer operands.
+
+    atomicDecWrap() computes the new value written to <address> by subtracting
+    one from the contents of <address>, and then forcing the result to
+    <wrap>-1 if the original value read from <address> was either zero or
+    greater than <wrap>.  This function supports only 32-bit unsigned integer
+    operands.
+
+    atomicAnd() computes the new value written to <address> by performing a
+    bitwise and of the value of <data> and the contents of <address>.  This
+    function supports 32-bit signed and unsigned integer operands.
+
+    atomicOr() computes the new value written to <address> by performing a
+    bitwise or of the value of <data> and the contents of <address>.  This
+    function supports 32-bit signed and unsigned integer operands.
+
+    atomicXor() computes the new value written to <address> by performing a
+    bitwise exclusive or of the value of <data> and the contents of <address>.
+    This function supports 32-bit signed and unsigned integer operands.
+
+    atomicExchange() uses the value of <data> as the value written to
+    <address>.  This function supports 32- and 64-bit unsigned integer
+    operands and 32-bit signed integer operands.
+
+    atomicCompSwap() compares the value of <compare> and the contents of
+    <address>.  If the values are equal, <data> is written to <address>;
+    otherwise, the original contents of <address> are preserved.  This
+    function supports 32- and 64-bit unsigned integer operands and 32-bit
+    signed integer operands.
+
+
+    Modify Section 9, Shading Language Grammar, p. 105
+
+    !!! TBD:  Add grammar constructs for memory access qualifiers, allowing
+        memory access qualifiers before or after the type and the "*"
+        characters indicating pointers in a variable declaration.
+ 
+
+Dependencies on EXT_shader_image_load_store
+
+    This specification incorporates the memory access ordering and
+    synchronization discussion from EXT_shader_image_load_store verbatim.  
+
+    If EXT_shader_image_load_store is not supported, this spec should be
+    construed to introduce:
+
+      * the shader memory access language from that specification, including
+        the MemoryBarrierEXT() command and the tokens accepted by <barriers>
+        from that specification;
+
+      * the memoryBarrier() function to the OpenGL shading language
+        specification; and
+
+      * the capability and spec language allowing applications to enable early
+        depth tests.
+
+Dependencies on NV_gpu_shader5
+
+    This specification requires either NV_gpu_shader5 or NV_gpu_program5.  
+
+    If NV_gpu_shader5 is supported, use of the new shading language features
+    described in this extension requires 
+
+      #extension GL_NV_gpu_shader5 : enable
+
+    If NV_gpu_shader5 is not supported, modifications to the OpenGL Shading
+    Language Specification should be removed.
+
+Dependencies on NV_gpu_program5
+
+    If NV_gpu_program5 is supported, the extension provides support for stores
+    and atomic memory transactions to buffer object memory.  Stores are
+    provided by the STORE opcode; atomics are provided by the ATOM opcode.  No
+    "OPTION" line is required for these features, which are implied by
+    NV_gpu_program5 program headers such as "!!NVfp5.0".  The operation of
+    these opcodes is described in the NV_gpu_program5 extension specification.
+
+    Note also that NV_gpu_program5 also supports the LOAD opcode originally
+    added by the NV_shader_buffer_load and the MEMBAR opcode originally
+    provided by EXT_shader_image_load_store.
+
+Dependencies on GLSL 4.30, ARB_shader_storage_buffer_object, and
+ARB_compute_shader
+
+    If GLSL 4.30 is supported, add the following atomic memory functions to
+    section 8.11 (Atomic Memory Functions) of the GLSL 4.30 specification:
+
+      uint atomicIncWrap(inout uint mem, uint wrap);
+      uint atomicDecWrap(inout uint mem, uint wrap);
+
+    with the following documentation
+
+      atomicIncWrap() computes the new value written to <mem> by adding one to
+      the contents of <mem>, and then forcing the result to zero if and only
+      if the incremented value is greater than or equal to <wrap>.  This
+      function supports only 32-bit unsigned integer operands.
+
+      atomicDecWrap() computes the new value written to <mem> by subtracting
+      one from the contents of <mem>, and then forcing the result to <wrap>-1
+      if the original value read from <mem> was either zero or greater than
+      <wrap>.  This function supports only 32-bit unsigned integer operands.
+
+    Additionally, add the following functions to the section:
+
+      uint64_t atomicAdd(inout uint64_t mem, uint data);
+      uint64_t atomicExchange(inout uint64_t mem, uint data);
+      uint64_t atomicCompSwap(inout uint64_t mem, uint64_t compare, 
+                              uint64_t data);
+
+    If ARB_shader_storage_buffer_object or ARB_compute_shader are supported,
+    make similar edits to the functions documented in the
+    ARB_shader_storage_buffer object extension.
+
+    These functions are available if and only if GL_NV_gpu_shader5 is enabled
+    via the "#extension" directive.
+
+Dependencies on OpenGL 4.2
+
+    If OpenGL 4.2 is supported, MemoryBarrierEXT can be replaced with the
+    equivalent core function MemoryBarrier.
+
+
+Errors
+
+    None
+
+New State
+
+    None.
+
+Issues
+
+    (1) Does MAX_SHADER_BUFFER_ADDRESS_NV still apply?
+
+      RESOLVED:  The primary reason for this limitation to exist was the lack
+      of 64-bit integer support in shaders (see issue 15 of 
+      NV_shader_buffer_load). Given that this extension is being released at 
+      the same time as NV_gpu_shader5 which adds 64-bit integer support, it 
+      is expected that this maximum address will match the maximum address
+      supported by the GPU's address space, or will be equal to "~0ULL" 
+      indicating that any GPU address returned by the GL will be usable in a
+      shader.
+
+    (2) What qualifiers should be supported on pointer variables, and how can
+        they be used in declarations?
+
+      RESOLVED:  We will support the qualifiers "coherent", "volatile",
+      "restrict", and "const" to be used in pointer declarations.  "coherent"
+      is taken from EXT_shader_image_load_store and is used to ensure that
+      memory accesses from different shader threads are cached coherently
+      (i.e., will be able to see each other when complete).  "volatile" and
+      "const" behave is as in C.
+
+      "restrict" behaves as in the C99 standard, and can be used to indicate
+      that no other pointer points to the same underlying data.  This permits
+      optimizations that would otherwise be impossible if the compiler has to
+      assume that a pair of pointers might end up pointing to the same data.
+      For example, in standard C/C++, a loop like:
+
+        int *a, *b;
+        a[0] = b[0] + b[0];
+        a[1] = b[0] + b[1];
+        a[2] = b[0] + b[2];
+
+       would need to reload b[0] for each assignment because a[0] or a[1]
+       might point at the same data as b[0].  With restrict, the compiler can
+       assume that b[0] is not modified by any of the instructions and load it
+       just once.
+
+    (3) What amount of automatic synchronization is provided for buffer object
+        writes through pointers?
+
+      RESOLVED:  Use of MemoryBarrierEXT() is required, and there is no
+      automatic synchronization when buffers are bound or unbound.  With
+      resident buffers, there are no well-defined binding points in the first
+      place -- all resident buffers are effectively "bound".
+
+      Implicit synchronization is difficult, as it might require some
+      combination of:
+
+        - tracking which buffers might be written (randomly) in the shader
+          itself;
+
+        - assuming that if a shader that performs writes is executed, all
+          bytes of all resident buffers could be modified and thus must be
+          treated as dirty;
+
+        - idling at the end of each primitive or draw call, so that the
+          results of all previous commands are complete.
+
+      Since normal OpenGL operation is pipelined, idling would result in a
+      significant performance impact since pipelining would otherwise allow
+      fragment shader execution for draw call N while simultaneously
+      performing vertex shader execution for draw call N+1.
+
+
+Revision History
+
+    Rev.    Date    Author    Changes
+    ----  --------  --------  -----------------------------------------
+     6    05/25/22  shqxu     Update to address removal of function MemoryBarrierNV
+                              and replace with MemoryBarrierEXT. Add interaction
+                              with OpenGL 4.2 supporting MemoryBarrier.
+
+     5    08/13/12  pbrown    Add interaction with OpenGL 4.3 (and related ARB
+                              extensions) supporting atomic{Inc,Dec}Wrap and 
+                              64-bit unsigned integer atomics to shared and
+                              shader storage buffer memory. 
+
+     4    04/13/10  pbrown    Remove the floating-point version of atomicAdd(). 
+
+     3    03/23/10  pbrown    Minor cleanups to the dependency sections.
+                              Fixed obsolete extension names.  Add an issue
+                              on synchronization.
+
+     2    03/16/10  pbrown    Updated memory access qualifiers section
+                              (volatile, coherent, restrict, const) for
+                              pointers.  Added language to document how
+                              these qualifiers work in possibly complicated
+                              expression.
+
+     1              pbrown    Internal revisions.

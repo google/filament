@@ -1,0 +1,101 @@
+// RUN: %dxc -T cs_6_0 -E main %s -O0 -spirv | FileCheck %s
+
+// Source: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476330(v=vs.85).aspx
+
+//--------------------------------------------------------------------------------------
+// This file contains the Compute Shader to perform out = in
+// Uses RAW Buffers
+//--------------------------------------------------------------------------------------
+
+ByteAddressBuffer Buffer0 : register(t0);
+RWByteAddressBuffer BufferOut : register(u1);
+
+[numthreads(1, 1, 1)]
+void main( uint3 DTid : SV_DispatchThreadID )
+{
+  uint word = Buffer0.Load( DTid.x*4 );
+  BufferOut.Store(DTid.x*4, word);
+}
+
+
+// CHECK: ; SPIR-V
+// CHECK-NEXT: ; Version: 1.0
+// CHECK-NEXT: ; Generator: Google spiregg; 0
+// CHECK-NEXT: ; Bound: 44
+// CHECK-NEXT: ; Schema: 0
+// CHECK-NEXT:                OpCapability Shader
+// CHECK-NEXT:                OpMemoryModel Logical GLSL450
+// CHECK-NEXT:                OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationID
+// CHECK-NEXT:                OpExecutionMode %main LocalSize 1 1 1
+// CHECK-NEXT:                OpSource HLSL 600
+// CHECK-NEXT:                OpName %type_ByteAddressBuffer "type.ByteAddressBuffer"
+// CHECK-NEXT:                OpName %Buffer0 "Buffer0"
+// CHECK-NEXT:                OpName %type_RWByteAddressBuffer "type.RWByteAddressBuffer"
+// CHECK-NEXT:                OpName %BufferOut "BufferOut"
+// CHECK-NEXT:                OpName %main "main"
+// CHECK-NEXT:                OpName %param_var_DTid "param.var.DTid"
+// CHECK-NEXT:                OpName %src_main "src.main"
+// CHECK-NEXT:                OpName %DTid "DTid"
+// CHECK-NEXT:                OpName %bb_entry "bb.entry"
+// CHECK-NEXT:                OpName %word "word"
+// CHECK-NEXT:                OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+// CHECK-NEXT:                OpDecorate %Buffer0 DescriptorSet 0
+// CHECK-NEXT:                OpDecorate %Buffer0 Binding 0
+// CHECK-NEXT:                OpDecorate %BufferOut DescriptorSet 0
+// CHECK-NEXT:                OpDecorate %BufferOut Binding 1
+// CHECK-NEXT:                OpDecorate %_runtimearr_uint ArrayStride 4
+// CHECK-NEXT:                OpMemberDecorate %type_ByteAddressBuffer 0 Offset 0
+// CHECK-NEXT:                OpMemberDecorate %type_ByteAddressBuffer 0 NonWritable
+// CHECK-NEXT:                OpDecorate %type_ByteAddressBuffer BufferBlock
+// CHECK-NEXT:                OpMemberDecorate %type_RWByteAddressBuffer 0 Offset 0
+// CHECK-NEXT:                OpDecorate %type_RWByteAddressBuffer BufferBlock
+// CHECK-NEXT:         %int = OpTypeInt 32 1
+// CHECK-NEXT:       %int_0 = OpConstant %int 0
+// CHECK-NEXT:        %uint = OpTypeInt 32 0
+// CHECK-NEXT:      %uint_4 = OpConstant %uint 4
+// CHECK-NEXT:      %uint_2 = OpConstant %uint 2
+// CHECK-NEXT:      %uint_0 = OpConstant %uint 0
+// CHECK-NEXT: %_runtimearr_uint = OpTypeRuntimeArray %uint
+// CHECK-NEXT: %type_ByteAddressBuffer = OpTypeStruct %_runtimearr_uint
+// CHECK-NEXT: %_ptr_Uniform_type_ByteAddressBuffer = OpTypePointer Uniform %type_ByteAddressBuffer
+// CHECK-NEXT: %type_RWByteAddressBuffer = OpTypeStruct %_runtimearr_uint
+// CHECK-NEXT: %_ptr_Uniform_type_RWByteAddressBuffer = OpTypePointer Uniform %type_RWByteAddressBuffer
+// CHECK-NEXT:      %v3uint = OpTypeVector %uint 3
+// CHECK-NEXT: %_ptr_Input_v3uint = OpTypePointer Input %v3uint
+// CHECK-NEXT:        %void = OpTypeVoid
+// CHECK-NEXT:          %19 = OpTypeFunction %void
+// CHECK-NEXT: %_ptr_Function_v3uint = OpTypePointer Function %v3uint
+// CHECK-NEXT:          %26 = OpTypeFunction %void %_ptr_Function_v3uint
+// CHECK-NEXT: %_ptr_Function_uint = OpTypePointer Function %uint
+// CHECK-NEXT: %_ptr_Uniform_uint = OpTypePointer Uniform %uint
+// CHECK-NEXT:     %Buffer0 = OpVariable %_ptr_Uniform_type_ByteAddressBuffer Uniform
+// CHECK-NEXT:   %BufferOut = OpVariable %_ptr_Uniform_type_RWByteAddressBuffer Uniform
+// CHECK-NEXT: %gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+// CHECK-NEXT:        %main = OpFunction %void None %19
+// CHECK-NEXT:          %20 = OpLabel
+// CHECK-NEXT: %param_var_DTid = OpVariable %_ptr_Function_v3uint Function
+// CHECK-NEXT:          %23 = OpLoad %v3uint %gl_GlobalInvocationID
+// CHECK-NEXT:                OpStore %param_var_DTid %23
+// CHECK-NEXT:          %24 = OpFunctionCall %void %src_main %param_var_DTid
+// CHECK-NEXT:                OpReturn
+// CHECK-NEXT:                OpFunctionEnd
+// CHECK-NEXT:    %src_main = OpFunction %void None %26
+// CHECK-NEXT:        %DTid = OpFunctionParameter %_ptr_Function_v3uint
+// CHECK-NEXT:    %bb_entry = OpLabel
+// CHECK-NEXT:        %word = OpVariable %_ptr_Function_uint Function
+// CHECK-NEXT:          %31 = OpAccessChain %_ptr_Function_uint %DTid %int_0
+// CHECK-NEXT:          %32 = OpLoad %uint %31
+// CHECK-NEXT:          %33 = OpIMul %uint %32 %uint_4
+// CHECK-NEXT:          %34 = OpShiftRightLogical %uint %33 %uint_2
+// CHECK-NEXT:          %36 = OpAccessChain %_ptr_Uniform_uint %Buffer0 %uint_0 %34
+// CHECK-NEXT:          %37 = OpLoad %uint %36
+// CHECK-NEXT:                OpStore %word %37
+// CHECK-NEXT:          %38 = OpAccessChain %_ptr_Function_uint %DTid %int_0
+// CHECK-NEXT:          %39 = OpLoad %uint %38
+// CHECK-NEXT:          %40 = OpIMul %uint %39 %uint_4
+// CHECK-NEXT:          %41 = OpShiftRightLogical %uint %40 %uint_2
+// CHECK-NEXT:          %42 = OpLoad %uint %word
+// CHECK-NEXT:          %43 = OpAccessChain %_ptr_Uniform_uint %BufferOut %uint_0 %41
+// CHECK-NEXT:                OpStore %43 %42
+// CHECK-NEXT:                OpReturn
+// CHECK-NEXT:                OpFunctionEnd

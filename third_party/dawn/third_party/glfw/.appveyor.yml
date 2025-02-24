@@ -1,0 +1,47 @@
+image:
+    - Visual Studio 2015
+branches:
+    only:
+        - ci
+        - master
+        - latest
+        - 3.3-stable
+skip_tags: true
+environment:
+    matrix:
+        - GENERATOR: MinGW Makefiles
+          BUILD_SHARED_LIBS: ON
+          CFLAGS: -Werror
+        - GENERATOR: MinGW Makefiles
+          BUILD_SHARED_LIBS: OFF
+          CFLAGS: -Werror
+        - GENERATOR: Visual Studio 12 2013
+          BUILD_SHARED_LIBS: ON
+          CFLAGS: /WX
+        - GENERATOR: Visual Studio 12 2013
+          BUILD_SHARED_LIBS: OFF
+          CFLAGS: /WX
+matrix:
+    fast_finish: true
+for:
+-
+    matrix:
+        only:
+            - GENERATOR: MinGW Makefiles
+    build_script:
+        - set PATH=%PATH:C:\Program Files\Git\usr\bin=C:\MinGW\bin%
+        - cmake -B build -G "%GENERATOR%" -DBUILD_SHARED_LIBS=%BUILD_SHARED_LIBS%
+        - cmake --build build
+-
+    matrix:
+        only:
+            - GENERATOR: Visual Studio 12 2013
+    build_script:
+        - cmake -B build -G "%GENERATOR%" -DBUILD_SHARED_LIBS=%BUILD_SHARED_LIBS%
+        - cmake --build build --target glfw
+notifications:
+    - provider: Email
+      to:
+        - ci@glfw.org
+      on_build_failure: true
+      on_build_success: false
